@@ -6,7 +6,7 @@ from typing import Callable, Dict, Iterator, List, Optional
 import bpy
 
 import pyblish.api
-import ayon_api
+from typing import Union, Any
 
 from ayon_core.host import (
     HostBase,
@@ -16,14 +16,15 @@ from ayon_core.host import (
 )
 from ayon_core.pipeline import (
     schema,
-    get_current_project_name,
-    get_current_folder_path,
     register_loader_plugin_path,
     register_creator_plugin_path,
     deregister_loader_plugin_path,
     deregister_creator_plugin_path,
     AVALON_CONTAINER_ID,
     AYON_CONTAINER_ID,
+)
+from ayon_core.pipeline.context_tools import (
+    get_current_task_entity
 )
 from ayon_core.lib import (
     Logger,
@@ -220,12 +221,34 @@ def message_window(title, message):
     _process_app_events()
 
 
-def get_folder_attributes():
-    project_name = get_current_project_name()
-    folder_path = get_current_folder_path()
-    folder_entity = ayon_api.get_folder_by_path(project_name, folder_path)
+def get_frame_range(task_entity=None) -> Union[Dict[str, Any], None]:
+    """Get the current task frame range and handles
 
-    return folder_entity["attrib"]
+    Args:
+        task_entity (dict): Task Entity.
+
+    Returns:
+        dict: with frame start, frame end, handle start, handle end.
+    """
+    # Set frame start/end
+    if task_entity is None:
+        task_entity = get_current_task_entity(fields={"attrib"})
+    task_attributes = task_entity["attrib"]
+    frame_start = int(task_attributes["frameStart"])
+    frame_end = int(task_attributes["frameEnd"])
+    handle_start = int(task_attributes["handleStart"])
+    handle_end = int(task_attributes["handleEnd"])
+    frame_start_handle = frame_start - handle_start
+    frame_end_handle = frame_end + handle_end
+
+    return {
+        "frameStart": frame_start,
+        "frameEnd": frame_end,
+        "handleStart": handle_start,
+        "handleEnd": handle_end,
+        "frameStartHandle": frame_start_handle,
+        "frameEndHandle": frame_end_handle,
+    }
 
 
 def set_frame_range(data):
@@ -278,7 +301,7 @@ def on_new():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_folder_attributes()
+    data = get_frame_range()
 
     if set_resolution_startup:
         set_resolution(data)
@@ -299,7 +322,7 @@ def on_open():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_folder_attributes()
+    data = get_frame_range()
 
     if set_resolution_startup:
         set_resolution(data)
