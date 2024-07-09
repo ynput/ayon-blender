@@ -110,6 +110,10 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ValidatePluginModel,
         title="Validate Render Output for Deadline",
     )
+    ValidateFrameRange: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
+        title="Validate Frame Range",
+    )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,
         title="Extract Blend",
@@ -207,6 +211,11 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
     "ValidateInstanceEmpty": {
         "enabled": True,
         "optional": False,
+        "active": True
+    },
+    "ValidateFrameRange": {
+        "enabled": True,
+        "optional": True,
         "active": True
     },
     "ExtractBlend": {
