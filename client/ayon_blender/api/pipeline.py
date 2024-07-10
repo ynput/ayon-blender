@@ -221,14 +221,16 @@ def message_window(title, message):
     _process_app_events()
 
 
-def get_frame_range(task_entity=None) -> Union[Dict[str, Any], None]:
-    """Get the current task frame range and handles
+def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
+    """Get the task entity's frame range and handles
 
     Args:
-        task_entity (dict): Task Entity.
+        task_entity (Optional[dict]): Task Entity.
+            When not provided defaults to current context task.
 
     Returns:
-        dict: with frame start, frame end, handle start, handle end.
+        Union[Dict[str, int], None]: Dictionary with
+            frame start, frame end, handle start, handle end.
     """
     # Set frame start/end
     if task_entity is None:
