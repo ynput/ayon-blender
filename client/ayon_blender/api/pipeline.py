@@ -303,7 +303,7 @@ def on_new():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_frame_range()
+    data = get_current_task_entity()
 
     if set_resolution_startup:
         set_resolution(data)
@@ -324,7 +324,7 @@ def on_open():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_frame_range()
+    data = get_current_task_entity()
 
     if set_resolution_startup:
         set_resolution(data)
