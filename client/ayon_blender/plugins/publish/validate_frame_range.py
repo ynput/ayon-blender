@@ -49,8 +49,8 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
                 "Missing frame start and frame end on "
                 "instance to validate."
             )
-        frame_start_handle = frame_range["frameStartHandle"]
-        frame_end_handle = frame_range["frameEndHandle"]
+        frame_start_handle = frame_range["frameStart"]
+        frame_end_handle = frame_range["frameEnd"]
         errors = []
         if frame_start_handle != inst_frame_start:
             errors.append(
