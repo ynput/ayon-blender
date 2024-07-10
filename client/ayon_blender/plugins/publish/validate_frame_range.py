@@ -10,7 +10,7 @@ from ayon_core.pipeline.publish import (
     PublishValidationError,
     KnownPublishError
 )
-from ayon_blender.api.pipeline import get_frame_range
+from ayon_blender.api.pipeline import get_frame_range, set_frame_range
 
 
 class ValidateFrameRange(pyblish.api.InstancePlugin,
@@ -47,7 +47,7 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
         if inst_frame_start is None or inst_frame_end is None:
             raise KnownPublishError(
                 "Missing frame start and frame end on "
-                "instance to to validate."
+                "instance to validate."
             )
         frame_start_handle = frame_range["frameStartHandle"]
         frame_end_handle = frame_range["frameEndHandle"]
@@ -75,10 +75,4 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
 
     @classmethod
     def repair(cls, instance):
-        frame_range = get_frame_range()
-        frame_start_handle = frame_range["frameStartHandle"]
-        frame_end_handle = frame_range["frameEndHandle"]
-        scene = bpy.context.scene
-        scene.frame_start = frame_start_handle
-        scene.frame_end = frame_end_handle
-
+        set_frame_range(instance.data["taskEntity"])
