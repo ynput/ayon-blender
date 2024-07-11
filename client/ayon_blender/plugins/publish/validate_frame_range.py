@@ -51,17 +51,17 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
                 "Missing frame start and frame end on "
                 "instance to validate."
             )
-        frame_start_handle = frame_range["frameStart"]
-        frame_end_handle = frame_range["frameEnd"]
+        frame_start = frame_range["frameStart"]
+        frame_end = frame_range["frameEnd"]
         errors = []
-        if frame_start_handle != inst_frame_start:
+        if frame_start != inst_frame_start:
             errors.append(
                 f"Start frame ({inst_frame_start}) on instance does not match " # noqa
-                f"with the start frame ({frame_start_handle}) set on the folder attributes. ")    # noqa
-        if frame_end_handle != inst_frame_end:
+                f"with the start frame ({frame_start}) set on the folder attributes. ")    # noqa
+        if frame_end != inst_frame_end:
             errors.append(
                 f"End frame ({inst_frame_end}) on instance does not match "
-                f"with the end frame ({frame_end_handle}) "
+                f"with the end frame ({frame_end}) "
                 "from the folder attributes. ")
 
         if errors:
