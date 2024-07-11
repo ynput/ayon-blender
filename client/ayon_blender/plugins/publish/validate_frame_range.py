@@ -2,8 +2,7 @@ import bpy
 import pyblish.api
 
 from ayon_core.pipeline import (
-    OptionalPyblishPluginMixin,
-    registered_host
+    OptionalPyblishPluginMixin
 )
 from ayon_core.pipeline.publish import (
     RepairAction,
