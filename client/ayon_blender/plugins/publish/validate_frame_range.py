@@ -2,7 +2,8 @@ import bpy
 import pyblish.api
 
 from ayon_core.pipeline import (
-    OptionalPyblishPluginMixin
+    OptionalPyblishPluginMixin,
+    registered_host
 )
 from ayon_core.pipeline.publish import (
     RepairAction,
@@ -10,7 +11,8 @@ from ayon_core.pipeline.publish import (
     PublishValidationError,
     KnownPublishError
 )
-from ayon_blender.api.pipeline import get_frame_range, set_frame_range
+
+from ayon_blender.api.pipeline import get_frame_range
 
 
 class ValidateFrameRange(pyblish.api.InstancePlugin,
@@ -75,4 +77,6 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
 
     @classmethod
     def repair(cls, instance):
-        set_frame_range(instance.data["taskEntity"])
+        frame_range = get_frame_range(instance.data["taskEntity"])
+        bpy.context.scene.frame_start = frame_range["frameStart"]
+        bpy.context.scene.frame_end = frame_range["frameEnd"]
