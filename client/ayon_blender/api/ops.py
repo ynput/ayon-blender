@@ -41,22 +41,30 @@ def execute_function_in_main_thread(f):
     return wrapper
 
 
-class BlenderApplication(QtWidgets.QApplication):
+class BlenderApplication:
     _instance = None
     blender_windows = {}
-
-    def __init__(self, *args, **kwargs):
-        super(BlenderApplication, self).__init__(*args, **kwargs)
-        self.setQuitOnLastWindowClosed(False)
-
-        self.setStyleSheet(style.load_stylesheet())
-        self.lastWindowClosed.connect(self.__class__.reset)
 
     @classmethod
     def get_app(cls):
         if cls._instance is None:
-            cls._instance = cls(sys.argv)
+            # If any other addon or plug-in may have initialed a Qt application
+            # before AYON then we should take the existing instance instead.
+            application = QtWidgets.QApplication.instance()
+            if application is None:
+                application = QtWidgets.QApplication(sys.argv)
+
+            # Ensure it is configured to our needs
+            cls._prepare_qapplication(application)
+            cls._instance = application
+
         return cls._instance
+
+    @classmethod
+    def _prepare_qapplication(cls, application: QtWidgets.QApplication):
+        application.setQuitOnLastWindowClosed(False)
+        application.setStyleSheet(style.load_stylesheet())
+        application.lastWindowClosed.connect(cls.reset)
 
     @classmethod
     def reset(cls):
