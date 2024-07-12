@@ -204,7 +204,6 @@ def _process_app_events() -> Optional[float]:
 class LaunchQtApp(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
-    _app: QtWidgets.QApplication
     _window = Union[QtWidgets.QDialog, ModuleType]
     _tool_name: str = None
     _init_args: Optional[List] = list()
@@ -215,8 +214,7 @@ class LaunchQtApp(bpy.types.Operator):
         if self.bl_idname is None:
             raise NotImplementedError("Attribute `bl_idname` must be set!")
         print(f"Initialising {self.bl_idname}...")
-        self._app = BlenderApplication.get_app()
-        GlobalClass.app = self._app
+        GlobalClass.app = BlenderApplication.get_app()
 
         if not bpy.app.timers.is_registered(_process_app_events):
             bpy.app.timers.register(
@@ -241,10 +239,10 @@ class LaunchQtApp(bpy.types.Operator):
                 raise AttributeError("`self._window` is not set.")
 
         else:
-            window = self._app.get_window(self.bl_idname)
+            window = BlenderApplication.get_window(self.bl_idname)
             if window is None:
                 window = host_tools.get_tool_by_name(self._tool_name)
-                self._app.store_window(self.bl_idname, window)
+                BlenderApplication.store_window(self.bl_idname, window)
             self._window = window
 
         if not isinstance(self._window, (QtWidgets.QWidget, ModuleType)):
@@ -281,7 +279,7 @@ class LaunchQtApp(bpy.types.Operator):
                 window = self._window.window
 
             if window:
-                self._app.store_window(self.bl_idname, window)
+                BlenderApplication.store_window(self.bl_idname, window)
 
         else:
             origin_flags = self._window.windowFlags()
