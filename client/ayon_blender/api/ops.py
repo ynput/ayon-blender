@@ -17,6 +17,9 @@ import bpy.utils.previews
 
 from ayon_core import style
 from ayon_core.pipeline import get_current_folder_path, get_current_task_name
+from ayon_core.pipeline.context_tools import (
+    get_current_task_entity
+)
 from ayon_core.tools.utils import host_tools
 
 from .workio import OpenFileCacher
@@ -355,7 +358,7 @@ class SetFrameRange(bpy.types.Operator):
     bl_label = "Set Frame Range"
 
     def execute(self, context):
-        data = pipeline.get_folder_attributes()
+        data = get_current_task_entity()
         pipeline.set_frame_range(data)
         return {"FINISHED"}
 
@@ -365,7 +368,7 @@ class SetResolution(bpy.types.Operator):
     bl_label = "Set Resolution"
 
     def execute(self, context):
-        data = pipeline.get_folder_attributes()
+        data = get_current_task_entity()
         pipeline.set_resolution(data)
         return {"FINISHED"}
 
