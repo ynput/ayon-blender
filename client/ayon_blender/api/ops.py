@@ -195,7 +195,7 @@ def _process_app_events() -> Optional[float]:
             return TIMER_INTERVAL
 
         app = GlobalClass.app
-        if app._instance:
+        if app:
             app.processEvents()
             return TIMER_INTERVAL
     return TIMER_INTERVAL
@@ -248,7 +248,7 @@ class LaunchQtApp(bpy.types.Operator):
         if not isinstance(self._window, (QtWidgets.QWidget, ModuleType)):
             raise AttributeError(
                 "`window` should be a `QWidget or module`. Got: {}".format(
-                    str(type(window))
+                    str(type(self._window))
                 )
             )
 
