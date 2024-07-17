@@ -248,7 +248,7 @@ class LaunchQtApp(bpy.types.Operator):
         if not isinstance(self._window, (QtWidgets.QWidget, ModuleType)):
             raise AttributeError(
                 "`window` should be a `QWidget or module`. Got: {}".format(
-                    str(type(window))
+                    str(type(self._window))
                 )
             )
 
