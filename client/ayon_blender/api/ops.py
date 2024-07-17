@@ -195,7 +195,7 @@ def _process_app_events() -> Optional[float]:
             return TIMER_INTERVAL
 
         app = GlobalClass.app
-        if app._instance:
+        if app:
             app.processEvents()
             return TIMER_INTERVAL
     return TIMER_INTERVAL
