@@ -16,7 +16,7 @@ class CollectWorkfile(plugin.BlenderInstancePlugin):
         """Process collector."""
 
         context = instance.context
-        filepath = Path(context.data["currentFile"])
+        filepath = Path(context.data.get("currentFile") or "")
         ext = filepath.suffix
 
         instance.data.update(
