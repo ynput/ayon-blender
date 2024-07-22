@@ -10,6 +10,7 @@ from ayon_core.pipeline import (
     get_representation_path,
     AVALON_CONTAINER_ID,
 )
+from ayon_core.lib import BoolDef
 
 from ayon_blender.api.pipeline import (
     AVALON_CONTAINERS,
@@ -33,6 +34,16 @@ class CacheModelLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
+    @classmethod
+    def get_options(cls, contexts):
+        return [
+            BoolDef(
+                "maya_export",
+                label="Convert scale from maya export",
+                default=False
+            )
+        ]
+
     def _remove(self, asset_group):
         objects = list(asset_group.children)
         empties = []
@@ -49,7 +60,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         for empty in empties:
             bpy.data.objects.remove(empty)
 
-    def _process(self, libpath, asset_group, group_name):
+    def _process(self, libpath, asset_group, group_name, options=None):
         plugin.deselect_all()
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
@@ -94,6 +105,13 @@ class CacheModelLoader(plugin.BlenderLoader):
             for obj in imported:
                 obj.parent = asset_group
             objects = imported
+
+        if options.get("maya_export", False) and any(libpath.lower().endswith(ext)
+                                                     for ext in [".abc"]):
+
+            asset_group.scale[0] = asset_group.scale[0] * 0.01
+            asset_group.scale[1] = asset_group.scale[1] * 0.01
+            asset_group.scale[2] = asset_group.scale[2] * 0.01
 
         for obj in objects:
             # Unlink the object from all collections
@@ -164,7 +182,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         asset_group.empty_display_type = 'SINGLE_ARROW'
         containers.objects.link(asset_group)
 
-        objects = self._process(libpath, asset_group, group_name)
+        objects = self._process(libpath, asset_group, group_name, options=options)
 
         # Link the asset group to the active collection
         collection = bpy.context.view_layer.active_layer_collection.collection
