@@ -43,7 +43,7 @@ class ValidateAbsoluteDataBlockPaths(pyblish.api.ContextPlugin,
                     continue
 
                 cls.log.error(f"Data block filepath {data_block.filepath} "
-                                "is not absolute path")
+                              "is not absolute path")
                 invalid.append(data_block.filepath)
         return invalid
 
@@ -53,23 +53,23 @@ class ValidateAbsoluteDataBlockPaths(pyblish.api.ContextPlugin,
             return
         invalid = self.get_invalid(context)
         if invalid:
-            bullet_point_errors = "\n".join(
-                "- {}".format(error) for error in invalid
-            )
             raise PublishValidationError(
                 "Invalid Data block filepaths",
                 title="Relative Data block filepaths",
-                description=self.get_description(bullet_point_errors)
+                description=self.get_description()
             )
 
     @classmethod
-    def get_description(cls, bullet_point_errors):
-        return inspect.cleandoc(f"""
+    def get_description(cls):
+        return ("""
             ### Data block filepaths are invalid
+            Data block filepaths must be absolute paths to avoid issues during relocation
+            of the published workfile into the publish folder.
 
-            Data block filepaths are not in absolute paths:
-            #### {bullet_point_errors}\n
-            You can use repair action to make the data block filepaths absolute.
+            #### How to repair?
+
+            Using the Repair action will turn all datablock filepaths in your scene into
+            absolute filepaths.
 
         """)
 
