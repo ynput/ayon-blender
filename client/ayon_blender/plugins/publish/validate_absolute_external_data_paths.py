@@ -1,5 +1,4 @@
 import bpy
-import inspect
 import pyblish.api
 from ayon_core.pipeline import (
     OptionalPyblishPluginMixin
