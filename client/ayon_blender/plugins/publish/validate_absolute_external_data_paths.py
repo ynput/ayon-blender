@@ -69,7 +69,6 @@ class ValidateAbsoluteDataBlockPaths(pyblish.api.ContextPlugin,
 
             Using the Repair action will turn all datablock filepaths in your scene into
             absolute filepaths.
-
         """)
 
     @classmethod
