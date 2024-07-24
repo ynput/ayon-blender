@@ -67,9 +67,9 @@ class ExtractPlayblastModel(BaseSettingsModel):
 
 
 class PublishPluginsModel(BaseSettingsModel):
-    ValidateAbsoluteExternalDataPaths: ValidatePluginModel = SettingsField(
+    ValidateAbsoluteDataBlockPaths: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate Absolute External Data Paths",
+        title="Validate Absolute Data Block Paths",
         section="General Validators"
     )
     ValidateCameraZeroKeyframe: ValidatePluginModel = SettingsField(
@@ -166,7 +166,7 @@ class PublishPluginsModel(BaseSettingsModel):
 
 
 DEFAULT_BLENDER_PUBLISH_SETTINGS = {
-    "ValidateAbsoluteExternalDataPaths": {
+    "ValidateAbsoluteDataBlockPaths": {
         "enabled": True,
         "optional": True,
         "active": True
