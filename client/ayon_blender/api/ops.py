@@ -187,9 +187,12 @@ def _process_app_events() -> Optional[float]:
 
         # Refresh Manager
         if GlobalClass.app:
-            manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
-            if manager:
-                manager.refresh()
+           if not hasattr(GlobalClass.app, "get_window"):
+                GlobalClass.app.processEvents()
+                return TIMER_INTERVAL
+           manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
+           if manager:
+               manager.refresh()
 
     if not GlobalClass.is_windows:
         if OpenFileCacher.opening_file:
