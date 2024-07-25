@@ -296,6 +296,15 @@ def set_resolution(data):
     scene.render.resolution_y = resolution_y
 
 
+def set_unit_scale(unit_scale_settings=None):
+    if unit_scale_settings is None:
+        return
+    unit_scale_enabled = unit_scale_settings.get("enabled")
+    if unit_scale_enabled:
+        unit_scale = unit_scale_settings.get("base_file_unit_scale")
+        bpy.context.scene.unit_settings.scale_length = unit_scale
+
+
 def on_new():
     project = os.environ.get("AYON_PROJECT_NAME")
     settings = get_project_settings(project).get("blender")
@@ -311,10 +320,7 @@ def on_new():
         set_frame_range(data)
 
     unit_scale_settings = settings.get("unit_scale_settings")
-    unit_scale_enabled = unit_scale_settings.get("enabled")
-    if unit_scale_enabled:
-        unit_scale = unit_scale_settings.get("base_file_unit_scale")
-        bpy.context.scene.unit_settings.scale_length = unit_scale
+    set_unit_scale(unit_scale_settings=unit_scale_settings)
 
 
 def on_open():

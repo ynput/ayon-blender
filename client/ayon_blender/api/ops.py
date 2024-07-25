@@ -16,6 +16,7 @@ import bpy
 import bpy.utils.previews
 
 from ayon_core import style
+from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import get_current_folder_path, get_current_task_name
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity
@@ -378,6 +379,17 @@ class SetResolution(bpy.types.Operator):
         pipeline.set_resolution(data)
         return {"FINISHED"}
 
+class SetUnitScale(bpy.types.Operator):
+    bl_idname = "wm.ayon_set_unit_scale"
+    bl_label = "Set Unit Scale"
+
+    def execute(self, context):
+        project = os.environ.get("AYON_PROJECT_NAME")
+        settings = get_project_settings(project).get("blender")
+        unit_scale_settings = settings.get("unit_scale_settings")
+        pipeline.set_unit_scale(unit_scale_settings)
+        return {"FINISHED"}
+
 
 class TOPBAR_MT_avalon(bpy.types.Menu):
     """Avalon menu."""
@@ -418,6 +430,7 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         layout.separator()
         layout.operator(SetFrameRange.bl_idname, text="Set Frame Range")
         layout.operator(SetResolution.bl_idname, text="Set Resolution")
+        layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
@@ -437,6 +450,7 @@ classes = [
     LaunchWorkFiles,
     SetFrameRange,
     SetResolution,
+    SetUnitScale,
     TOPBAR_MT_avalon,
 ]
 
