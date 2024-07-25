@@ -187,9 +187,6 @@ def _process_app_events() -> Optional[float]:
 
         # Refresh Manager
         if GlobalClass.app:
-           if not hasattr(GlobalClass.app, "get_window"):
-                GlobalClass.app.processEvents()
-                return TIMER_INTERVAL
            manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
            if manager:
                manager.refresh()
@@ -390,7 +387,8 @@ class SetUnitScale(bpy.types.Operator):
         project = os.environ.get("AYON_PROJECT_NAME")
         settings = get_project_settings(project).get("blender")
         unit_scale_settings = settings.get("unit_scale_settings")
-        pipeline.set_unit_scale(unit_scale_settings)
+        pipeline.set_unit_scale_for_setting(
+            unit_scale_settings=unit_scale_settings)
         return {"FINISHED"}
 
 

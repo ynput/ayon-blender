@@ -296,7 +296,7 @@ def set_resolution(data):
     scene.render.resolution_y = resolution_y
 
 
-def set_unit_scale(unit_scale_settings=None):
+def set_unit_scale_for_setting(unit_scale_settings=None):
     if unit_scale_settings is None:
         return
     unit_scale_enabled = unit_scale_settings.get("enabled")
@@ -320,7 +320,7 @@ def on_new():
         set_frame_range(data)
 
     unit_scale_settings = settings.get("unit_scale_settings")
-    set_unit_scale(unit_scale_settings=unit_scale_settings)
+    set_unit_scale_for_setting(unit_scale_settings=unit_scale_settings)
 
 
 def on_open():
