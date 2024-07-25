@@ -22,6 +22,7 @@ from ayon_core.pipeline import (
     deregister_creator_plugin_path,
     AVALON_CONTAINER_ID,
     AYON_CONTAINER_ID,
+    get_current_project_name
 )
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity
@@ -296,7 +297,7 @@ def set_resolution(data):
     scene.render.resolution_y = resolution_y
 
 
-def set_unit_scale_for_setting(unit_scale_settings=None):
+def set_unit_scale_from_settings(unit_scale_settings=None):
     if unit_scale_settings is None:
         return
     unit_scale_enabled = unit_scale_settings.get("enabled")
@@ -306,7 +307,7 @@ def set_unit_scale_for_setting(unit_scale_settings=None):
 
 
 def on_new():
-    project = os.environ.get("AYON_PROJECT_NAME")
+    project = get_current_project_name()
     settings = get_project_settings(project).get("blender")
 
     set_resolution_startup = settings.get("set_resolution_startup")
@@ -320,7 +321,7 @@ def on_new():
         set_frame_range(data)
 
     unit_scale_settings = settings.get("unit_scale_settings")
-    set_unit_scale_for_setting(unit_scale_settings=unit_scale_settings)
+    set_unit_scale_from_settings(unit_scale_settings=unit_scale_settings)
 
 
 def on_open():
