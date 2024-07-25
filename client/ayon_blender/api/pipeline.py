@@ -302,7 +302,7 @@ def set_unit_scale_from_settings(unit_scale_settings=None):
         return
     unit_scale_enabled = unit_scale_settings.get("enabled")
     if unit_scale_enabled:
-        unit_scale = unit_scale_settings.get("base_file_unit_scale")
+        unit_scale = unit_scale_settings["base_file_unit_scale"]
         bpy.context.scene.unit_settings.scale_length = unit_scale
 
 

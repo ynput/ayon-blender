@@ -17,7 +17,11 @@ import bpy.utils.previews
 
 from ayon_core import style
 from ayon_core.settings import get_project_settings
-from ayon_core.pipeline import get_current_folder_path, get_current_task_name
+from ayon_core.pipeline import (
+    get_current_folder_path,
+    get_current_task_name,
+    get_current_project_name
+)
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity
 )
@@ -187,9 +191,9 @@ def _process_app_events() -> Optional[float]:
 
         # Refresh Manager
         if GlobalClass.app:
-           manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
-           if manager:
-               manager.refresh()
+            manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
+            if manager:
+                manager.refresh()
 
     if not GlobalClass.is_windows:
         if OpenFileCacher.opening_file:
@@ -379,12 +383,13 @@ class SetResolution(bpy.types.Operator):
         pipeline.set_resolution(data)
         return {"FINISHED"}
 
+
 class SetUnitScale(bpy.types.Operator):
     bl_idname = "wm.ayon_set_unit_scale"
     bl_label = "Set Unit Scale"
 
     def execute(self, context):
-        project = os.environ.get("AYON_PROJECT_NAME")
+        project = get_current_project_name()
         settings = get_project_settings(project).get("blender")
         unit_scale_settings = settings.get("unit_scale_settings")
         pipeline.set_unit_scale_from_settings(
