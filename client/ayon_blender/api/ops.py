@@ -430,7 +430,11 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         layout.separator()
         layout.operator(SetFrameRange.bl_idname, text="Set Frame Range")
         layout.operator(SetResolution.bl_idname, text="Set Resolution")
-        layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
+        project = os.environ.get("AYON_PROJECT_NAME")
+        settings = get_project_settings(project).get("blender")
+        unit_scale_settings = settings.get("unit_scale_settings")
+        if unit_scale_settings.get("enabled"):
+            layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
