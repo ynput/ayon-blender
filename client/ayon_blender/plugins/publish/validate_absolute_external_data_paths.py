@@ -1,4 +1,5 @@
 import bpy
+import inspect
 import pyblish.api
 from ayon_core.pipeline import (
     OptionalPyblishPluginMixin
@@ -60,7 +61,7 @@ class ValidateAbsoluteDataBlockPaths(pyblish.api.ContextPlugin,
 
     @classmethod
     def get_description(cls):
-        return ("""
+        return inspect.cleandoc(f"""
             ### Data block filepaths are invalid
             Data block filepaths must be absolute paths to avoid issues during relocation
             of the published workfile into the publish folder.
@@ -69,6 +70,7 @@ class ValidateAbsoluteDataBlockPaths(pyblish.api.ContextPlugin,
 
             Using the Repair action will turn all datablock filepaths in your scene into
             absolute filepaths.
+
         """)
 
     @classmethod
