@@ -61,7 +61,7 @@ class ValidateAbsoluteDataBlockPaths(pyblish.api.ContextPlugin,
 
     @classmethod
     def get_description(cls):
-        return inspect.cleandoc(f"""
+        return inspect.cleandoc("""
             ### Data block filepaths are invalid
             Data block filepaths must be absolute paths to avoid issues during relocation
             of the published workfile into the publish folder.
