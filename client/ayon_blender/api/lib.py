@@ -429,9 +429,29 @@ def get_highest_root(objects):
 
 @contextlib.contextmanager
 def attribute_overrides(
-        scene,
+        obj,
         attribute_values
 ):
+    """Apply attribute or property overrides during context.
+
+    Supports nested/deep overrides, that is also why it does not use **kwargs
+    as function arguments because it requires the keys to support dots (`.`).
+
+    Example:
+        >>> with attribute_overrides(scene, {
+        ...     "render.fps": 30,
+        ...     "frame_start": 1001}
+        ... ):
+        ...     print(scene.render.fps)
+        ...     print(scene.frame_start)
+        # 30
+        # 1001
+
+    Arguments:
+        obj (Any): The object to set attributes and properties on.
+        attribute_values: (dict[str, Any]): The property names mapped to the
+            values that will be applied during the context.
+    """
     if not attribute_values:
         # do nothing
         yield
@@ -439,7 +459,7 @@ def attribute_overrides(
 
     # Helper functions to get and set nested keys on the scene object like
     # e.g. "scene.unit_settings.scale_length" or "scene.render.fps"
-    # by doing `set_value(scene, "unit_settings.scale_length", 10)`
+    # by doing `setattr_deep(scene, "unit_settings.scale_length", 10)`
     def getattr_deep(root, path):
         for key in path.split("."):
             root = getattr(root, key)
@@ -454,15 +474,15 @@ def attribute_overrides(
 
     # Get original values
     original = {
-        key: getattr_deep(scene, key) for key in attribute_values
+        key: getattr_deep(obj, key) for key in attribute_values
     }
     try:
         for key, value in attribute_values.items():
-            setattr_deep(scene, key, value)
+            setattr_deep(obj, key, value)
         yield
     finally:
         for key, value in original.items():
-            setattr_deep(scene, key, value)
+            setattr_deep(obj, key, value)
 
 
 def collect_animation_defs(fps=False):
