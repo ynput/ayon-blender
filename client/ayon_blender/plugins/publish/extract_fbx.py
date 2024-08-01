@@ -3,7 +3,8 @@ import os
 import bpy
 
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin
+from ayon_core.lib import NumberDef
+from ayon_blender.api import plugin, lib
 
 
 class ExtractFBX(
@@ -55,21 +56,22 @@ class ExtractFBX(
                 new_materials.append(mat)
                 new_materials_objs.append(obj)
 
-        scene = bpy.context.scene
-        scale_length = scene.unit_settings.scale_length
-        scene.unit_settings.scale_length = instance.data.get("unitScale")
+        attr_values = self.get_attr_values_from_data(instance.data)
+        scene_overrides = {}
+        unit_scale = attr_values.get("unitScale")
+        if unit_scale is not None:
+            scene_overrides["unit_settings.scale_length"] = unit_scale
 
-        with bpy.context.temp_override(**context):
-            # We export the fbx
-            bpy.ops.export_scene.fbx(
-                filepath=filepath,
-                use_active_collection=False,
-                use_selection=True,
-                mesh_smooth_type='FACE',
-                add_leaf_bones=False
-            )
-
-        scene.unit_settings.scale_length = scale_length
+        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
+            with bpy.context.temp_override(**context):
+                # We export the fbx
+                bpy.ops.export_scene.fbx(
+                    filepath=filepath,
+                    use_active_collection=False,
+                    use_selection=True,
+                    mesh_smooth_type='FACE',
+                    add_leaf_bones=False
+                )
 
         plugin.deselect_all()
 
@@ -92,3 +94,14 @@ class ExtractFBX(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
+
+    @classmethod
+    def get_attribute_defs(cls):
+        return [
+            NumberDef("unitScale",
+                      label="Unit Scale (FBX)",
+                      default=1.0,
+                      decimals=4,
+                      tooltip="Scale of the model, valid only for FBX export.")
+        ]
+

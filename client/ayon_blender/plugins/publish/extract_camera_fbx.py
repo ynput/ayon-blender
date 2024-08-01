@@ -3,7 +3,8 @@ import os
 import bpy
 
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin
+from ayon_core.lib import NumberDef
+from ayon_blender.api import plugin, lib
 
 
 class ExtractCamera(
@@ -49,43 +50,36 @@ class ExtractCamera(
         context = plugin.create_blender_context(
             active=camera, selected=selected)
 
-        scene = bpy.context.scene
-        scale_length = scene.unit_settings.scale_length
-        frame_start = scene.frame_start
-        frame_end = scene.frame_end
-        frame_step = scene.frame_step
-        fps = scene.render.fps
-        fps_base = scene.render.fps_base
-        scene.unit_settings.scale_length = instance.data.get(
-            "unitScale", scale_length)
-        scene.frame_start = instance.data.get("frameStart", frame_start)
-        scene.frame_end = instance.data.get("frameEnd", frame_end)
-        scene.frame_step = instance.data.get("frameStep", frame_step)
-        inst_fps = instance.data.get("fps")
-        if inst_fps:
-            scene.render.fps = inst_fps
-            scene.render.fps_base = 1
+        attr_values = self.get_attr_values_from_data(instance.data)
+        scene_overrides = {
+            "frame_start": instance.data.get("frameStart"),
+            "frame_end": instance.data.get("frameEnd"),
+            "frame_step": instance.data.get("frameStep"),
+            "unit_settings.scale_length": attr_values.get("unitScale"),
+            "render.fps": instance.data.get("fps")
+        }
+        # Skip None value overrides
+        scene_overrides = {
+            key: value for key, value in scene_overrides.items()
+            if value is not None
+        }
+        if "render.fps" in scene_overrides:
+            scene_overrides["render.fps_base"] = 1
 
-        with bpy.context.temp_override(**context):
-            # We export the fbx
-            bpy.ops.export_scene.fbx(
-                filepath=filepath,
-                use_active_collection=False,
-                use_selection=True,
-                bake_anim_use_nla_strips=False,
-                bake_anim_use_all_actions=False,
-                add_leaf_bones=False,
-                armature_nodetype='ROOT',
-                object_types={'CAMERA'},
-                bake_anim_simplify_factor=0.0
-            )
-
-        scene.unit_settings.scale_length = scale_length
-        scene.frame_start = frame_start
-        scene.frame_end = frame_end
-        scene.frame_step = frame_step
-        scene.render.fps = fps
-        scene.render.fps_base = fps_base
+        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
+            with bpy.context.temp_override(**context):
+                # We export the fbx
+                bpy.ops.export_scene.fbx(
+                    filepath=filepath,
+                    use_active_collection=False,
+                    use_selection=True,
+                    bake_anim_use_nla_strips=False,
+                    bake_anim_use_all_actions=False,
+                    add_leaf_bones=False,
+                    armature_nodetype='ROOT',
+                    object_types={'CAMERA'},
+                    bake_anim_simplify_factor=0.0
+                )
 
         plugin.deselect_all()
 
@@ -102,3 +96,14 @@ class ExtractCamera(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
+
+    @classmethod
+    def get_attribute_defs(cls):
+        return [
+            NumberDef("unitScale",
+                      label="Unit Scale (FBX)",
+                      default=1.0,
+                      decimals=4,
+                      tooltip="Scale of the model, valid only for FBX export.")
+        ]
+

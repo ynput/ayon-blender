@@ -1,6 +1,5 @@
 """Create an animation asset."""
 
-from ayon_core.lib import NumberDef
 from ayon_blender.api import plugin, lib
 
 
@@ -34,12 +33,4 @@ class CreateAnimation(plugin.BlenderCreator):
 
     def get_instance_attr_defs(self):
         defs = lib.collect_animation_defs()
-
-        defs.append(
-            NumberDef("unitScale",
-                      label="Unit Scale (FBX)",
-                      default=1.0,
-                      tooltip="Scale of the model, valid only for FBX export.")
-        )
-
         return defs

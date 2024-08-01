@@ -427,6 +427,44 @@ def get_highest_root(objects):
     return num_parents_to_obj[minimum_parent]
 
 
+@contextlib.contextmanager
+def attribute_overrides(
+        scene,
+        attribute_values
+):
+    if not attribute_values:
+        # do nothing
+        yield
+        return
+
+    # Helper functions to get and set nested keys on the scene object like
+    # e.g. "scene.unit_settings.scale_length" or "scene.render.fps"
+    # by doing `set_value(scene, "unit_settings.scale_length", 10)`
+    def getattr_deep(root, path):
+        for key in path.split("."):
+            root = getattr(root, key)
+        return root
+
+    def setattr_deep(root, path, value):
+        keys = path.split(".")
+        last_key = keys.pop()
+        for key in keys:
+            root = getattr(root, key)
+        return setattr(root, last_key, value)
+
+    # Get original values
+    original = {
+        key: getattr_deep(scene, key) for key in attribute_values
+    }
+    try:
+        for key, value in attribute_values.items():
+            setattr_deep(scene, key, value)
+        yield
+    finally:
+        for key, value in original.items():
+            setattr_deep(scene, key, value)
+
+
 def collect_animation_defs(fps=False):
     """
     Get the basic animation attribute definitions for the publisher.

@@ -3,7 +3,7 @@ import os
 import bpy
 
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 
 
 class ExtractCameraABC(
@@ -45,33 +45,29 @@ class ExtractCameraABC(
         context = plugin.create_blender_context(
             active=active, selected=selected)
 
-        scene = bpy.context.scene
-        frame_start = scene.frame_start
-        frame_end = scene.frame_end
-        frame_step = scene.frame_step
-        fps = scene.render.fps
-        fps_base = scene.render.fps_base
-        scene.frame_start = instance.data.get("frameStart", frame_start)
-        scene.frame_end = instance.data.get("frameEnd", frame_end)
-        scene.frame_step = instance.data.get("frameStep", frame_step)
-        inst_fps = instance.data.get("fps")
-        if inst_fps:
-            scene.render.fps = inst_fps
-            scene.render.fps_base = 1
+        scene_overrides = {
+            "frame_start": instance.data.get("frameStart"),
+            "frame_end": instance.data.get("frameEnd"),
+            "frame_step": instance.data.get("frameStep"),
+            "unit_settings.scale_length": instance.data.get("unitScale"),
+            "render.fps": instance.data.get("fps")
+        }
+        # Skip None value overrides
+        scene_overrides = {
+            key: value for key, value in scene_overrides.items()
+            if value is not None
+        }
+        if "render.fps" in scene_overrides:
+            scene_overrides["render.fps_base"] = 1
 
-        with bpy.context.temp_override(**context):
-            # We export the abc
-            bpy.ops.wm.alembic_export(
-                filepath=filepath,
-                selected=True,
-                flatten=True
-            )
-
-        scene.frame_start = frame_start
-        scene.frame_end = frame_end
-        scene.frame_step = frame_step
-        scene.render.fps = fps
-        scene.render.fps_base = fps_base
+        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
+            with bpy.context.temp_override(**context):
+                # We export the abc
+                bpy.ops.wm.alembic_export(
+                    filepath=filepath,
+                    selected=True,
+                    flatten=True
+                )
 
         plugin.deselect_all()
 
