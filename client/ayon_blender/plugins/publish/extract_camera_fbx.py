@@ -50,12 +50,10 @@ class ExtractCamera(
         context = plugin.create_blender_context(
             active=camera, selected=selected)
 
-        attr_values = self.get_attr_values_from_data(instance.data)
         scene_overrides = {
             "frame_start": instance.data.get("frameStart"),
             "frame_end": instance.data.get("frameEnd"),
             "frame_step": instance.data.get("frameStep"),
-            "unit_settings.scale_length": attr_values.get("unitScale"),
             "render.fps": instance.data.get("fps")
         }
         # Skip None value overrides

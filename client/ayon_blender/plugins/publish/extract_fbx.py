@@ -56,22 +56,15 @@ class ExtractFBX(
                 new_materials.append(mat)
                 new_materials_objs.append(obj)
 
-        attr_values = self.get_attr_values_from_data(instance.data)
-        scene_overrides = {}
-        unit_scale = attr_values.get("unitScale")
-        if unit_scale is not None:
-            scene_overrides["unit_settings.scale_length"] = unit_scale
-
-        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
-            with bpy.context.temp_override(**context):
-                # We export the fbx
-                bpy.ops.export_scene.fbx(
-                    filepath=filepath,
-                    use_active_collection=False,
-                    use_selection=True,
-                    mesh_smooth_type='FACE',
-                    add_leaf_bones=False
-                )
+        with bpy.context.temp_override(**context):
+            # We export the fbx
+            bpy.ops.export_scene.fbx(
+                filepath=filepath,
+                use_active_collection=False,
+                use_selection=True,
+                mesh_smooth_type='FACE',
+                add_leaf_bones=False
+            )
 
         plugin.deselect_all()
 
