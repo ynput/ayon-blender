@@ -4,6 +4,7 @@ from pathlib import Path
 from pprint import pformat
 from typing import Dict, List, Optional
 
+import os
 import bpy
 
 from ayon_core.pipeline import (
@@ -149,6 +150,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
         object_name = container["objectName"]
         asset_group = bpy.data.objects.get(object_name)
         libpath = Path(get_representation_path(repre_entity))
+        prev_filename = os.path.basename(container["libpath"])
         extension = libpath.suffix.lower()
 
         self.log.info(
@@ -186,6 +188,8 @@ class AbcCameraLoader(plugin.BlenderLoader):
             for constraint in obj.constraints:
                 if constraint.type == "TRANSFORM_CACHE":
                     constraint.cache_file.filepath = libpath.as_posix()
+                    if constraint.cache_file.name == prev_filename:
+                        constraint.cache_file.name = os.path.basename(libpath)
                     found = True
                     break
             if not found:
@@ -195,6 +199,8 @@ class AbcCameraLoader(plugin.BlenderLoader):
                 constraint = obj.constraints.new("TRANSFORM_CACHE")
                 bpy.ops.cachefile.open(filepath=libpath.as_posix())
                 constraint.cache_file = bpy.data.cache_files[-1]
+                constraint.cache_file.filepath = libpath.as_posix()
+                constraint.cache_file.name = os.path.basename(libpath)
                 constraint.cache_file.scale = 1.0
 
                 # This is a workaround to set the object path. Blender doesn't

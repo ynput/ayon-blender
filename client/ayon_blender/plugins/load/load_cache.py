@@ -5,6 +5,7 @@ from pprint import pformat
 from typing import Dict, List, Optional
 
 import bpy
+import os
 
 from ayon_core.pipeline import (
     get_representation_path,
@@ -32,6 +33,45 @@ class CacheModelLoader(plugin.BlenderLoader):
     label = "Load Cache"
     icon = "code-fork"
     color = "orange"
+
+    def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
+        """search and update path in the transform cache modifier
+        If there is no transform cache modifier, it will create one
+        to update the filepath of the alembic.
+        """
+        for obj in asset_group.children:
+            found = False
+            for constraint in obj.constraints:
+                if constraint.type == "TRANSFORM_CACHE":
+                    constraint.cache_file.filepath = libpath.as_posix()
+                    if constraint.cache_file.name == prev_filename:
+                        constraint.cache_file.name = os.path.basename(libpath)
+                    found = True
+                    break
+            if not found:
+                # This is to keep compatibility with cameras loaded with
+                # the old loader
+                # Create a new constraint for the cache file
+                constraint = obj.constraints.new("TRANSFORM_CACHE")
+                bpy.ops.cachefile.open(filepath=libpath.as_posix())
+                constraint.cache_file = bpy.data.cache_files[-1]
+                constraint.cache_file.filepath = libpath.as_posix()
+                constraint.cache_file.name = os.path.basename(libpath)
+                constraint.cache_file.scale = 1.0
+
+                # This is a workaround to set the object path. Blender doesn't
+                # load the list of object paths until the object is evaluated.
+                # This is a hack to force the object to be evaluated.
+                # The modifier doesn't need to be removed because camera
+                # objects don't have modifiers.
+                obj.modifiers.new(
+                    name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
+                bpy.context.evaluated_depsgraph_get()
+
+                constraint.object_path = (
+                    constraint.cache_file.object_paths[0].path)
+
+        return libpath
 
     def _remove(self, asset_group):
         objects = list(asset_group.children)
@@ -245,15 +285,22 @@ class CacheModelLoader(plugin.BlenderLoader):
             self.log.info("Library already loaded, not updating...")
             return
 
-        mat = asset_group.matrix_basis.copy()
-        self._remove(asset_group)
+        if any(str(libpath).lower().endswith(ext)
+               for ext in [".usd", ".usda", ".usdc"]):
+            mat = asset_group.matrix_basis.copy()
+            self._remove(asset_group)
 
-        objects = self._process(str(libpath), asset_group, object_name)
+            objects = self._process(str(libpath), asset_group, object_name)
 
-        containers = bpy.data.collections.get(AVALON_CONTAINERS)
-        self._link_objects(objects, asset_group, containers, asset_group)
+            containers = bpy.data.collections.get(AVALON_CONTAINERS)
+            self._link_objects(objects, asset_group, containers, asset_group)
 
-        asset_group.matrix_basis = mat
+            asset_group.matrix_basis = mat
+        else:
+            prev_filename = os.path.basename(container["libpath"])
+            libpath = self._update_transform_cache_path(
+                asset_group, libpath, prev_filename)
+
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
