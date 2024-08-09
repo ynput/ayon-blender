@@ -43,9 +43,9 @@ class CacheModelLoader(plugin.BlenderLoader):
             found = False
             for constraint in obj.constraints:
                 if constraint.type == "TRANSFORM_CACHE":
-                    constraint.cache_file.filepath = libpath.as_posix()
                     if constraint.cache_file.name == prev_filename:
                         constraint.cache_file.name = os.path.basename(libpath)
+                    constraint.cache_file.filepath = libpath.as_posix()
                     found = True
                     break
             if not found:
@@ -55,6 +55,8 @@ class CacheModelLoader(plugin.BlenderLoader):
                 constraint = obj.constraints.new("TRANSFORM_CACHE")
                 bpy.ops.cachefile.open(filepath=libpath.as_posix())
                 constraint.cache_file = bpy.data.cache_files[-1]
+                if constraint.cache_file.name == prev_filename:
+                    constraint.cache_file.name = os.path.basename(libpath)
                 constraint.cache_file.filepath = libpath.as_posix()
                 constraint.cache_file.name = os.path.basename(libpath)
                 constraint.cache_file.scale = 1.0
