@@ -191,7 +191,7 @@ def _process_app_events() -> Optional[float]:
 
         # Refresh Manager
         if GlobalClass.app:
-            manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
+            manager = BlenderApplication.get_window("WM_OT_avalon_manager")
             if manager:
                 manager.refresh()
 
