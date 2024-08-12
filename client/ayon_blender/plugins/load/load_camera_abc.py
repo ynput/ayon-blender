@@ -190,6 +190,8 @@ class AbcCameraLoader(plugin.BlenderLoader):
                     if constraint.cache_file.name == prev_filename:
                         constraint.cache_file.name = os.path.basename(libpath)
                     constraint.cache_file.filepath = libpath.as_posix()
+                    constraint.object_path = (
+                        constraint.cache_file.object_paths[0].path)
                     found = True
                     break
             if not found:
