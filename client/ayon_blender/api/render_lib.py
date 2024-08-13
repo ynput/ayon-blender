@@ -348,7 +348,7 @@ def prepare_rendering(asset_group):
     # Clear the render filepath, so that the output is handled only by the
     # output node in the compositor.
     bpy.context.scene.render.filepath = (
-        "/tmp\\"if sys.platform == "windows" else "/tmp/"
+        "/tmp\\"if sys.platform == "windows" else ""
     )
     render_settings = {
         "render_folder": render_folder,
