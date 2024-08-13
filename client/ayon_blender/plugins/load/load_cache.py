@@ -69,24 +69,13 @@ class CacheModelLoader(plugin.BlenderLoader):
                 relative_path=relative
             )
 
-        objects = []
-        uninspected_top_objs = [obj for obj in lib.get_selection() if not obj.parent]
-
-        while uninspected_top_objs:
-            obj = uninspected_top_objs.pop()
-
-            # Ignore EMPTYs without transforms/parent (blank containers)
-            if obj.type == "EMPTY" and obj.matrix_local.is_identity:
-                uninspected_top_objs.extend(obj.children)
-                bpy.data.objects.remove(obj)
-
-            # Reparent top object to asset_group
-            else:
-                obj.parent = asset_group
-                objects.append(obj)
-                objects.extend(obj.children_recursive)
+        objects = lib.get_selection()
 
         for obj in objects:
+            # reparent top object to asset_group
+            if not obj.parent:
+                obj.parent = asset_group
+
             # Unlink the object from all collections
             collections = obj.users_collection
             for collection in collections:
