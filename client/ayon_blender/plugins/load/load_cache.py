@@ -34,46 +34,41 @@ class CacheModelLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
+    def _update_transform_cache_path(self, asset_group, libpath):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
         """
         for obj in asset_group.children:
             found = False
-            for constraint in obj.constraints:
-                if constraint.type == "TRANSFORM_CACHE":
-                    if constraint.cache_file.name == prev_filename:
-                        constraint.cache_file.name = os.path.basename(libpath)
-                    constraint.cache_file.filepath = libpath.as_posix()
-                    constraint.object_path = (
-                        constraint.cache_file.object_paths[0].path)
+            for modifier in obj.modifiers:
+                if modifier.type == "MESH_SEQUENCE_CACHE":
+                    modifier.cache_file = bpy.data.cache_files[-1]
+                    modifier.cache_file.filepath = libpath.as_posix()
+                    modifier.object_path = (
+                        modifier.cache_file.object_paths[0].path)
                     found = True
                     break
             if not found:
                 # This is to keep compatibility with cameras loaded with
                 # the old loader
                 # Create a new constraint for the cache file
-                constraint = obj.constraints.new("TRANSFORM_CACHE")
+                modifier = obj.modifiers.new(
+                    name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
                 bpy.ops.cachefile.open(filepath=libpath.as_posix())
-                constraint.cache_file = bpy.data.cache_files[-1]
-                if constraint.cache_file.name == prev_filename:
-                    constraint.cache_file.name = os.path.basename(libpath)
-                constraint.cache_file.filepath = libpath.as_posix()
-                constraint.cache_file.name = os.path.basename(libpath)
-                constraint.cache_file.scale = 1.0
+                modifier.cache_file = bpy.data.cache_files[-1]
+                modifier.cache_file.filepath = libpath.as_posix()
+                modifier.cache_file.scale = 1.0
 
                 # This is a workaround to set the object path. Blender doesn't
                 # load the list of object paths until the object is evaluated.
                 # This is a hack to force the object to be evaluated.
                 # The modifier doesn't need to be removed because camera
                 # objects don't have modifiers.
-                obj.modifiers.new(
-                    name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
                 bpy.context.evaluated_depsgraph_get()
 
-                constraint.object_path = (
-                    constraint.cache_file.object_paths[0].path)
+                modifier.object_path = (
+                    modifier.cache_file.object_paths[0].path)
 
         return libpath
 
@@ -301,9 +296,7 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             asset_group.matrix_basis = mat
         else:
-            prev_filename = os.path.basename(container["libpath"])
-            libpath = self._update_transform_cache_path(
-                asset_group, libpath, prev_filename)
+            libpath = self._update_transform_cache_path(asset_group, libpath)
 
 
         metadata["libpath"] = str(libpath)

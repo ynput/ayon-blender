@@ -187,8 +187,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
             found = False
             for constraint in obj.constraints:
                 if constraint.type == "TRANSFORM_CACHE":
-                    if constraint.cache_file.name == prev_filename:
-                        constraint.cache_file.name = os.path.basename(libpath)
+                    constraint.cache_file = bpy.data.cache_files[-1]
                     constraint.cache_file.filepath = libpath.as_posix()
                     constraint.object_path = (
                         constraint.cache_file.object_paths[0].path)
