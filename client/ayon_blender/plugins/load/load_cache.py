@@ -40,28 +40,30 @@ class CacheModelLoader(plugin.BlenderLoader):
         to update the filepath of the alembic.
         """
         for obj in asset_group.children:
-            found = False
             names = [modifier.name for modifier in obj.modifiers
                      if modifier.type == "MESH_SEQUENCE_CACHE"]
+            file_list = [file for file in bpy.data.cache_files
+                         if file.name == prev_filename]
             if names:
                 for name in names:
                     obj.modifiers.remove(obj.modifiers.get(name))
+            if file_list:
+                bpy.data.batch_remove(file_list)
 
-            if not found:
-                # This is to keep compatibility with cameras loaded with
-                # the old loader
-                # Create a new constraint for the cache file
-                modifier = obj.modifiers.new(
-                    name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
-                bpy.ops.cachefile.open(filepath=libpath.as_posix())
-                modifier.cache_file = bpy.data.cache_files[-1]
-                modifier.cache_file.name = os.path.basename(libpath.as_posix())
-                modifier.cache_file.filepath = libpath.as_posix()
-                modifier.cache_file.scale = 1.0
-                bpy.context.evaluated_depsgraph_get()
+            # This is to keep compatibility with cameras loaded with
+            # the old loader
+            # Create a new constraint for the cache file
+            modifier = obj.modifiers.new(
+                name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
+            bpy.ops.cachefile.open(filepath=libpath.as_posix())
+            modifier.cache_file = bpy.data.cache_files[-1]
+            modifier.cache_file.name = os.path.basename(libpath.as_posix())
+            modifier.cache_file.filepath = libpath.as_posix()
+            modifier.cache_file.scale = 1.0
+            bpy.context.evaluated_depsgraph_get()
 
-                modifier.object_path = (
-                    modifier.cache_file.object_paths[0].path)
+            modifier.object_path = (
+                modifier.cache_file.object_paths[0].path)
 
         return libpath
 
