@@ -34,21 +34,19 @@ class CacheModelLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    def _update_transform_cache_path(self, asset_group, libpath):
+    def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
         """
         for obj in asset_group.children:
             found = False
-            for modifier in obj.modifiers:
-                if modifier.type == "MESH_SEQUENCE_CACHE":
-                    modifier.cache_file = bpy.data.cache_files[-1]
-                    modifier.cache_file.filepath = libpath.as_posix()
-                    modifier.object_path = (
-                        modifier.cache_file.object_paths[0].path)
-                    found = True
-                    break
+            names = [modifier.name for modifier in obj.modifiers
+                     if modifier.type == "MESH_SEQUENCE_CACHE"]
+            if names:
+                for name in names:
+                    obj.modifiers.remove(obj.modifiers.get(name))
+
             if not found:
                 # This is to keep compatibility with cameras loaded with
                 # the old loader
@@ -57,14 +55,9 @@ class CacheModelLoader(plugin.BlenderLoader):
                     name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
                 bpy.ops.cachefile.open(filepath=libpath.as_posix())
                 modifier.cache_file = bpy.data.cache_files[-1]
+                modifier.cache_file.name = os.path.basename(libpath.as_posix())
                 modifier.cache_file.filepath = libpath.as_posix()
                 modifier.cache_file.scale = 1.0
-
-                # This is a workaround to set the object path. Blender doesn't
-                # load the list of object paths until the object is evaluated.
-                # This is a hack to force the object to be evaluated.
-                # The modifier doesn't need to be removed because camera
-                # objects don't have modifiers.
                 bpy.context.evaluated_depsgraph_get()
 
                 modifier.object_path = (
@@ -296,7 +289,8 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             asset_group.matrix_basis = mat
         else:
-            libpath = self._update_transform_cache_path(asset_group, libpath)
+            prev_filename = os.path.basename(container["libpath"])
+            libpath = self._update_transform_cache_path(asset_group, libpath, prev_filename)
 
 
         metadata["libpath"] = str(libpath)
