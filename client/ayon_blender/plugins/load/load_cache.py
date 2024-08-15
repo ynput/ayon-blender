@@ -43,16 +43,13 @@ class CacheModelLoader(plugin.BlenderLoader):
             names = [modifier.name for modifier in obj.modifiers
                      if modifier.type == "MESH_SEQUENCE_CACHE"]
             file_list = [file for file in bpy.data.cache_files
-                         if file.name == prev_filename]
+                         if file.name.startswith(prev_filename)]
             if names:
                 for name in names:
                     obj.modifiers.remove(obj.modifiers.get(name))
             if file_list:
                 bpy.data.batch_remove(file_list)
 
-            # This is to keep compatibility with cameras loaded with
-            # the old loader
-            # Create a new constraint for the cache file
             modifier = obj.modifiers.new(
                 name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
             bpy.ops.cachefile.open(filepath=libpath.as_posix())
