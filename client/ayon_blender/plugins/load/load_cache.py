@@ -39,7 +39,8 @@ class CacheModelLoader(plugin.BlenderLoader):
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
         """
-        for obj in asset_group.children:
+        bpy.ops.cachefile.open(filepath=libpath.as_posix())
+        for i, obj in enumerate(asset_group.children):
             names = [modifier.name for modifier in obj.modifiers
                      if modifier.type == "MESH_SEQUENCE_CACHE"]
             file_list = [file for file in bpy.data.cache_files
@@ -52,15 +53,15 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             modifier = obj.modifiers.new(
                 name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
-            bpy.ops.cachefile.open(filepath=libpath.as_posix())
             modifier.cache_file = bpy.data.cache_files[-1]
-            modifier.cache_file.name = os.path.basename(libpath.as_posix())
+            cache_file_name = os.path.basename(libpath.as_posix())
+            modifier.cache_file.name = cache_file_name
             modifier.cache_file.filepath = libpath.as_posix()
             modifier.cache_file.scale = 1.0
             bpy.context.evaluated_depsgraph_get()
 
             modifier.object_path = (
-                modifier.cache_file.object_paths[0].path)
+                modifier.cache_file.object_paths[i].path)
 
         return libpath
 

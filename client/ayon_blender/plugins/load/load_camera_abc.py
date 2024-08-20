@@ -183,7 +183,8 @@ class AbcCameraLoader(plugin.BlenderLoader):
             self.log.info("Library already loaded, not updating...")
             return
 
-        for obj in asset_group.children:
+        bpy.ops.cachefile.open(filepath=libpath.as_posix())
+        for i, obj in enumerate(asset_group.children):
             names = [constraint.name for constraint in obj.constraints
                         if constraint.type == "TRANSFORM_CACHE"]
             file_list = [file for file in bpy.data.cache_files
@@ -195,7 +196,6 @@ class AbcCameraLoader(plugin.BlenderLoader):
                 bpy.data.batch_remove(file_list)
 
             constraint = obj.constraints.new("TRANSFORM_CACHE")
-            bpy.ops.cachefile.open(filepath=libpath.as_posix())
             constraint.cache_file = bpy.data.cache_files[-1]
             constraint.cache_file.name = os.path.basename(libpath)
             constraint.cache_file.filepath = libpath.as_posix()
@@ -203,7 +203,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
             bpy.context.evaluated_depsgraph_get()
 
             constraint.object_path = (
-                constraint.cache_file.object_paths[0].path)
+                constraint.cache_file.object_paths[i].path)
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
