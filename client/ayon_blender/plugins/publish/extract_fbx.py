@@ -3,8 +3,7 @@ import os
 import bpy
 
 from ayon_core.pipeline import publish
-from ayon_core.lib import NumberDef
-from ayon_blender.api import plugin, lib
+from ayon_blender.api import plugin
 
 
 class ExtractFBX(
