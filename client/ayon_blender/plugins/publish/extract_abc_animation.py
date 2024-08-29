@@ -59,7 +59,6 @@ class ExtractAnimationABC(
             "frame_start": instance.data.get("frameStart"),
             "frame_end": instance.data.get("frameEnd"),
             "frame_step": instance.data.get("frameStep"),
-            "render.fps": instance.data.get("fps")
         }
         # Skip None value overrides
         scene_overrides = {
