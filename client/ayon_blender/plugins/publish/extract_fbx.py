@@ -88,13 +88,4 @@ class ExtractFBX(
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
 
-    @classmethod
-    def get_attribute_defs(cls):
-        return [
-            NumberDef("unitScale",
-                      label="Unit Scale (FBX)",
-                      default=1.0,
-                      decimals=4,
-                      tooltip="Scale of the model, valid only for FBX export.")
-        ]
 
