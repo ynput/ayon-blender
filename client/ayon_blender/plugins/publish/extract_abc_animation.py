@@ -65,8 +65,6 @@ class ExtractAnimationABC(
             key: value for key, value in scene_overrides.items()
             if value is not None
         }
-        if "render.fps" in scene_overrides:
-            scene_overrides["render.fps_base"] = 1
 
         with lib.attribute_overrides(bpy.context.scene, scene_overrides):
             with bpy.context.temp_override(**context):
