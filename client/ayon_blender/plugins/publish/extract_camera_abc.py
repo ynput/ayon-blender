@@ -50,7 +50,6 @@ class ExtractCameraABC(
             "frame_end": instance.data.get("frameEnd"),
             "frame_step": instance.data.get("frameStep"),
             "unit_settings.scale_length": instance.data.get("unitScale"),
-            "render.fps": instance.data.get("fps")
         }
         # Skip None value overrides
         scene_overrides = {
