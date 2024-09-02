@@ -184,9 +184,10 @@ class AbcCameraLoader(plugin.BlenderLoader):
             return
 
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        for i, obj in enumerate(asset_group.children):
+        for obj in asset_group.children:
+            asset_name = obj.name.rsplit(":", 1)[-1]
             names = [constraint.name for constraint in obj.constraints
-                        if constraint.type == "TRANSFORM_CACHE"]
+                     if constraint.type == "TRANSFORM_CACHE"]
             file_list = [file for file in bpy.data.cache_files
                         if file.name.startswith(prev_filename)]
             if names:
@@ -202,8 +203,10 @@ class AbcCameraLoader(plugin.BlenderLoader):
             constraint.cache_file.scale = 1.0
             bpy.context.evaluated_depsgraph_get()
 
-            constraint.object_path = (
-                constraint.cache_file.object_paths[i].path)
+            for object_path in constraint.cache_file.object_paths:
+                base_object_name = os.path.basename(object_path.path)
+                if base_object_name.startswith(asset_name):
+                    constraint.object_path = object_path.path
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]

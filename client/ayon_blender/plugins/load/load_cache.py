@@ -40,7 +40,9 @@ class CacheModelLoader(plugin.BlenderLoader):
         to update the filepath of the alembic.
         """
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        for i, obj in enumerate(asset_group.children):
+        for obj in asset_group.children:
+            asset_name = obj.name.rsplit(":", 1)[-1]
+            print(asset_name)
             names = [modifier.name for modifier in obj.modifiers
                      if modifier.type == "MESH_SEQUENCE_CACHE"]
             file_list = [file for file in bpy.data.cache_files
@@ -59,9 +61,10 @@ class CacheModelLoader(plugin.BlenderLoader):
             modifier.cache_file.filepath = libpath.as_posix()
             modifier.cache_file.scale = 1.0
             bpy.context.evaluated_depsgraph_get()
-
-            modifier.object_path = (
-                modifier.cache_file.object_paths[i].path)
+            for object_path in modifier.cache_file.object_paths:
+                base_object_name = os.path.basename(object_path.path)
+                if base_object_name.startswith(asset_name):
+                    modifier.object_path = object_path.path
 
         return libpath
 
