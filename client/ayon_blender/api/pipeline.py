@@ -254,7 +254,7 @@ def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
     }
 
 
-def set_frame_range(data):
+def set_frame_range(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
@@ -262,15 +262,16 @@ def set_frame_range(data):
     frameEnd = scene.frame_end
     fps = scene.render.fps / scene.render.fps_base
 
-    if not data:
+    if not entity:
         return
 
-    if data.get("frameStart"):
-        frameStart = data.get("frameStart")
-    if data.get("frameEnd"):
-        frameEnd = data.get("frameEnd")
-    if data.get("fps"):
-        fps = data.get("fps")
+    attrib = entity["attrib"]
+    if attrib.get("frameStart"):
+        frameStart = attrib.get("frameStart")
+    if attrib.get("frameEnd"):
+        frameEnd = attrib.get("frameEnd")
+    if attrib.get("fps"):
+        fps = attrib.get("fps")
 
     scene.frame_start = frameStart
     scene.frame_end = frameEnd
@@ -278,20 +279,21 @@ def set_frame_range(data):
     scene.render.fps_base = round(fps) / fps
 
 
-def set_resolution(data):
+def set_resolution(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
     resolution_x = scene.render.resolution_x
     resolution_y = scene.render.resolution_y
 
-    if not data:
+    if not entity:
         return
 
-    if data.get("resolutionWidth"):
-        resolution_x = data.get("resolutionWidth")
-    if data.get("resolutionHeight"):
-        resolution_y = data.get("resolutionHeight")
+    attrib = entity["attrib"]
+    if attrib.get("resolutionWidth"):
+        resolution_x = attrib.get("resolutionWidth")
+    if attrib.get("resolutionHeight"):
+        resolution_y = attrib.get("resolutionHeight")
 
     scene.render.resolution_x = resolution_x
     scene.render.resolution_y = resolution_y
@@ -313,12 +315,12 @@ def on_new():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_current_task_entity()
+    task_entity = get_current_task_entity()
 
     if set_resolution_startup:
-        set_resolution(data)
+        set_resolution(task_entity)
     if set_frames_startup:
-        set_frame_range(data)
+        set_frame_range(task_entity)
 
     unit_scale_settings = settings.get("unit_scale_settings")
     set_unit_scale_from_settings(unit_scale_settings=unit_scale_settings)
@@ -331,12 +333,12 @@ def on_open():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_current_task_entity()
+    task_entity = get_current_task_entity()
 
     if set_resolution_startup:
-        set_resolution(data)
+        set_resolution(task_entity)
     if set_frames_startup:
-        set_frame_range(data)
+        set_frame_range(task_entity)
 
     unit_scale_settings = settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
