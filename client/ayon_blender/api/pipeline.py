@@ -258,8 +258,8 @@ def set_frame_range(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
-    frameStart = scene.frame_start
-    frameEnd = scene.frame_end
+    frame_start = scene.frame_start
+    frame_end = scene.frame_end
     fps = scene.render.fps / scene.render.fps_base
 
     if not entity:
@@ -267,14 +267,14 @@ def set_frame_range(entity: dict):
 
     attrib = entity["attrib"]
     if attrib.get("frameStart"):
-        frameStart = attrib.get("frameStart")
+        frame_start = attrib.get("frameStart")
     if attrib.get("frameEnd"):
-        frameEnd = attrib.get("frameEnd")
+        frame_end = attrib.get("frameEnd")
     if attrib.get("fps"):
         fps = attrib.get("fps")
 
-    scene.frame_start = frameStart
-    scene.frame_end = frameEnd
+    scene.frame_start = frame_start
+    scene.frame_end = frame_end
     scene.render.fps = round(fps)
     scene.render.fps_base = round(fps) / fps
 
