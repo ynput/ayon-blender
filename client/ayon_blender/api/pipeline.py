@@ -273,7 +273,7 @@ def set_frame_range(entity: dict):
     if attrib.get("fps"):
         fps = attrib.get("fps")
 
-    # Should handles be included?
+    # Should handles be included, defined by settings
     settings = get_project_settings(get_current_project_name())
     task_type = attrib.get("taskType")
     include_handles_settings = settings["blender"]["include_handles"]
