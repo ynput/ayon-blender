@@ -3,7 +3,7 @@ from ayon_server.settings import (
     SettingsField,
     TemplateWorkfileBaseOptions,
 )
-
+from .include_handles import IncludeHandlesModel, DEFAULT_INCLUDE_HANDLES
 from .imageio import BlenderImageIOModel
 from .publish_plugins import (
     PublishPluginsModel,
@@ -37,6 +37,10 @@ class BlenderSettings(BaseSettingsModel):
         True,
         title="Set Start/End Frames and FPS on Startup"
     )
+    include_handles: IncludeHandlesModel = SettingsField(
+        default_factory=IncludeHandlesModel,
+        title="Include/Exclude Handles in default playback & render range"
+    )
     imageio: BlenderImageIOModel = SettingsField(
         default_factory=BlenderImageIOModel,
         title="Color Management (ImageIO)"
@@ -61,6 +65,7 @@ DEFAULT_VALUES = {
     },
     "set_frames_startup": True,
     "set_resolution_startup": True,
+    "include_handles": DEFAULT_INCLUDE_HANDLES,
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
     "workfile_builder": {
