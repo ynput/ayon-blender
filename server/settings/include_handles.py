@@ -16,7 +16,7 @@ class IncludeByTaskTypeModel(BaseSettingsModel):
 
 class IncludeHandlesModel(BaseSettingsModel):
     include_handles_default: bool = SettingsField(
-        True, title="Include handles by default"
+        False, title="Include handles by default"
     )
     per_task_type: list[IncludeByTaskTypeModel] = SettingsField(
         default_factory=list,
