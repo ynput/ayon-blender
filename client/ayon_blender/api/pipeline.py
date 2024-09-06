@@ -30,7 +30,8 @@ from ayon_core.pipeline.context_tools import (
 from ayon_core.lib import (
     Logger,
     register_event_callback,
-    emit_event
+    emit_event,
+    filter_profiles
 )
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
@@ -272,6 +273,24 @@ def set_frame_range(entity: dict):
         frame_end = attrib.get("frameEnd")
     if attrib.get("fps"):
         fps = attrib.get("fps")
+
+    # Should handles be included, defined by settings
+    settings = get_project_settings(get_current_project_name())
+    task_type = entity.get("taskType")
+    include_handles_settings = settings["blender"]["include_handles"]
+    include_handles = include_handles_settings["include_handles_default"]
+    profile = filter_profiles(
+        include_handles_settings["profiles"],
+        key_values={
+            "task_types": task_type,
+            "task_names": entity["name"]
+        }
+    )
+    if profile:
+        include_handles = profile["include_handles"]
+    if include_handles:
+        frame_start -= int(attrib.get("handleStart", 0))
+        frame_end += int(attrib.get("handleEnd", 0))
 
     scene.frame_start = frame_start
     scene.frame_end = frame_end

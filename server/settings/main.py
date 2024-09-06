@@ -2,8 +2,8 @@ from ayon_server.settings import (
     BaseSettingsModel,
     SettingsField,
     TemplateWorkfileBaseOptions,
+    task_types_enum,
 )
-
 from .imageio import BlenderImageIOModel
 from .publish_plugins import (
     PublishPluginsModel,
@@ -24,6 +24,31 @@ class UnitScaleSettingsModel(BaseSettingsModel):
     )
 
 
+class IncludeHandlesProfilesModel(BaseSettingsModel):
+    task_types: list[str] = SettingsField(
+        default_factory=list,
+        title="Task Types",
+        description="Filter by task types",
+        enum_resolver=task_types_enum,
+    )
+    task_names: list[str] = SettingsField(
+        default_factory=list,
+        title="Task Names",
+        description="Filter by task names.",
+    )
+    include_handles: bool = SettingsField(True, title="Include handles")
+
+
+class IncludeHandlesModel(BaseSettingsModel):
+    include_handles_default: bool = SettingsField(
+        False, title="Include handles by default"
+    )
+    profiles: list[IncludeHandlesProfilesModel] = SettingsField(
+        default_factory=list,
+        title="Include/exclude handles by profiles"
+    )
+
+
 class BlenderSettings(BaseSettingsModel):
     unit_scale_settings: UnitScaleSettingsModel = SettingsField(
         default_factory=UnitScaleSettingsModel,
@@ -36,6 +61,10 @@ class BlenderSettings(BaseSettingsModel):
     set_frames_startup: bool = SettingsField(
         True,
         title="Set Start/End Frames and FPS on Startup"
+    )
+    include_handles: IncludeHandlesModel = SettingsField(
+        default_factory=IncludeHandlesModel,
+        title="Include/Exclude Handles in default playback & render range"
     )
     imageio: BlenderImageIOModel = SettingsField(
         default_factory=BlenderImageIOModel,
@@ -61,6 +90,10 @@ DEFAULT_VALUES = {
     },
     "set_frames_startup": True,
     "set_resolution_startup": True,
+    "include_handles": {
+        "include_handles_default": False,
+        "profiles": []
+    },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
     "workfile_builder": {
