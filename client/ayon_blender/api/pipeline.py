@@ -275,7 +275,7 @@ def set_frame_range(entity: dict):
 
     # Should handles be included, defined by settings
     settings = get_project_settings(get_current_project_name())
-    task_type = attrib.get("taskType")
+    task_type = entity.get("taskType")
     include_handles_settings = settings["blender"]["include_handles"]
     include_handles = include_handles_settings["include_handles_default"]
     for item in include_handles_settings["per_task_type"]:
