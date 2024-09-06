@@ -2,8 +2,8 @@ from ayon_server.settings import (
     BaseSettingsModel,
     SettingsField,
     TemplateWorkfileBaseOptions,
+    task_types_enum,
 )
-from .include_handles import IncludeHandlesModel, DEFAULT_INCLUDE_HANDLES
 from .imageio import BlenderImageIOModel
 from .publish_plugins import (
     PublishPluginsModel,
@@ -21,6 +21,25 @@ class UnitScaleSettingsModel(BaseSettingsModel):
         False, title="Apply on Opening Existing Files")
     base_file_unit_scale: float = SettingsField(
         1.0, title="Base File Unit Scale"
+    )
+
+
+class IncludeByTaskTypeModel(BaseSettingsModel):
+    task_type: list[str] = SettingsField(
+        default_factory=list,
+        title="Task types",
+        enum_resolver=task_types_enum
+    )
+    include_handles: bool = SettingsField(True, title="Include handles")
+
+
+class IncludeHandlesModel(BaseSettingsModel):
+    include_handles_default: bool = SettingsField(
+        False, title="Include handles by default"
+    )
+    per_task_type: list[IncludeByTaskTypeModel] = SettingsField(
+        default_factory=list,
+        title="Include/exclude handles by task type"
     )
 
 
@@ -65,7 +84,10 @@ DEFAULT_VALUES = {
     },
     "set_frames_startup": True,
     "set_resolution_startup": True,
-    "include_handles": DEFAULT_INCLUDE_HANDLES,
+    "include_handles": {
+        "include_handles_default": False,
+        "per_task_type": []
+    },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
     "workfile_builder": {
