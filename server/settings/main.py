@@ -24,11 +24,17 @@ class UnitScaleSettingsModel(BaseSettingsModel):
     )
 
 
-class IncludeByTaskTypeModel(BaseSettingsModel):
+class IncludeHandlesProfilesModel(BaseSettingsModel):
     task_types: list[str] = SettingsField(
         default_factory=list,
-        title="Task types",
-        enum_resolver=task_types_enum
+        title="Task Types",
+        description="Filter by task types",
+        enum_resolver=task_types_enum,
+    )
+    task_names: list[str] = SettingsField(
+        default_factory=list,
+        title="Task Names",
+        description="Filter by task names.",
     )
     include_handles: bool = SettingsField(True, title="Include handles")
 
@@ -37,9 +43,9 @@ class IncludeHandlesModel(BaseSettingsModel):
     include_handles_default: bool = SettingsField(
         False, title="Include handles by default"
     )
-    per_task_type: list[IncludeByTaskTypeModel] = SettingsField(
+    profiles: list[IncludeHandlesProfilesModel] = SettingsField(
         default_factory=list,
-        title="Include/exclude handles by task type"
+        title="Include/exclude handles by profiles"
     )
 
 
@@ -86,7 +92,7 @@ DEFAULT_VALUES = {
     "set_resolution_startup": True,
     "include_handles": {
         "include_handles_default": False,
-        "per_task_type": []
+        "profiles": []
     },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
