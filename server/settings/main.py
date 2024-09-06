@@ -25,7 +25,7 @@ class UnitScaleSettingsModel(BaseSettingsModel):
 
 
 class IncludeByTaskTypeModel(BaseSettingsModel):
-    task_type: list[str] = SettingsField(
+    task_types: list[str] = SettingsField(
         default_factory=list,
         title="Task types",
         enum_resolver=task_types_enum

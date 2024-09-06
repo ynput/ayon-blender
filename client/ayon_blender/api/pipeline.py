@@ -279,7 +279,7 @@ def set_frame_range(entity: dict):
     include_handles_settings = settings["blender"]["include_handles"]
     include_handles = include_handles_settings["include_handles_default"]
     for item in include_handles_settings["per_task_type"]:
-        if task_type in item["task_type"]:
+        if task_type in item["task_types"]:
             include_handles = item["include_handles"]
             break
     if include_handles:
