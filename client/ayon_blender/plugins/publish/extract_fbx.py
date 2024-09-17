@@ -55,9 +55,6 @@ class ExtractFBX(
                 new_materials.append(mat)
                 new_materials_objs.append(obj)
 
-        scale_length = bpy.context.scene.unit_settings.scale_length
-        bpy.context.scene.unit_settings.scale_length = 0.01
-
         with bpy.context.temp_override(**context):
             # We export the fbx
             bpy.ops.export_scene.fbx(
@@ -67,8 +64,6 @@ class ExtractFBX(
                 mesh_smooth_type='FACE',
                 add_leaf_bones=False
             )
-
-        bpy.context.scene.unit_settings.scale_length = scale_length
 
         plugin.deselect_all()
 
@@ -91,3 +86,5 @@ class ExtractFBX(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
+
+
