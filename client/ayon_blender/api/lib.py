@@ -6,8 +6,11 @@ from typing import Dict, List, Union
 
 import bpy
 import addon_utils
-from ayon_core.lib import Logger
-from ayon_core.lib import NumberDef
+from ayon_core.lib import (
+    Logger,
+    NumberDef
+)
+from ayon_core.pipeline.create import CreateContext
 
 from . import pipeline
 
@@ -485,18 +488,35 @@ def attribute_overrides(
             setattr_deep(obj, key, value)
 
 
-def collect_animation_defs(fps=False):
-    """
-    Get the basic animation attribute definitions for the publisher.
+def collect_animation_defs(create_context, step=True, fps=False):
+    """Get the basic animation attribute definitions for the publisher.
+
+    Arguments:
+        create_context (CreateContext): The context of publisher will be
+            used to define the defaults for the attributes to use the current
+            context's entity frame range as default values.
+        step (bool): Whether to include `step` attribute definition.
+        fps (bool): Whether to include `fps` attribute definition.
 
     Returns:
-        OrderedDict
+        List[NumberDef]: List of number attribute definitions.
+
     """
 
     # get scene values as defaults
     scene = bpy.context.scene
-    frame_start = scene.frame_start
-    frame_end = scene.frame_end
+    # frame_start = scene.frame_start
+    # frame_end = scene.frame_end
+    # handle_start = 0
+    # handle_end = 0
+
+    # use task entity attributes to set defaults based on current context
+    task_entity = create_context.get_current_task_entity()
+    attrib: dict = task_entity["attrib"]
+    frame_start = attrib["frameStart"]
+    frame_end = attrib["frameEnd"]
+    handle_start = attrib["handleStart"]
+    handle_end = attrib["handleEnd"]
 
     # build attributes
     defs = [
@@ -508,13 +528,29 @@ def collect_animation_defs(fps=False):
                   label="Frame End",
                   default=frame_end,
                   decimals=0),
-        NumberDef("step",
-                  label="Step size",
-                  tooltip="Number of frames to skip forward while rendering/"
-                          "playing back each frame",
-                  default=1,
+        NumberDef("handleStart",
+                  label="Handle Start",
+                  tooltip="Frames added before frame start to use as handles.",
+                  default=handle_start,
+                  decimals=0),
+        NumberDef("handleEnd",
+                  label="Handle End",
+                  tooltip="Frames added after frame end to use as handles.",
+                  default=handle_end,
                   decimals=0),
     ]
+
+    if step:
+        defs.append(
+            NumberDef(
+                "step",
+                label="Step size",
+                tooltip="Number of frames to skip forward while rendering/"
+                        "playing back each frame",
+                default=1,
+                decimals=0
+            )
+        )
 
     if fps:
         current_fps = scene.render.fps / scene.render.fps_base
