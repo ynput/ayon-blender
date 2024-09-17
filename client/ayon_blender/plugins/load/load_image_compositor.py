@@ -85,6 +85,11 @@ class LoadImageCompositor(plugin.BlenderLoader):
         self.set_source_and_colorspace(context, img_comp_node)
         self.remove_image_if_unused(old_image)
 
+        # Update representation id
+        lib.imprint(img_comp_node, {
+            "representation": context["representation"]["id"]
+        })
+
     def set_source_and_colorspace(
         self,
         context: dict,
