@@ -12,7 +12,7 @@ from ayon_core.lib import (
 )
 
 if TYPE_CHECKING:
-    from ayon_core.pipeline.create import CreateContext
+    from ayon_core.pipeline.create import CreateContext  # noqa: E401
 
 from . import pipeline
 
