@@ -137,7 +137,7 @@ class LoadImageCompositor(plugin.BlenderLoader):
 
     def remove_image_if_unused(self, image: bpy.types.Image):
         if image and not image.users:
-            self.log.debug(f"Removing unused image: %s", image.name)
+            self.log.debug("Removing unused image: %s", image.name)
             bpy.data.images.remove(image)
 
     def switch(self, container, context):
