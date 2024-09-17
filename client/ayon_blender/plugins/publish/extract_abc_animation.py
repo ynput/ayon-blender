@@ -3,7 +3,7 @@ import os
 import bpy
 
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 
 
 class ExtractAnimationABC(
@@ -55,13 +55,25 @@ class ExtractAnimationABC(
         context = plugin.create_blender_context(
             active=asset_group, selected=selected)
 
-        with bpy.context.temp_override(**context):
-            # We export the abc
-            bpy.ops.wm.alembic_export(
-                filepath=filepath,
-                selected=True,
-                flatten=False
-            )
+        scene_overrides = {
+            "frame_start": instance.data.get("frameStart"),
+            "frame_end": instance.data.get("frameEnd"),
+            "frame_step": instance.data.get("frameStep"),
+        }
+        # Skip None value overrides
+        scene_overrides = {
+            key: value for key, value in scene_overrides.items()
+            if value is not None
+        }
+
+        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
+            with bpy.context.temp_override(**context):
+                # We export the abc
+                bpy.ops.wm.alembic_export(
+                    filepath=filepath,
+                    selected=True,
+                    flatten=False
+                )
 
         plugin.deselect_all()
 
