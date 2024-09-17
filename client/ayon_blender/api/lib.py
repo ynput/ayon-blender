@@ -2,7 +2,7 @@ import os
 import traceback
 import importlib
 import contextlib
-from typing import Dict, List, Union
+from typing import Dict, List, Union, TYPE_CHECKING
 
 import bpy
 import addon_utils
@@ -10,7 +10,9 @@ from ayon_core.lib import (
     Logger,
     NumberDef
 )
-from ayon_core.pipeline.create import CreateContext
+
+if TYPE_CHECKING:
+    from ayon_core.pipeline.create import CreateContext
 
 from . import pipeline
 
