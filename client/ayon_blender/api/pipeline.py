@@ -30,7 +30,8 @@ from ayon_core.pipeline.context_tools import (
 from ayon_core.lib import (
     Logger,
     register_event_callback,
-    emit_event
+    emit_event,
+    filter_profiles
 )
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
@@ -254,44 +255,64 @@ def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
     }
 
 
-def set_frame_range(data):
+def set_frame_range(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
-    frameStart = scene.frame_start
-    frameEnd = scene.frame_end
+    frame_start = scene.frame_start
+    frame_end = scene.frame_end
     fps = scene.render.fps / scene.render.fps_base
 
-    if not data:
+    if not entity:
         return
 
-    if data.get("frameStart"):
-        frameStart = data.get("frameStart")
-    if data.get("frameEnd"):
-        frameEnd = data.get("frameEnd")
-    if data.get("fps"):
-        fps = data.get("fps")
+    attrib = entity["attrib"]
+    if attrib.get("frameStart"):
+        frame_start = attrib.get("frameStart")
+    if attrib.get("frameEnd"):
+        frame_end = attrib.get("frameEnd")
+    if attrib.get("fps"):
+        fps = attrib.get("fps")
 
-    scene.frame_start = frameStart
-    scene.frame_end = frameEnd
+    # Should handles be included, defined by settings
+    settings = get_project_settings(get_current_project_name())
+    task_type = entity.get("taskType")
+    include_handles_settings = settings["blender"]["include_handles"]
+    include_handles = include_handles_settings["include_handles_default"]
+    profile = filter_profiles(
+        include_handles_settings["profiles"],
+        key_values={
+            "task_types": task_type,
+            "task_names": entity["name"]
+        }
+    )
+    if profile:
+        include_handles = profile["include_handles"]
+    if include_handles:
+        frame_start -= int(attrib.get("handleStart", 0))
+        frame_end += int(attrib.get("handleEnd", 0))
+
+    scene.frame_start = frame_start
+    scene.frame_end = frame_end
     scene.render.fps = round(fps)
     scene.render.fps_base = round(fps) / fps
 
 
-def set_resolution(data):
+def set_resolution(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
     resolution_x = scene.render.resolution_x
     resolution_y = scene.render.resolution_y
 
-    if not data:
+    if not entity:
         return
 
-    if data.get("resolutionWidth"):
-        resolution_x = data.get("resolutionWidth")
-    if data.get("resolutionHeight"):
-        resolution_y = data.get("resolutionHeight")
+    attrib = entity["attrib"]
+    if attrib.get("resolutionWidth"):
+        resolution_x = attrib.get("resolutionWidth")
+    if attrib.get("resolutionHeight"):
+        resolution_y = attrib.get("resolutionHeight")
 
     scene.render.resolution_x = resolution_x
     scene.render.resolution_y = resolution_y
@@ -313,12 +334,12 @@ def on_new():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_current_task_entity()
+    task_entity = get_current_task_entity()
 
     if set_resolution_startup:
-        set_resolution(data)
+        set_resolution(task_entity)
     if set_frames_startup:
-        set_frame_range(data)
+        set_frame_range(task_entity)
 
     unit_scale_settings = settings.get("unit_scale_settings")
     set_unit_scale_from_settings(unit_scale_settings=unit_scale_settings)
@@ -331,12 +352,12 @@ def on_open():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_current_task_entity()
+    task_entity = get_current_task_entity()
 
     if set_resolution_startup:
-        set_resolution(data)
+        set_resolution(task_entity)
     if set_frames_startup:
-        set_frame_range(data)
+        set_frame_range(task_entity)
 
     unit_scale_settings = settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")

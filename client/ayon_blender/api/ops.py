@@ -191,7 +191,7 @@ def _process_app_events() -> Optional[float]:
 
         # Refresh Manager
         if GlobalClass.app:
-            manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
+            manager = BlenderApplication.get_window("WM_OT_avalon_manager")
             if manager:
                 manager.refresh()
 
@@ -369,8 +369,8 @@ class SetFrameRange(bpy.types.Operator):
     bl_label = "Set Frame Range"
 
     def execute(self, context):
-        data = get_current_task_entity()
-        pipeline.set_frame_range(data)
+        task_entity = get_current_task_entity()
+        pipeline.set_frame_range(task_entity)
         return {"FINISHED"}
 
 
@@ -379,8 +379,8 @@ class SetResolution(bpy.types.Operator):
     bl_label = "Set Resolution"
 
     def execute(self, context):
-        data = get_current_task_entity()
-        pipeline.set_resolution(data)
+        task_entity = get_current_task_entity()
+        pipeline.set_resolution(task_entity)
         return {"FINISHED"}
 
 
