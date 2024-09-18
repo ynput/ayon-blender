@@ -11,7 +11,7 @@ from ayon_blender.api.pipeline import AVALON_CONTAINER_ID
 class LoadImageCompositor(plugin.BlenderLoader):
     """Load media to the compositor."""
 
-    product_types = {"render"}
+    product_types = {"render", "image", "plate"}
     representations = {"*"}
 
     label = "Load in Compositor"
