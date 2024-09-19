@@ -83,10 +83,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         ext = render_data.get("image_format")
         multilayer = render_data.get("multilayer_exr")
 
-        frame_start = context.data["frameStart"]
-        frame_end = context.data["frameEnd"]
-        frame_handle_start = context.data["frameStartHandle"]
-        frame_handle_end = context.data["frameEndHandle"]
+        frame_start = instance.data["frameStartHandle"]
+        frame_end = instance.data["frameEndHandle"]
 
         expected_beauty = self.generate_expected_beauty(
             render_product, int(frame_start), int(frame_end),
@@ -100,12 +98,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
         instance.data.update({
             "families": ["render", "render.farm"],
-            "frameStart": frame_start,
-            "frameEnd": frame_end,
-            "frameStartHandle": frame_handle_start,
-            "frameEndHandle": frame_handle_end,
             "fps": context.data["fps"],
-            "byFrameStep": bpy.context.scene.frame_step,
+            "byFrameStep": instance.data["creator_attributes"].get("step", 1),
             "review": render_data.get("review", False),
             "multipartExr": ext == "exr" and multilayer,
             "farm": True,
@@ -116,5 +110,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "colorspaceConfig": "",
             "colorspaceDisplay": "sRGB",
             "colorspaceView": "ACES 1.0 SDR-video",
-            "renderProducts": colorspace.ARenderProduct(),
+            "renderProducts": colorspace.ARenderProduct(
+                frame_start=frame_start,
+                frame_end=frame_end
+            ),
         })
