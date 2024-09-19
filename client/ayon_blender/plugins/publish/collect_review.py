@@ -48,8 +48,6 @@ class CollectReview(plugin.BlenderInstancePlugin):
 
             instance.data.update({
                 "review_camera": camera,
-                "frameStart": instance.context.data["frameStart"],
-                "frameEnd": instance.context.data["frameEnd"],
                 "fps": instance.context.data["fps"],
                 "isolate": isolate_objects,
             })

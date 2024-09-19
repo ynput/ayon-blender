@@ -46,9 +46,6 @@ class ExtractCameraABC(
             active=active, selected=selected)
 
         scene_overrides = {
-            "frame_start": instance.data.get("frameStart"),
-            "frame_end": instance.data.get("frameEnd"),
-            "frame_step": instance.data.get("frameStep"),
             "unit_settings.scale_length": instance.data.get("unitScale"),
         }
         # Skip None value overrides
@@ -56,8 +53,6 @@ class ExtractCameraABC(
             key: value for key, value in scene_overrides.items()
             if value is not None
         }
-        if "render.fps" in scene_overrides:
-            scene_overrides["render.fps_base"] = 1
 
         with lib.attribute_overrides(bpy.context.scene, scene_overrides):
             with bpy.context.temp_override(**context):
@@ -65,7 +60,9 @@ class ExtractCameraABC(
                 bpy.ops.wm.alembic_export(
                     filepath=filepath,
                     selected=True,
-                    flatten=True
+                    flatten=True,
+                    start=instance.data["frameStartHandle"],
+                    end=instance.data["frameEndHandle"]
                 )
 
         plugin.deselect_all()
