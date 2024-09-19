@@ -110,5 +110,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "colorspaceConfig": "",
             "colorspaceDisplay": "sRGB",
             "colorspaceView": "ACES 1.0 SDR-video",
-            "renderProducts": colorspace.ARenderProduct(),
+            "renderProducts": colorspace.ARenderProduct(
+                frame_start=frame_start,
+                frame_end=frame_end
+            ),
         })
