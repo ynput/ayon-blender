@@ -601,6 +601,7 @@ def parse_container(container: bpy.types.Collection,
 
     # Append transient data
     data["objectName"] = container.name
+    data["node"] = container  # store parsed object for easy access in loader
 
     if validate:
         schema.validate(data)
@@ -619,6 +620,18 @@ def ls() -> Iterator:
     for id_type in {AYON_CONTAINER_ID, AVALON_CONTAINER_ID}:
         for container in lib.lsattr("id", id_type):
             yield parse_container(container)
+
+    # Compositor nodes are not in `bpy.data` that `lib.lsattr` looks in.
+    node_tree = bpy.context.scene.node_tree
+    if node_tree:
+        for node in node_tree.nodes:
+            if not node.get(AVALON_PROPERTY):
+                continue
+
+            if node.get(AVALON_PROPERTY).get("id") != id_type:
+                continue
+
+            yield parse_container(node)
 
 
 def publish():
