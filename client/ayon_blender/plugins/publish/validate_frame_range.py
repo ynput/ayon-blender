@@ -42,14 +42,8 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
             return
 
         frame_range = self.get_expected_frame_range(instance)
-        scene = bpy.context.scene
-
-        if instance.data["productType"] == "render":
-            inst_frame_start = scene.frame_start
-            inst_frame_end = scene.frame_end
-        else:
-            inst_frame_start = instance.data["frameStart"]
-            inst_frame_end = instance.data["frameEnd"]
+        inst_frame_start = instance.data["frameStart"]
+        inst_frame_end = instance.data["frameEnd"]
 
         if inst_frame_start is None or inst_frame_end is None:
             raise KnownPublishError(
