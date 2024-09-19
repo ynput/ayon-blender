@@ -144,7 +144,3 @@ class LoadImageCompositor(plugin.BlenderLoader):
         if image and not image.users:
             self.log.debug("Removing unused image: %s", image.name)
             bpy.data.images.remove(image)
-
-    def switch(self, container, context):
-        # Support switch in scene inventory
-        self.update(container, context)
