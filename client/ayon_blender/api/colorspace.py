@@ -1,7 +1,5 @@
 import attr
 
-import bpy
-
 
 @attr.s
 class LayerMetadata(object):
