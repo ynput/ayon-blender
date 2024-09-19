@@ -1,5 +1,4 @@
 from typing import Dict
-import bpy
 import pyblish.api
 
 from ayon_core.pipeline import (
