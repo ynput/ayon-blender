@@ -2,11 +2,12 @@ import os
 
 import bpy
 
-from ayon_core.pipeline import KnownPublishError
+from ayon_core.pipeline import KnownPublishError, OptionalPyblishPluginMixin
 from ayon_blender.api import plugin, lib
 
 
-class ExtractUSD(plugin.BlenderExtractor):
+class ExtractUSD(plugin.BlenderExtractor,
+                 OptionalPyblishPluginMixin):
     """Extract as USD."""
 
     label = "Extract USD"
@@ -14,6 +15,8 @@ class ExtractUSD(plugin.BlenderExtractor):
     families = ["usd"]
 
     def process(self, instance):
+        if not self.is_active(instance.data):
+            return
 
         # Ignore runtime instances (e.g. USD layers)
         # TODO: This is better done via more specific `families`
