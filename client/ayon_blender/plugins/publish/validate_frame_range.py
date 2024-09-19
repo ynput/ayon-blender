@@ -92,19 +92,13 @@ class ValidateFrameRange(pyblish.api.InstancePlugin,
     def repair(cls, instance):
         frame_range = cls.get_expected_frame_range(instance)
 
-        if instance.data["productType"] == "render":
-            # Render uses scene frame range
-            bpy.context.scene.frame_start = frame_range["frameStart"]
-            bpy.context.scene.frame_end = frame_range["frameEnd"]
+        # Update the frame range attributes on the instance
+        create_context = instance.context.data["create_context"]
+        create_instance = create_context.get_instance_by_id(
+            instance.data["instance_id"]
+        )
 
-        else:
-            # Update the frame range attributes on the instance
-            create_context = instance.context.data["create_context"]
-            create_instance = create_context.get_instance_by_id(
-                instance.data["instance_id"]
-            )
-
-            creator_attributes = create_instance["creator_attributes"]
-            creator_attributes["frameStart"] = frame_range["frameStart"]
-            creator_attributes["frameEnd"] = frame_range["frameEnd"]
-            create_context.save_changes()
+        creator_attributes = create_instance["creator_attributes"]
+        creator_attributes["frameStart"] = frame_range["frameStart"]
+        creator_attributes["frameEnd"] = frame_range["frameEnd"]
+        create_context.save_changes()
