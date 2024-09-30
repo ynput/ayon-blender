@@ -42,7 +42,6 @@ class CacheModelLoader(plugin.BlenderLoader):
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
         for obj in asset_group.children:
             asset_name = obj.name.rsplit(":", 1)[-1]
-            print(asset_name)
             names = [modifier.name for modifier in obj.modifiers
                      if modifier.type == "MESH_SEQUENCE_CACHE"]
             file_list = [file for file in bpy.data.cache_files
@@ -55,17 +54,19 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             modifier = obj.modifiers.new(
                 name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
-            modifier.cache_file = bpy.data.cache_files[-1]
-            cache_file_name = os.path.basename(libpath.as_posix())
-            modifier.cache_file.name = cache_file_name
-            modifier.cache_file.filepath = libpath.as_posix()
-            modifier.cache_file.scale = 1.0
-            bpy.context.evaluated_depsgraph_get()
-            for object_path in modifier.cache_file.object_paths:
-                base_object_name = os.path.basename(object_path.path)
-                if base_object_name.startswith(asset_name):
-                    modifier.object_path = object_path.path
-
+            if bpy.data.cache_files:
+                modifier.cache_file = bpy.data.cache_files[-1]
+                cache_file_name = os.path.basename(libpath.as_posix())
+                modifier.cache_file.name = cache_file_name
+                modifier.cache_file.filepath = libpath.as_posix()
+                modifier.cache_file.scale = 1.0
+                bpy.context.evaluated_depsgraph_get()
+                for object_path in modifier.cache_file.object_paths:
+                    base_object_name = os.path.basename(object_path.path)
+                    if base_object_name.startswith(asset_name):
+                        modifier.object_path = object_path.path
+                if not modifier.object_path:
+                    modifier.object_path = modifier.cache_file.object_paths[-1].path
         return libpath
 
     def _remove(self, asset_group):
