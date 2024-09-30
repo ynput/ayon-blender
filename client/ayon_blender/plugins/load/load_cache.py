@@ -54,7 +54,7 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             modifier = obj.modifiers.new(
                 name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
-            if bpy.data.cache_files:
+            if modifier is not None:
                 modifier.cache_file = bpy.data.cache_files[-1]
                 cache_file_name = os.path.basename(libpath.as_posix())
                 modifier.cache_file.name = cache_file_name
