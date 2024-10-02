@@ -54,20 +54,20 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             modifier = obj.modifiers.new(
                 name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
-            for modifier in obj.modifiers:
-                if modifier.type == "MESH_SEQUENCE_CACHE":
-                    modifier.cache_file = bpy.data.cache_files[-1]
-                    cache_file_name = os.path.basename(libpath.as_posix())
-                    modifier.cache_file.name = cache_file_name
-                    modifier.cache_file.filepath = libpath.as_posix()
-                    modifier.cache_file.scale = 1.0
-                    bpy.context.evaluated_depsgraph_get()
-                    for object_path in modifier.cache_file.object_paths:
-                        base_object_name = os.path.basename(object_path.path)
-                        if base_object_name.startswith(asset_name):
-                            modifier.object_path = object_path.path
-                    if not modifier.object_path:
-                        modifier.object_path = modifier.cache_file.object_paths[-1].path
+            if modifier is None:
+                continue
+            modifier.cache_file = bpy.data.cache_files[-1]
+            cache_file_name = os.path.basename(libpath.as_posix())
+            modifier.cache_file.name = cache_file_name
+            modifier.cache_file.filepath = libpath.as_posix()
+            modifier.cache_file.scale = 1.0
+            bpy.context.evaluated_depsgraph_get()
+            for object_path in modifier.cache_file.object_paths:
+                base_object_name = os.path.basename(object_path.path)
+                if base_object_name.startswith(asset_name):
+                    modifier.object_path = object_path.path
+            if not modifier.object_path:
+                modifier.object_path = modifier.cache_file.object_paths[-1].path
         return libpath
 
     def _remove(self, asset_group):
