@@ -524,3 +524,18 @@ def collect_animation_defs(fps=False):
         defs.append(fps_def)
 
     return defs
+
+
+def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
+    modifiers = []
+    modifier_names = [modifier.name for modifier in obj.modifiers
+                      if modifier.type == modifier_type]
+    if modifier_names:
+        modifiers = [modifier for modifier in obj.modifiers
+                     if modifier.type == modifier_type]
+    else:
+        for sub_obj in obj.children:
+            for ob in sub_obj.children:
+                modifiers = [modifier.name for modifier in ob.modifiers
+                            if modifier.type == modifier_type]
+    return modifiers
