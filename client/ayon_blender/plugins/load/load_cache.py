@@ -5,6 +5,7 @@ from pprint import pformat
 from typing import Dict, List, Optional
 
 import bpy
+import os
 
 from ayon_core.pipeline import (
     get_representation_path,
@@ -32,6 +33,40 @@ class CacheModelLoader(plugin.BlenderLoader):
     label = "Load Cache"
     icon = "code-fork"
     color = "orange"
+
+    def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
+        """search and update path in the transform cache modifier
+        If there is no transform cache modifier, it will create one
+        to update the filepath of the alembic.
+        """
+        bpy.ops.cachefile.open(filepath=libpath.as_posix())
+        for obj in asset_group.children:
+            asset_name = obj.name.rsplit(":", 1)[-1]
+            print(asset_name)
+            names = [modifier.name for modifier in obj.modifiers
+                     if modifier.type == "MESH_SEQUENCE_CACHE"]
+            file_list = [file for file in bpy.data.cache_files
+                         if file.name.startswith(prev_filename)]
+            if names:
+                for name in names:
+                    obj.modifiers.remove(obj.modifiers.get(name))
+            if file_list:
+                bpy.data.batch_remove(file_list)
+
+            modifier = obj.modifiers.new(
+                name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
+            modifier.cache_file = bpy.data.cache_files[-1]
+            cache_file_name = os.path.basename(libpath.as_posix())
+            modifier.cache_file.name = cache_file_name
+            modifier.cache_file.filepath = libpath.as_posix()
+            modifier.cache_file.scale = 1.0
+            bpy.context.evaluated_depsgraph_get()
+            for object_path in modifier.cache_file.object_paths:
+                base_object_name = os.path.basename(object_path.path)
+                if base_object_name.startswith(asset_name):
+                    modifier.object_path = object_path.path
+
+        return libpath
 
     def _remove(self, asset_group):
         objects = list(asset_group.children)
@@ -69,33 +104,13 @@ class CacheModelLoader(plugin.BlenderLoader):
                 relative_path=relative
             )
 
-        imported = lib.get_selection()
-
-        # Use first EMPTY without parent as container
-        container = next(
-            (obj for obj in imported
-             if obj.type == "EMPTY" and not obj.parent),
-            None
-        )
-
-        objects = []
-        if container:
-            nodes = list(container.children)
-
-            for obj in nodes:
-                obj.parent = asset_group
-
-            bpy.data.objects.remove(container)
-
-            objects.extend(nodes)
-            for obj in nodes:
-                objects.extend(obj.children_recursive)
-        else:
-            for obj in imported:
-                obj.parent = asset_group
-            objects = imported
+        objects = lib.get_selection()
 
         for obj in objects:
+            # reparent top object to asset_group
+            if not obj.parent:
+                obj.parent = asset_group
+
             # Unlink the object from all collections
             collections = obj.users_collection
             for collection in collections:
@@ -245,15 +260,21 @@ class CacheModelLoader(plugin.BlenderLoader):
             self.log.info("Library already loaded, not updating...")
             return
 
-        mat = asset_group.matrix_basis.copy()
-        self._remove(asset_group)
+        if any(str(libpath).lower().endswith(ext)
+               for ext in [".usd", ".usda", ".usdc"]):
+            mat = asset_group.matrix_basis.copy()
+            self._remove(asset_group)
 
-        objects = self._process(str(libpath), asset_group, object_name)
+            objects = self._process(str(libpath), asset_group, object_name)
 
-        containers = bpy.data.collections.get(AVALON_CONTAINERS)
-        self._link_objects(objects, asset_group, containers, asset_group)
+            containers = bpy.data.collections.get(AVALON_CONTAINERS)
+            self._link_objects(objects, asset_group, containers, asset_group)
 
-        asset_group.matrix_basis = mat
+            asset_group.matrix_basis = mat
+        else:
+            prev_filename = os.path.basename(container["libpath"])
+            libpath = self._update_transform_cache_path(asset_group, libpath, prev_filename)
+
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]

@@ -2,11 +2,17 @@ import os
 import traceback
 import importlib
 import contextlib
-from typing import Dict, List, Union
+from typing import Dict, List, Union, TYPE_CHECKING
 
 import bpy
 import addon_utils
-from ayon_core.lib import Logger
+from ayon_core.lib import (
+    Logger,
+    NumberDef
+)
+
+if TYPE_CHECKING:
+    from ayon_core.pipeline.create import CreateContext  # noqa: F401
 
 from . import pipeline
 
@@ -424,3 +430,135 @@ def get_highest_root(objects):
 
     minimum_parent = min(num_parents_to_obj)
     return num_parents_to_obj[minimum_parent]
+
+
+@contextlib.contextmanager
+def attribute_overrides(
+        obj,
+        attribute_values
+):
+    """Apply attribute or property overrides during context.
+
+    Supports nested/deep overrides, that is also why it does not use **kwargs
+    as function arguments because it requires the keys to support dots (`.`).
+
+    Example:
+        >>> with attribute_overrides(scene, {
+        ...     "render.fps": 30,
+        ...     "frame_start": 1001}
+        ... ):
+        ...     print(scene.render.fps)
+        ...     print(scene.frame_start)
+        # 30
+        # 1001
+
+    Arguments:
+        obj (Any): The object to set attributes and properties on.
+        attribute_values: (dict[str, Any]): The property names mapped to the
+            values that will be applied during the context.
+    """
+    if not attribute_values:
+        # do nothing
+        yield
+        return
+
+    # Helper functions to get and set nested keys on the scene object like
+    # e.g. "scene.unit_settings.scale_length" or "scene.render.fps"
+    # by doing `setattr_deep(scene, "unit_settings.scale_length", 10)`
+    def getattr_deep(root, path):
+        for key in path.split("."):
+            root = getattr(root, key)
+        return root
+
+    def setattr_deep(root, path, value):
+        keys = path.split(".")
+        last_key = keys.pop()
+        for key in keys:
+            root = getattr(root, key)
+        return setattr(root, last_key, value)
+
+    # Get original values
+    original = {
+        key: getattr_deep(obj, key) for key in attribute_values
+    }
+    try:
+        for key, value in attribute_values.items():
+            setattr_deep(obj, key, value)
+        yield
+    finally:
+        for key, value in original.items():
+            setattr_deep(obj, key, value)
+
+
+def collect_animation_defs(create_context, step=True, fps=False):
+    """Get the basic animation attribute definitions for the publisher.
+
+    Arguments:
+        create_context (CreateContext): The context of publisher will be
+            used to define the defaults for the attributes to use the current
+            context's entity frame range as default values.
+        step (bool): Whether to include `step` attribute definition.
+        fps (bool): Whether to include `fps` attribute definition.
+
+    Returns:
+        List[NumberDef]: List of number attribute definitions.
+
+    """
+
+    # get scene values as defaults
+    scene = bpy.context.scene
+    # frame_start = scene.frame_start
+    # frame_end = scene.frame_end
+    # handle_start = 0
+    # handle_end = 0
+
+    # use task entity attributes to set defaults based on current context
+    task_entity = create_context.get_current_task_entity()
+    attrib: dict = task_entity["attrib"]
+    frame_start = attrib["frameStart"]
+    frame_end = attrib["frameEnd"]
+    handle_start = attrib["handleStart"]
+    handle_end = attrib["handleEnd"]
+
+    # build attributes
+    defs = [
+        NumberDef("frameStart",
+                  label="Frame Start",
+                  default=frame_start,
+                  decimals=0),
+        NumberDef("frameEnd",
+                  label="Frame End",
+                  default=frame_end,
+                  decimals=0),
+        NumberDef("handleStart",
+                  label="Handle Start",
+                  tooltip="Frames added before frame start to use as handles.",
+                  default=handle_start,
+                  decimals=0),
+        NumberDef("handleEnd",
+                  label="Handle End",
+                  tooltip="Frames added after frame end to use as handles.",
+                  default=handle_end,
+                  decimals=0),
+    ]
+
+    if step:
+        defs.append(
+            NumberDef(
+                "step",
+                label="Step size",
+                tooltip="Number of frames to skip forward while rendering/"
+                        "playing back each frame",
+                default=1,
+                decimals=0
+            )
+        )
+
+    if fps:
+        current_fps = scene.render.fps / scene.render.fps_base
+        fps_def = NumberDef(
+            "fps", label="FPS", default=current_fps, decimals=5
+        )
+        defs.append(fps_def)
+
+    return defs

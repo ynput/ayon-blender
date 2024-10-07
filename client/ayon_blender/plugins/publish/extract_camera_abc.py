@@ -3,7 +3,7 @@ import os
 import bpy
 
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 
 
 class ExtractCameraABC(
@@ -45,13 +45,25 @@ class ExtractCameraABC(
         context = plugin.create_blender_context(
             active=active, selected=selected)
 
-        with bpy.context.temp_override(**context):
-            # We export the abc
-            bpy.ops.wm.alembic_export(
-                filepath=filepath,
-                selected=True,
-                flatten=True
-            )
+        scene_overrides = {
+            "unit_settings.scale_length": instance.data.get("unitScale"),
+        }
+        # Skip None value overrides
+        scene_overrides = {
+            key: value for key, value in scene_overrides.items()
+            if value is not None
+        }
+
+        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
+            with bpy.context.temp_override(**context):
+                # We export the abc
+                bpy.ops.wm.alembic_export(
+                    filepath=filepath,
+                    selected=True,
+                    flatten=True,
+                    start=instance.data["frameStartHandle"],
+                    end=instance.data["frameEndHandle"]
+                )
 
         plugin.deselect_all()
 

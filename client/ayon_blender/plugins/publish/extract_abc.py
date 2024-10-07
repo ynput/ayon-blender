@@ -44,13 +44,21 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
         context = plugin.create_blender_context(
             active=asset_group, selected=selected)
 
+        # Supply frame range if set on instance
+        kwargs = {}
+        if "frameStartHandle" in instance.data:
+            kwargs["start"]: int = instance.data["frameStartHandle"]
+        if "frameEndHandle" in instance.data:
+            kwargs["end"]: int = instance.data["frameEndHandle"]
+
         with bpy.context.temp_override(**context):
             # We export the abc
             bpy.ops.wm.alembic_export(
                 filepath=filepath,
                 selected=True,
                 flatten=False,
-                subdiv_schema=attr_values.get("subdiv_schema", False)
+                subdiv_schema=attr_values.get("subdiv_schema", False),
+                **kwargs
             )
 
         plugin.deselect_all()
