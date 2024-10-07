@@ -4,7 +4,7 @@ import bpy
 
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin, lib
+from ayon_blender.api import plugin
 
 
 class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
@@ -44,28 +44,22 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
         context = plugin.create_blender_context(
             active=asset_group, selected=selected)
 
-        scene_overrides = {
-            "frame_start": instance.data.get("frameStart"),
-            "frame_end": instance.data.get("frameEnd"),
-            "frame_step": instance.data.get("frameStep"),
-        }
-        # Skip None value overrides
-        scene_overrides = {
-            key: value for key, value in scene_overrides.items()
-            if value is not None
-        }
-        if "render.fps" in scene_overrides:
-            scene_overrides["render.fps_base"] = 1
+        # Supply frame range if set on instance
+        kwargs = {}
+        if "frameStartHandle" in instance.data:
+            kwargs["start"]: int = instance.data["frameStartHandle"]
+        if "frameEndHandle" in instance.data:
+            kwargs["end"]: int = instance.data["frameEndHandle"]
 
-        with lib.attribute_overrides(bpy.context.scene, scene_overrides):
-            with bpy.context.temp_override(**context):
-                # We export the abc
-                bpy.ops.wm.alembic_export(
-                    filepath=filepath,
-                    selected=True,
-                    flatten=False,
-                    subdiv_schema=attr_values.get("subdiv_schema", False)
-                )
+        with bpy.context.temp_override(**context):
+            # We export the abc
+            bpy.ops.wm.alembic_export(
+                filepath=filepath,
+                selected=True,
+                flatten=False,
+                subdiv_schema=attr_values.get("subdiv_schema", False),
+                **kwargs
+            )
 
         plugin.deselect_all()
 
