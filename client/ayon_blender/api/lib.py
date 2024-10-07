@@ -536,6 +536,6 @@ def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
     else:
         for sub_obj in obj.children:
             for ob in sub_obj.children:
-                modifiers = [modifier.name for modifier in ob.modifiers
-                            if modifier.type == modifier_type]
+                modifiers = [modifier for modifier in ob.modifiers
+                             if modifier.type == modifier_type]
     return modifiers
