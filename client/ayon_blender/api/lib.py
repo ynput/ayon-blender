@@ -566,28 +566,14 @@ def collect_animation_defs(create_context, step=True, fps=False):
 
 def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
     modifiers_dict = {}
-    modifiers = []
-    modifier_names = [modifier.name for modifier in obj.modifiers
-                      if modifier.type == modifier_type]
-    if modifier_names:
-        modifiers = [modifier for modifier in obj.modifiers
-                     if modifier.type == modifier_type]
-        modifiers_dict = {
-            obj.name: (
-                modifier for modifier in obj.modifiers
-                if modifier.type == modifier_type
-            )
-        }
+    modifiers = [modifier for modifier in obj.modifiers
+                 if modifier.type == modifier_type]
+    if modifiers:
+        modifiers_dict[obj.name] = modifiers
     else:
         for sub_obj in obj.children:
             for ob in sub_obj.children:
                 cache_modifiers = [modifier for modifier in ob.modifiers
                                    if modifier.type == modifier_type]
-                modifiers.extend(cache_modifiers)
-                modifiers_dict.update({
-                    ob.name: (
-                        modifier for modifier in ob.modifiers
-                        if modifier.type == modifier_type
-                    )
-                })
+                modifiers_dict[ob.name] = cache_modifiers
     return modifiers_dict
