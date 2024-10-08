@@ -82,5 +82,4 @@ class ValidateDeadlinePublish(
         container = instance.data["transientData"]["instance_node"]
         prepare_rendering(container)
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
-        bpy.context.scene.render.filepath = "/tmp/"
         cls.log.debug("Reset the render output folder...")
