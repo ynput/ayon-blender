@@ -59,8 +59,7 @@ class CacheDataLoader(plugin.BlenderLoader):
             # differs in the new version.
             always_add_cache_reader=True
         )
-        after_cachefiles = list(bpy.data.cache_files)
-        cachefile = next(cache for cache in after_cachefiles
+        cachefile = next(cache for cache in bpy.data.cache_files
                          if cache not in before_cachefiles)
 
         plugin.deselect_all()
