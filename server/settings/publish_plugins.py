@@ -70,53 +70,65 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateAbsoluteDataBlockPaths: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Absolute Data Block Paths",
+        description="Checks if external data having absolute file path.",
         section="General Validators"
     )
     ValidateCameraZeroKeyframe: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate Camera Zero Keyframe"
+        title="Validate Camera Zero Keyframe",
+        description="Checks if keyframe present on the frame 0 - mostly because of asset export to UE",
     )
     ValidateFileSaved: ValidateFileSavedModel = SettingsField(
         default_factory=ValidateFileSavedModel,
         title="Validate File Saved",
+        description="Checks for workfile unsaved changes enforcing user to save the blend scene.",
     )
     ValidateInstanceEmpty: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate Instance is not Empty"
+        title="Validate Instance is not Empty",
+        description="Checks for empty publish instance sets which could result into no data when published.",
     )
     ValidateMeshHasUvs: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Mesh Has Uvs",
+        description="Checks for geometry having UV set defined.",
         section="Model Validators"
     )
     ValidateMeshNoNegativeScale: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate Mesh No Negative Scale"
+        title="Validate Mesh No Negative Scale",
+        description="Checks for object scaling in negative values which is prohibited then.",
     )
     ValidateModelMeshUvMap1: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate Model Mesh Has UV map named map1"
+        title="Validate Model Mesh Has UV map named map1",
+        description="Checks if object having UV set named meeting maya standards.",
     )
     ValidateTransformZero: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate Transform Zero"
+        title="Validate Transform Zero",
+        description="Checks for zero values in XYZ transforms",
     )
     ValidateNoColonsInName: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Validate No Colons In Name"
+        title="Validate No Colons In Name",
+        description="Checks for invalid naming format containing : within name - mostly when export to UE.",
     )
     ValidateRenderCameraIsSet: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Render Camera Is Set",
+        description="Checks for renderable camera when using Render.",
         section="Render Validators"
     )
     ValidateDeadlinePublish: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Render Output for Deadline",
+        description="Checks scene for meeting Deadline submission requirements.",
     )
     ValidateFrameRange: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Frame Range",
+        description="Checks if scene frame range matches AYON project values for the context.",
     )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,
