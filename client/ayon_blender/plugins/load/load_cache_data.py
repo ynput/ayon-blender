@@ -76,7 +76,7 @@ class CacheDataLoader(plugin.BlenderLoader):
 
     def _imprint(self, cache_file: "bpy.types.CacheFile", context):
         cache_file[AVALON_PROPERTY] = {
-            "schema": "openpype:container-2.0",
+            "schema": "ayon:container-3.0",
             "id": AVALON_CONTAINER_ID,
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
