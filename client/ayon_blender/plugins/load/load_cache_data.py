@@ -2,10 +2,25 @@ from typing import Dict, List, Optional
 
 import bpy
 
-from ayon_core.pipeline import AVALON_CONTAINER_ID
+from ayon_core.pipeline import AYON_CONTAINER_ID
 
 from ayon_blender.api.pipeline import AVALON_PROPERTY
 from ayon_blender.api import plugin
+
+
+def get_users(ID):
+    """Yield all users"""
+    if not ID.users:
+        return
+
+    for attr in dir(bpy.data):
+        data = getattr(bpy.data, attr, None)
+        if not isinstance(data, bpy.types.bpy_prop_collection):
+            continue
+
+        for obj in data:
+            if obj.user_of_id(ID):
+                yield obj
 
 
 class CacheDataLoader(plugin.BlenderLoader):
@@ -71,13 +86,15 @@ class CacheDataLoader(plugin.BlenderLoader):
     def exec_remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene."""
         datablock = container["node"]
-        bpy.data.batch_remove([datablock] + datablock.users)
+
+        users = list(get_users(datablock))
+        bpy.data.batch_remove([datablock] + users)
         return True
 
     def _imprint(self, cache_file: "bpy.types.CacheFile", context):
         cache_file[AVALON_PROPERTY] = {
             "schema": "ayon:container-3.0",
-            "id": AVALON_CONTAINER_ID,
+            "id": AYON_CONTAINER_ID,
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
 
