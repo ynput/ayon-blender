@@ -43,8 +43,6 @@ class CacheDataLoader(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
-
-        plugin.deselect_all()
         filepath = self.filepath_from_context(context)
         relative = bpy.context.preferences.filepaths.use_relative_paths
 
