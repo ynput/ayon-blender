@@ -21,7 +21,7 @@ class UnitScaleSettingsModel(BaseSettingsModel):
         False, title="Apply on Opening Existing Files")
     base_file_unit_scale: float = SettingsField(
         1.0, title="Base File Unit Scale",
-             description="Typically values multiplied / divided by 10, 100 resulting into unit conversions (e.g. 0.1, 0.01 or 100).",    
+             description="Typically increments in tenths, e.g. 0.1, 0.01 or 100.",    
     )
 
 
