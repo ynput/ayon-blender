@@ -112,7 +112,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateNoColonsInName: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate No Colons In Name",
-        description="Checks for invalid naming format containing : within name - mostly when export to UE.",
+        description="Checks for invalid naming format containing : within name - mostly when exporting to Unreal Engine.",
     )
     ValidateRenderCameraIsSet: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
