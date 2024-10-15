@@ -102,7 +102,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateModelMeshUvMap1: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Model Mesh Has UV map named map1",
-        description="Checks if object having UV set named meeting maya standards.",
+        description="Checks if objects have a UV set named 'uvMap1' meeting Maya standards.",
     )
     ValidateTransformZero: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
