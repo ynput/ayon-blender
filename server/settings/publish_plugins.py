@@ -76,17 +76,17 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateCameraZeroKeyframe: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Camera Zero Keyframe",
-        description="Checks if keyframe present on the frame 0 - mostly because of asset export to Unreal Engine",
+        description="Checks if keyframe set on the zero frame - mostly when asset publish to Unreal Engine.",
     )
     ValidateFileSaved: ValidateFileSavedModel = SettingsField(
         default_factory=ValidateFileSavedModel,
         title="Validate File Saved",
-        description="Checks for workfile unsaved changes enforcing user to save the blend scene.",
+        description="Checks if workfile changes been saved, forcing user to perform save action if not.",
     )
     ValidateInstanceEmpty: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Instance is not Empty",
-        description="Checks for empty publish instance sets which could result into no data when published.",
+        description="Checks for empty publish instances which could result into no data when published.",
     )
     ValidateMeshHasUvs: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
@@ -102,12 +102,12 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateModelMeshUvMap1: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Model Mesh Has UV map named map1",
-        description="Checks if objects have a UV set named 'uvMap1' meeting Maya standards.",
+        description="Checks if objects have a UV set named 'map1' meeting Maya standards.",
     )
     ValidateTransformZero: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Transform Zero",
-        description="Checks for zero values in XYZ transforms",
+        description="Checks for zero values in the objects transforms.",
     )
     ValidateNoColonsInName: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
@@ -123,7 +123,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateDeadlinePublish: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Render Output for Deadline",
-        description="Checks scene for meeting Deadline submission requirements.",
+        description="Checks render output folder naming and if matching workfile and version.",
     )
     ValidateFrameRange: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,

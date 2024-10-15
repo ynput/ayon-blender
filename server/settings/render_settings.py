@@ -133,18 +133,18 @@ class RenderSettingsModel(BaseSettingsModel):
     )
     compositing: bool = SettingsField(
         title="Enable Compositing",
-        description="By enabling compositing, AYON will output composite beside regular render output having post fx present.",
+        description="When enabled AYON will output composite AOV beside regular rgba beauty output.",
     )
     aov_list: list[str] = SettingsField(
         default_factory=list,
         enum_resolver=aov_list_enum,
         title="AOVs to create",
-        description="Choose Blender default available AOVs for automatic creation when using Render instance.",
+        description="Choose from available Blender AOVs for automatic creation when rendering.",
     )
     custom_passes: list[CustomPassesModel] = SettingsField(
         default_factory=list,
         title="Custom Passes",
-        description="Configure your custom AOVs which will be used for output besides the preconfig ones.",
+        description="Configure additional AOVs for output besides the standard Blender ones.",
     )
 
 
