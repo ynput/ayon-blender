@@ -86,7 +86,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateInstanceEmpty: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Instance is not Empty",
-        description="Checks for empty publish instances which could result into no data when published.",
+        description="Checks for empty publish instances which could result in no data when published.",
     )
     ValidateMeshHasUvs: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
