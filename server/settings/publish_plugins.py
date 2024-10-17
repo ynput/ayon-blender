@@ -81,7 +81,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateFileSaved: ValidateFileSavedModel = SettingsField(
         default_factory=ValidateFileSavedModel,
         title="Validate File Saved",
-        description="Checks if workfile changes been saved, forcing user to perform save action if not.",
+        description="Checks if workfile changes have been saved, forcing user to perform save action if not.",
     )
     ValidateInstanceEmpty: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
