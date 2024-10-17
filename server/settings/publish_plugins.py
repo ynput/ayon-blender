@@ -107,7 +107,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateTransformZero: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Transform Zero",
-        description="Checks for zero values in the objects transforms.",
+        description="Checks all objects transforms are zero values.",
     )
     ValidateNoColonsInName: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
