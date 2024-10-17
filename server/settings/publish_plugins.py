@@ -76,7 +76,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateCameraZeroKeyframe: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Camera Zero Keyframe",
-        description="Checks if keyframe set on the zero frame - mostly when asset publish to Unreal Engine.",
+        description="Checks if a keyframe is set on frame zero - mostly used when loading in Unreal Engine shifting the first keyframe to zero.",
     )
     ValidateFileSaved: ValidateFileSavedModel = SettingsField(
         default_factory=ValidateFileSavedModel,
