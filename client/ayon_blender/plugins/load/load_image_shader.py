@@ -1,7 +1,9 @@
 from typing import Dict, List, Optional
 
+from qtpy import QtWidgets
 import bpy
 
+from ayon_core.tools.utils import host_tools
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.pipeline import AVALON_CONTAINER_ID
 
@@ -142,9 +144,6 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             bpy.data.images.remove(image)
 
     def display_warning(self, message):
-        from qtpy import QtWidgets
-
-        from ayon_core.tools.utils import host_tools
         loader_gui_window = host_tools.get_tool_by_name("loader")
 
         QtWidgets.QMessageBox.warning(
