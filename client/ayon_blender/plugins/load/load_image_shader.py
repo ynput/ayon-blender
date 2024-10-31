@@ -30,6 +30,9 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         # In the current objects selection, I get the first one that is a
         # MESH or a SURFACE.
+        # TODO: We tend to avoid acting on 'user selection' so that the loaders
+        #  can run completely automatically, without user interaction or popups
+        #  So we may want to investigate different approaches to this.
         selected_objects = lib.get_selection()
         for obj in selected_objects:
             if obj.type in {'MESH', 'SURFACE'}:
