@@ -7,12 +7,12 @@ from ayon_blender.api.pipeline import AVALON_CONTAINER_ID
 
 
 class LoadImageShaderEditor(plugin.BlenderLoader):
-    """Load a product to the Shader Editor in Blender."""
+    """Load a product to the Shader Editor for selected mesh in Blender."""
 
     product_types = {"render", "image", "plate"}
     representations = {"*"}
 
-    label = "Load in Shader Editor to selected mesh"
+    label = "Load to Shader Editor"
     icon = "code-fork"
     color = "orange"
 
