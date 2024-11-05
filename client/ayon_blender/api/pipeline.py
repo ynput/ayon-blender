@@ -616,8 +616,13 @@ def ls() -> Iterator:
     disk, it lists assets already loaded in Blender; once loaded they are
     called containers.
     """
+    container_ids = {
+        AYON_CONTAINER_ID,
+        # Backwards compatibility
+        AVALON_CONTAINER_ID
+    }
 
-    for id_type in {AYON_CONTAINER_ID, AVALON_CONTAINER_ID}:
+    for id_type in container_ids:
         for container in lib.lsattr("id", id_type):
             yield parse_container(container)
 
@@ -628,7 +633,7 @@ def ls() -> Iterator:
             if not node.get(AVALON_PROPERTY):
                 continue
 
-            if node.get(AVALON_PROPERTY).get("id") != id_type:
+            if node.get(AVALON_PROPERTY).get("id") not in container_ids:
                 continue
 
             yield parse_container(node)
