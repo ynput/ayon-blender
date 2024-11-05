@@ -100,11 +100,11 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         if node.format.color_management == "OVERRIDE":
             display: str = node.display_settings.display_device
             view: str = node.view_settings.view_transform
-            look: str = node.view_settings.look
+            # look: str = node.view_settings.look
         else:
             display: str = bpy.context.scene.display_settings.display_device
             view: str = bpy.context.scene.view_settings.view_transform
-            look: str = bpy.context.scene.view_settings.look
+            # look: str = bpy.context.scene.view_settings.look
 
         return {
             "colorspaceConfig": ocio_path,
