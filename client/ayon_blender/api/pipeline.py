@@ -638,6 +638,21 @@ def ls() -> Iterator:
 
             yield parse_container(node)
 
+    # Shader nodes are not available in a way that `lib.lsattr` can find.
+    for material in bpy.data.materials:
+        material_node_tree = material.node_tree
+        if not material_node_tree:
+            continue
+
+        for shader_node in material_node_tree.nodes:
+            if not shader_node.get(AVALON_PROPERTY):
+                continue
+
+            if shader_node.get(AVALON_PROPERTY).get("id") not in container_ids:
+                continue
+
+            yield parse_container(shader_node)
+
 
 def publish():
     """Shorthand to publish from within host."""
