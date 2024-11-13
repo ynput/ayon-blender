@@ -133,8 +133,10 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         image = image_texture_node.image
         representation: dict = context["representation"]
 
-        if representation.get("colorspaceData"):
-            colorspace: str = representation["colorspaceData"]["colorspace"]
+        colorspace_data = representation.get("data", {}).get(
+            "colorspaceData", {})
+        if colorspace_data:
+            colorspace: str = colorspace_data["colorspace"]
             if colorspace:
                 image.colorspace_settings.name = colorspace
 
