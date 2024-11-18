@@ -54,10 +54,11 @@ class CollectReview(plugin.BlenderInstancePlugin):
         self.log.debug(f"instance data: {instance.data}")
 
         # TODO : Collect audio
-        instance.data["audio"] = [
-            {
-                "offset": track.offset.get(),
-                "filename": track.filename.get(),
-            }
-            for track in audio_tracks
-        ]
+        # audio_tracks = []
+        # instance.data["audio"] = [
+        #     {
+        #         "offset": track.offset.get(),
+        #         "filename": track.filename.get(),
+        #     }
+        #     for track in audio_tracks
+        # ]
