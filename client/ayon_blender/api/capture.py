@@ -101,8 +101,6 @@ def capture(
                 view_context=True
             )
 
-        restore_global_view(window)
-
     return filename
 
 
@@ -134,7 +132,7 @@ def isolate_objects(window, objects):
 
     deselect_all()
 
-def restore_global_view(window, isolate=None):
+def restore_global_view(window):
     """Exit local view if active.
 
     Blender currently does not exit localview when closing windows.
@@ -143,7 +141,7 @@ def restore_global_view(window, isolate=None):
     types = {"MESH", "GPENCIL"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
-    context = create_blender_context(selected=isolate or objects, window=window)
+    context = create_blender_context(selected=objects, window=window)
 
     with bpy.context.temp_override(**context):
         # Only toggle back if in local view
@@ -295,4 +293,6 @@ def _independent_window():
         try:
             yield window
         finally:
+            restore_global_view(window) 
             bpy.ops.wm.window_close()
+
