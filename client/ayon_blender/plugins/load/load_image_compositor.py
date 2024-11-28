@@ -54,6 +54,7 @@ class LoadImageCompositor(plugin.BlenderLoader):
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
+            "project_name": context["project"]["name"],
         }
         lib.imprint(img_comp_node, data)
 
@@ -87,7 +88,8 @@ class LoadImageCompositor(plugin.BlenderLoader):
 
         # Update representation id
         lib.imprint(img_comp_node, {
-            "representation": context["representation"]["id"]
+            "representation": context["representation"]["id"],
+            "project_name": context["project"]["name"],
         })
 
     def set_source_and_colorspace(
