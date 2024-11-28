@@ -101,6 +101,8 @@ def capture(
                 view_context=True
             )
 
+        restore_global_view(window)
+
     return filename
 
 
@@ -117,7 +119,6 @@ ImageSettings = {
     },
 }
 
-
 def isolate_objects(window, objects):
     """Isolate selection"""
     deselect_all()
@@ -133,7 +134,22 @@ def isolate_objects(window, objects):
 
     deselect_all()
 
+def restore_global_view(window, isolate=None):
+    """Exit local view if active.
 
+    Blender currently does not exit localview when closing windows.
+    """
+
+    types = {"MESH", "GPENCIL"}
+    objects = [obj for obj in window.scene.objects if obj.type in types]
+
+    context = create_blender_context(selected=isolate or objects, window=window)
+
+    with bpy.context.temp_override(**context):
+        # Only toggle back if in local view
+        if bpy.context.space_data.local_view:
+            bpy.ops.view3d.localview()
+    
 def _apply_options(entity, options):
     for option, value in options.items():
         if isinstance(value, dict):
