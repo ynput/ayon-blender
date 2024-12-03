@@ -616,8 +616,13 @@ def ls() -> Iterator:
     disk, it lists assets already loaded in Blender; once loaded they are
     called containers.
     """
+    container_ids = {
+        AYON_CONTAINER_ID,
+        # Backwards compatibility
+        AVALON_CONTAINER_ID
+    }
 
-    for id_type in {AYON_CONTAINER_ID, AVALON_CONTAINER_ID}:
+    for id_type in container_ids:
         for container in lib.lsattr("id", id_type):
             yield parse_container(container)
 
@@ -628,10 +633,25 @@ def ls() -> Iterator:
             if not node.get(AVALON_PROPERTY):
                 continue
 
-            if node.get(AVALON_PROPERTY).get("id") != id_type:
+            if node.get(AVALON_PROPERTY).get("id") not in container_ids:
                 continue
 
             yield parse_container(node)
+
+    # Shader nodes are not available in a way that `lib.lsattr` can find.
+    for material in bpy.data.materials:
+        material_node_tree = material.node_tree
+        if not material_node_tree:
+            continue
+
+        for shader_node in material_node_tree.nodes:
+            if not shader_node.get(AVALON_PROPERTY):
+                continue
+
+            if shader_node.get(AVALON_PROPERTY).get("id") not in container_ids:
+                continue
+
+            yield parse_container(shader_node)
 
 
 def publish():
