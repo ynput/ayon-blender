@@ -207,9 +207,15 @@ class BlenderCreator(Creator):
                 avalon_instances.objects if avalon_instances else []
             )
 
+            # Consider any node tree objects as well
+            node_tree_objects = []
+            if bpy.context.scene.node_tree:
+                node_tree_objects = bpy.context.scene.node_tree.nodes
+
             for obj_or_col in itertools.chain(
                     avalon_instance_objs,
-                    bpy.data.collections
+                    bpy.data.collections,
+                    node_tree_objects
             ):
                 avalon_prop = obj_or_col.get(AVALON_PROPERTY, {})
                 if not avalon_prop:
@@ -377,7 +383,7 @@ class BlenderCreator(Creator):
 
         instance_data.update(
             {
-                "id": AVALON_INSTANCE_ID,
+                "id": AYON_INSTANCE_ID,
                 "creator_identifier": self.identifier,
                 "productName": product_name,
             }

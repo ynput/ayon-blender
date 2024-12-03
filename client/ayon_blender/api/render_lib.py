@@ -7,17 +7,15 @@ from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import get_current_project_name
 
 
-def get_default_render_folder(settings):
+def get_default_render_folder(settings) -> str:
     """Get default render folder from blender settings."""
-
     return (settings["blender"]
                     ["RenderSettings"]
                     ["default_render_image_folder"])
 
 
-def get_aov_separator(settings):
+def get_aov_separator(settings) -> str:
     """Get aov separator from blender settings."""
-
     aov_sep = (settings["blender"]
                        ["RenderSettings"]
                        ["aov_separator"])
@@ -32,33 +30,29 @@ def get_aov_separator(settings):
         raise ValueError(f"Invalid aov separator: {aov_sep}")
 
 
-def get_image_format(settings):
+def get_image_format(settings) -> str:
     """Get image format from blender settings."""
-
     return (settings["blender"]
                     ["RenderSettings"]
                     ["image_format"])
 
 
-def get_multilayer(settings):
+def get_multilayer(settings) -> bool:
     """Get multilayer from blender settings."""
-
     return (settings["blender"]
                     ["RenderSettings"]
                     ["multilayer_exr"])
 
 
-def get_renderer(settings):
+def get_renderer(settings) -> str:
     """Get renderer from blender settings."""
-
     return (settings["blender"]
                     ["RenderSettings"]
                     ["renderer"])
 
 
-def get_compositing(settings):
-    """Get compositing from blender settings."""
-
+def get_compositing(settings) -> bool:
+    """Get whether 'Composite' render is enabled from blender settings."""
     return (settings["blender"]
                     ["RenderSettings"]
                     ["compositing"])
@@ -70,21 +64,22 @@ def get_render_product(output_path, name, aov_sep):
     as the frame number, when it renders.
 
     Args:
-        file_path (str): The path to the blender scene.
-        render_folder (str): The render folder set in settings.
-        file_name (str): The name of the blender scene.
-        instance (pyblish.api.Instance): The instance to publish.
-        ext (str): The image format to render.
+        output_path (str): The root render output directory.
+        name (str): The file name to render to.
+        aov_sep (str): The AOV separator token, e.g. `.` or `_`.
+
+    Returns:
+        str: The full path to the render product without extension.
+
     """
     filepath = output_path / name.lstrip("/")
     render_product = f"{filepath}{aov_sep}beauty.####"
     return os.path.normpath(render_product)
 
 
-def set_render_format(ext, multilayer):
-    # Set Blender to save the file with the right extension
+def set_render_format(ext: str, multilayer: bool):
+    """Set Blender scene to save render file with the right extension"""
     bpy.context.scene.render.use_file_extension = True
-
     image_settings = bpy.context.scene.render.image_settings
 
     if ext == "exr":
@@ -106,7 +101,13 @@ def set_render_format(ext, multilayer):
         image_settings.file_format = "TIFF"
 
 
-def set_render_passes(settings, renderer):
+def set_render_passes(settings: dict, renderer: str):
+    """Set render passes for the current view layer
+
+    Args:
+        settings (dict): The project settings.
+        renderer (str): The renderer to use, either CYCLES or BLENDER_EEVEE.
+    """
     aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
 
@@ -171,14 +172,14 @@ def set_render_passes(settings, renderer):
         cycles.use_pass_shadow_catcher = "shadow" in aov_list
 
     aovs_names = [aov.name for aov in vl.aovs]
-    for cp in custom_passes:
-        cp_name = cp["attribute"]
-        if cp_name not in aovs_names:
+    for custom_pass in custom_passes:
+        custom_pass_name = custom_pass["attribute"]
+        if custom_pass_name not in aovs_names:
             aov = vl.aovs.add()
-            aov.name = cp_name
+            aov.name = custom_pass_name
         else:
-            aov = vl.aovs[cp_name]
-        aov.type = cp["value"]
+            aov = vl.aovs[custom_pass_name]
+        aov.type = custom_pass["value"]
 
     return list(aov_list), custom_passes
 
@@ -224,7 +225,7 @@ def set_node_tree(
     # Get the enabled output sockets, that are the active passes for the
     # render.
     # We also exclude some layers.
-    exclude_sockets = ["Image", "Alpha", "Noisy Image"]
+    exclude_sockets = {"Image", "Alpha", "Noisy Image"}
     passes = [
         socket
         for socket in render_layer_node.outputs
@@ -237,8 +238,6 @@ def set_node_tree(
     image_settings = bpy.context.scene.render.image_settings
     output.format.file_format = image_settings.file_format
 
-    slots = None
-
     # In case of a multilayer exr, we don't need to use the output node,
     # because the blender render already outputs a multilayer exr.
     multi_exr = ext == "exr" and multilayer
@@ -248,7 +247,6 @@ def set_node_tree(
     slots.clear()
 
     aov_file_products = []
-
     old_links = {
         link.from_socket.name: link for link in tree.links
         if link.to_node == old_output_node}
@@ -304,18 +302,8 @@ def set_node_tree(
     return [] if multi_exr else aov_file_products
 
 
-def imprint_render_settings(node, data):
-    RENDER_DATA = "render_data"
-    if not node.get(RENDER_DATA):
-        node[RENDER_DATA] = {}
-    for key, value in data.items():
-        if value is None:
-            continue
-        node[RENDER_DATA][key] = value
-
-
-def prepare_rendering(asset_group):
-    name = asset_group.name
+def prepare_rendering(name: str):
+    """Initialize render setup using render settings from project settings."""
 
     filepath = Path(bpy.data.filepath)
     assert filepath, "Workfile not saved. Please save the file first."
@@ -335,29 +323,16 @@ def prepare_rendering(asset_group):
 
     set_render_format(ext, multilayer)
     bpy.context.scene.render.engine = renderer
-    aov_list, custom_passes = set_render_passes(settings, renderer)
+    set_render_passes(settings, renderer)
 
     output_path = Path.joinpath(dirpath, render_folder, file_name)
 
     render_product = get_render_product(output_path, name, aov_sep)
-    aov_file_product = set_node_tree(
+    set_node_tree(
         output_path, render_product, name, aov_sep,
-        ext, multilayer, compositing)
+        ext, multilayer, compositing
+    )
 
     # Clear the render filepath, so that the output is handled only by the
     # output node in the compositor.
     bpy.context.scene.render.filepath = ""
-
-    render_settings = {
-        "render_folder": render_folder,
-        "aov_separator": aov_sep,
-        "image_format": ext,
-        "multilayer_exr": multilayer,
-        "aov_list": aov_list,
-        "custom_passes": custom_passes,
-        "render_product": render_product,
-        "aov_file_product": aov_file_product,
-        "review": True,
-    }
-
-    imprint_render_settings(asset_group, render_settings)
