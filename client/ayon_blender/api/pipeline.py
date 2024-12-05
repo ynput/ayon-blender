@@ -576,6 +576,7 @@ def containerise_existing(
         "namespace": namespace or '',
         "loader": str(loader),
         "representation": context["representation"]["id"],
+        "project_name": context["project"]["name"],
     }
 
     metadata_update(container, data)

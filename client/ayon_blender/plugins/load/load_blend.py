@@ -169,6 +169,7 @@ class BlendLoader(plugin.BlenderLoader):
             "productType": context["product"]["productType"],
             "objectName": group_name,
             "members": members,
+            "project_name": context["project"]["name"],
         }
 
         container[AVALON_PROPERTY] = data
@@ -238,6 +239,7 @@ class BlendLoader(plugin.BlenderLoader):
             "representation": repre_entity["id"],
             "parent": repre_entity["versionId"],
             "members": members,
+            "project_name": context["project"]["name"],
         }
 
         imprint(asset_group, new_data)
