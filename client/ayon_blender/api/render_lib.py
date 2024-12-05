@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import bpy
@@ -78,7 +77,9 @@ def get_render_product(output_path, name, aov_sep):
     """
     filepath = output_path / name.lstrip("/")
     render_product = f"{filepath}{aov_sep}beauty.####"
-    return os.path.normpath(render_product)
+    render_product = render_product.replace("\\", "/")
+
+    return render_product
 
 
 def set_render_format(ext, multilayer):
@@ -265,6 +266,12 @@ def set_node_tree(
         comp_socket, filepath = _create_aov_slot(
             name, aov_sep, slots, pass_name, multi_exr, output_path)
         aov_file_products.append(("Composite", filepath))
+        # If there's a composite node, we connect its input with the new output
+        if composite_node:
+            for link in tree.links:
+                if link.to_node == composite_node:
+                    tree.links.new(link.from_socket, comp_socket)
+                    break
 
     # For each active render pass, we add a new socket to the output node
     # and link it
@@ -286,13 +293,6 @@ def set_node_tree(
             tree.links.new(link.from_socket, socket)
         # Then, we remove the old link.
         tree.links.remove(link)
-
-    # If there's a composite node, we connect its input with the new output
-    if compositing and composite_node:
-        for link in tree.links:
-            if link.to_node == composite_node:
-                tree.links.new(link.from_socket, comp_socket)
-                break
 
     if old_output_node:
         output.location = old_output_node.location
