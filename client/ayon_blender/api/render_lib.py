@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import bpy
@@ -77,9 +78,7 @@ def get_render_product(output_path, name, aov_sep):
     """
     filepath = output_path / name.lstrip("/")
     render_product = f"{filepath}{aov_sep}beauty.####"
-    render_product = render_product.replace("\\", "/")
-
-    return render_product
+    return os.path.normpath(render_product)
 
 
 def set_render_format(ext, multilayer):
