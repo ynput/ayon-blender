@@ -204,32 +204,36 @@ def set_node_tree(
     compositor_type = "CompositorNodeComposite"
 
     # Get the Render Layer, Composite and the previous output nodes
-    render_layer_node = None
+    render_layer_nodes = []
     composite_node = None
     old_output_node = None
     for node in tree.nodes:
         if node.bl_idname == comp_layer_type:
-            render_layer_node = node
+            render_layer_nodes.append(node)
         elif node.bl_idname == compositor_type:
             composite_node = node
         elif node.bl_idname == output_type and "AYON" in node.name:
             old_output_node = node
-        if render_layer_node and composite_node and old_output_node:
+        if render_layer_nodes and composite_node and old_output_node:
             break
 
     # If there's not a Render Layers node, we create it
-    if not render_layer_node:
+    if not render_layer_nodes:
         render_layer_node = tree.nodes.new(comp_layer_type)
+        render_layer_nodes.append(render_layer_node)
 
     # Get the enabled output sockets, that are the active passes for the
     # render.
     # We also exclude some layers.
     exclude_sockets = ["Image", "Alpha", "Noisy Image"]
-    passes = [
-        socket
-        for socket in render_layer_node.outputs
-        if socket.enabled and socket.name not in exclude_sockets
-    ]
+    passes = []
+    for render_layer_node in render_layer_nodes:
+        render_passes = [
+            socket
+            for socket in render_layer_node.outputs
+            if socket.enabled and socket.name not in exclude_sockets
+        ]
+        passes.extend(render_passes)
 
     # Create a new output node
     output = tree.nodes.new(output_type)
@@ -257,7 +261,8 @@ def set_node_tree(
     pass_name = "rgba" if multi_exr else "beauty"
     slot, _ = _create_aov_slot(
         name, aov_sep, slots, pass_name, multi_exr, output_path)
-    tree.links.new(render_layer_node.outputs["Image"], slot)
+    for render_layer_node in render_layer_nodes:
+        tree.links.new(render_layer_node.outputs["Image"], slot)
 
     if compositing:
         # Create a new socket for the composite output
