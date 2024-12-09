@@ -203,7 +203,8 @@ class CacheModelLoader(plugin.BlenderLoader):
             "asset_name": asset_name,
             "parent": context["representation"]["versionId"],
             "productType": product_type,
-            "objectName": group_name
+            "objectName": group_name,
+            "project_name": context["project"]["name"],
         }
 
         self[:] = objects
@@ -282,6 +283,7 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
+        metadata["project_name"] = context["project"]["name"]
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene.
