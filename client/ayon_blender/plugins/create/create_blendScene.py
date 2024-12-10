@@ -32,3 +32,17 @@ class CreateBlendScene(plugin.BlenderCreator):
                     instance_node.objects.link(data)
 
         return instance_node
+
+    def remove_instances(self, instances):
+
+        for instance in instances:
+            node = instance.transient_data["instance_node"]
+
+            if isinstance(node, bpy.types.Collection):
+                for children in node.children_recursive:
+                    if isinstance(children, bpy.types.Collection):
+                        bpy.data.collections.remove(children)
+                    else:
+                        bpy.data.objects.remove(children)
+
+            self._remove_instance_from_context(instance)
