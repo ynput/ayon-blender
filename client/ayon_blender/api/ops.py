@@ -455,7 +455,7 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         if project_settings["core"]["tools"]["ayon_menu"].get(
             "version_up_current_workfile"):
                 layout.operator(
-                    VersionUpWorkfile.bl_idname, text="Version Up Workfile")
+                    VersionUpWorkfile.bl_idname, text="Version Up Current Workfile")
 
 
 def draw_avalon_menu(self, context):
