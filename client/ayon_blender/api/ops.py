@@ -23,7 +23,8 @@ from ayon_core.pipeline import (
     get_current_project_name
 )
 from ayon_core.pipeline.context_tools import (
-    get_current_task_entity
+    get_current_task_entity,
+    version_up_current_workfile
 )
 from ayon_core.tools.utils import host_tools
 
