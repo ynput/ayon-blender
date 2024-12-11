@@ -347,8 +347,9 @@ def prepare_rendering(asset_group):
     # output node in the compositor.
     ayon_workdir = os.getenv("AYON_WORKDIR")
     tmp_render_path = os.path.join(ayon_workdir, "renders", "tmp")
+    tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
-    bpy.context.scene.render.filepath = tmp_render_path
+    bpy.context.scene.render.filepath = f"{tmp_render_path}/"
     render_settings = {
         "render_folder": render_folder,
         "aov_separator": aov_sep,
