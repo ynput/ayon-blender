@@ -397,6 +397,17 @@ class SetUnitScale(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class VersionUpWorkfile(LaunchQtApp):
+    """Launch Avalon Publisher."""
+
+    bl_idname = "wm.avalon_version_up_workfile"
+    bl_label = "Version Up Workfile"
+
+    def execute(self, context):
+        version_up_current_workfile()
+        return {"FINISHED"}
+
+
 class TOPBAR_MT_avalon(bpy.types.Menu):
     """Avalon menu."""
 
@@ -439,6 +450,12 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
+        project_name = get_current_project_name()
+        project_settings = get_project_settings(project_name)
+        if project_settings["core"]["tools"]["ayon_menu"].get(
+            "version_up_current_workfile"):
+                layout.operator(
+                    VersionUpWorkfile.bl_idname, text="Version Up Workfile")
 
 
 def draw_avalon_menu(self, context):
@@ -457,6 +474,7 @@ classes = [
     SetFrameRange,
     SetResolution,
     SetUnitScale,
+    VersionUpWorkfile,
     TOPBAR_MT_avalon,
 ]
 
