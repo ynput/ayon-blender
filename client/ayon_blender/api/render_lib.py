@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import sys
 import bpy
 
 from ayon_core.settings import get_project_settings
@@ -346,9 +345,9 @@ def prepare_rendering(asset_group):
 
     # Clear the render filepath, so that the output is handled only by the
     # output node in the compositor.
-    bpy.context.scene.render.filepath = (
-        "/tmp\\" if sys.platform == "windows" else ""
-    )
+    ayon_workdir = os.getenv("AYON_WORKDIR")
+    temp_render_dir = os.makedirs(f"{ayon_workdir}/renders/tmp", exist_ok=True)
+    bpy.context.scene.render.filepath = temp_render_dir
     render_settings = {
         "render_folder": render_folder,
         "aov_separator": aov_sep,
