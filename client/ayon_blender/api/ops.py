@@ -399,7 +399,7 @@ class SetUnitScale(bpy.types.Operator):
 
 
 class VersionUpWorkfile(LaunchQtApp):
-    """Launch Avalon Publisher."""
+    """Perform Incremental Save Workfile."""
 
     bl_idname = "wm.avalon_version_up_workfile"
     bl_label = "Version Up Workfile"
