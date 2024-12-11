@@ -3,7 +3,7 @@ import bpy
 
 from ayon_core.lib import version_up
 from ayon_core.pipeline.context_tools import version_up_current_workfile
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 from ayon_blender.api.render_lib import prepare_rendering
 from ayon_blender.api.workio import save_file
 
@@ -47,3 +47,8 @@ class CreateRenderlayer(plugin.BlenderCreator):
             save_file(filepath, copy=False)
 
         return collection
+
+    def get_instance_attr_defs(self):
+        defs = lib.collect_animation_defs(self.create_context)
+
+        return defs

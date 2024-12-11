@@ -89,7 +89,8 @@ class AudioLoader(plugin.BlenderLoader):
             "parent": context["representation"]["versionId"],
             "productType": context["product"]["productType"],
             "objectName": group_name,
-            "audio": audio
+            "audio": audio,
+            "project_name": context["project"]["name"],
         }
 
         objects = []
@@ -179,6 +180,7 @@ class AudioLoader(plugin.BlenderLoader):
         metadata["representation"] = repre_entity["id"]
         metadata["parent"] = repre_entity["versionId"]
         metadata["audio"] = new_audio
+        metadata["project_name"] = context["project"]["name"]
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove an audio strip from the sequence editor and the container.

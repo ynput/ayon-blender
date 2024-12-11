@@ -540,3 +540,7 @@ class BlenderLoader(LoaderPlugin):
         """ Run the remove on Blender main thread"""
         mti = MainThreadItem(self.exec_remove, container)
         execute_in_main_thread(mti)
+
+    def switch(self, container, context):
+        # Support switch in scene inventory
+        self.update(container, context)

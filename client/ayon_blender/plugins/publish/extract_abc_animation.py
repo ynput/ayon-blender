@@ -54,13 +54,14 @@ class ExtractAnimationABC(
 
         context = plugin.create_blender_context(
             active=asset_group, selected=selected)
-
         with bpy.context.temp_override(**context):
             # We export the abc
             bpy.ops.wm.alembic_export(
                 filepath=filepath,
                 selected=True,
-                flatten=False
+                flatten=False,
+                start=instance.data["frameStartHandle"],
+                end=instance.data["frameEndHandle"]
             )
 
         plugin.deselect_all()
