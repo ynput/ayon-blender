@@ -435,6 +435,24 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
             LaunchWorkFiles.bl_idname, text=context_label
         )
         context_label_item.enabled = False
+        project_name = get_current_project_name()
+        project_settings = get_project_settings(project_name)
+        if project_settings["core"]["tools"]["ayon_menu"].get(
+            "version_up_current_workfile"):
+                layout.separator()
+                layout.operator(
+                    VersionUpWorkfile.bl_idname,
+                    text="Version Up Current Workfile"
+                )
+                wm = bpy.context.window_manager
+                keyconfigs = wm.keyconfigs
+                keymap = keyconfigs.addon.keymaps.new(name='Window', space_type='EMPTY')
+                keymap.keymap_items.new(
+                    VersionUpWorkfile.bl_idname, 'S',
+                    'PRESS', ctrl=True, alt=True
+                )
+                bpy.context.window_manager.keyconfigs.addon.keymaps.update()
+
         layout.separator()
         layout.operator(LaunchCreator.bl_idname, text="Create...")
         layout.operator(LaunchLoader.bl_idname, text="Load...")
@@ -451,13 +469,6 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
-        project_name = get_current_project_name()
-        project_settings = get_project_settings(project_name)
-        if project_settings["core"]["tools"]["ayon_menu"].get(
-            "version_up_current_workfile"):
-                layout.operator(
-                    VersionUpWorkfile.bl_idname, text="Version Up Current Workfile")
-
 
 def draw_avalon_menu(self, context):
     """Draw the Avalon menu in the top bar."""
