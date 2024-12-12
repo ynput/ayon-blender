@@ -184,7 +184,7 @@ def set_render_passes(settings, renderer):
 
 
 def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, render_layer):
-    filename = f"{name}_{render_layer}{aov_sep}{rpass_name}.####"
+    filename = f"{render_layer}/{name}_{render_layer}{aov_sep}{rpass_name}.####"
     slot = slots.new(rpass_name if multi_exr else filename)
     filepath = str(output_path / filename.lstrip("/"))
 
@@ -236,7 +236,6 @@ def set_node_tree(
         ]
     }
         render_aovs_dict.update(render_dict)
-
     # Create a new output node
     output = tree.nodes.new(output_type)
 
@@ -291,10 +290,10 @@ def set_node_tree(
                     name, aov_sep, slots, rpass.name, multi_exr, output_path, render_layer)
                 aov_file_products.append((rpass.name, filepath))
 
-            # If the rpass was not connected with the old output node, we connect
-            # it with the new one.
-            if not old_links.get(rpass.name):
-                tree.links.new(rpass, slot)
+                # If the rpass was not connected with the old output node, we connect
+                # it with the new one.
+                if not old_links.get(rpass.name):
+                    tree.links.new(rpass, slot)
 
         for link in list(old_links.values()):
             # Check if the socket is still available in the new output node.
