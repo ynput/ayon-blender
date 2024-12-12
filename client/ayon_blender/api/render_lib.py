@@ -226,84 +226,82 @@ def set_node_tree(
     # render.
     # We also exclude some layers.
     exclude_sockets = ["Image", "Alpha", "Noisy Image"]
-    passes = []
     for render_layer_node in render_layer_nodes:
-        render_passes = [
+        passes = [
             socket
             for socket in render_layer_node.outputs
             if socket.enabled and socket.name not in exclude_sockets
         ]
-        passes.extend(render_passes)
 
-    # Create a new output node
-    output = tree.nodes.new(output_type)
+        # Create a new output node
+        output = tree.nodes.new(output_type)
+        output.name = "AYON File Output"
+        output.label = "AYON File Output"
 
-    image_settings = bpy.context.scene.render.image_settings
-    output.format.file_format = image_settings.file_format
 
-    slots = None
+        image_settings = bpy.context.scene.render.image_settings
+        output.format.file_format = image_settings.file_format
 
-    # In case of a multilayer exr, we don't need to use the output node,
-    # because the blender render already outputs a multilayer exr.
-    multi_exr = ext == "exr" and multilayer
-    slots = output.layer_slots if multi_exr else output.file_slots
-    output.base_path = render_product if multi_exr else str(output_path)
+        slots = None
 
-    slots.clear()
+        # In case of a multilayer exr, we don't need to use the output node,
+        # because the blender render already outputs a multilayer exr.
+        multi_exr = ext == "exr" and multilayer
+        slots = output.layer_slots if multi_exr else output.file_slots
+        output.base_path = render_product if multi_exr else str(output_path)
 
-    aov_file_products = []
+        slots.clear()
 
-    old_links = {
-        link.from_socket.name: link for link in tree.links
-        if link.to_node == old_output_node}
+        aov_file_products = []
 
-    # Create a new socket for the beauty output
-    pass_name = "rgba" if multi_exr else "beauty"
-    slot, _ = _create_aov_slot(
-        name, aov_sep, slots, pass_name, multi_exr, output_path)
-    for render_layer_node in render_layer_nodes:
+        old_links = {
+            link.from_socket.name: link for link in tree.links
+            if link.to_node == old_output_node}
+
+        # Create a new socket for the beauty output
+        pass_name = "rgba" if multi_exr else "beauty"
+        slot, _ = _create_aov_slot(
+            name, aov_sep, slots, pass_name, multi_exr, output_path)
+
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
-    if compositing:
-        # Create a new socket for the composite output
-        pass_name = "composite"
-        comp_socket, filepath = _create_aov_slot(
-            name, aov_sep, slots, pass_name, multi_exr, output_path)
-        aov_file_products.append(("Composite", filepath))
-        # If there's a composite node, we connect its input with the new output
-        if composite_node:
-            for link in tree.links:
-                if link.to_node == composite_node:
-                    tree.links.new(link.from_socket, comp_socket)
-                    break
+        if compositing:
+            # Create a new socket for the composite output
+            pass_name = "composite"
+            comp_socket, filepath = _create_aov_slot(
+                name, aov_sep, slots, pass_name, multi_exr, output_path)
+            aov_file_products.append(("Composite", filepath))
+            # If there's a composite node, we connect its input with the new output
+            if composite_node:
+                for link in tree.links:
+                    if link.to_node == composite_node:
+                        tree.links.new(link.from_socket, comp_socket)
+                        break
 
-    # For each active render pass, we add a new socket to the output node
-    # and link it
-    for rpass in passes:
-        slot, filepath = _create_aov_slot(
-            name, aov_sep, slots, rpass.name, multi_exr, output_path)
-        aov_file_products.append((rpass.name, filepath))
+        # For each active render pass, we add a new socket to the output node
+        # and link it
+        for rpass in passes:
+            slot, filepath = _create_aov_slot(
+                name, aov_sep, slots, rpass.name, multi_exr, output_path)
+            aov_file_products.append((rpass.name, filepath))
 
-        # If the rpass was not connected with the old output node, we connect
-        # it with the new one.
-        if not old_links.get(rpass.name):
-            tree.links.new(rpass, slot)
+            # If the rpass was not connected with the old output node, we connect
+            # it with the new one.
+            if not old_links.get(rpass.name):
+                tree.links.new(rpass, slot)
 
-    for link in list(old_links.values()):
-        # Check if the socket is still available in the new output node.
-        socket = output.inputs.get(link.to_socket.name)
-        # If it is, we connect it with the new output node.
-        if socket:
-            tree.links.new(link.from_socket, socket)
-        # Then, we remove the old link.
-        tree.links.remove(link)
+        for link in list(old_links.values()):
+            # Check if the socket is still available in the new output node.
+            socket = output.inputs.get(link.to_socket.name)
+            # If it is, we connect it with the new output node.
+            if socket:
+                tree.links.new(link.from_socket, socket)
+            # Then, we remove the old link.
+            tree.links.remove(link)
 
     if old_output_node:
         output.location = old_output_node.location
         tree.nodes.remove(old_output_node)
-
-    output.name = "AYON File Output"
-    output.label = "AYON File Output"
 
     return [] if multi_exr else aov_file_products
 
