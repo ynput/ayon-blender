@@ -16,8 +16,7 @@ class ValidateDeadlinePublish(
     plugin.BlenderInstancePlugin,
     OptionalPyblishPluginMixin
 ):
-    """Validates Render File Directory is
-    not the same in every submission
+    """Validates Render File Directory is not the same in every submission
     """
 
     order = ValidateContentsOrder
@@ -26,6 +25,10 @@ class ValidateDeadlinePublish(
     label = "Validate Render Output for Deadline"
     optional = True
     actions = [RepairAction]
+
+    # TODO: Fix validator - it should just validate against the pre-collected
+    #  expected output files instead so that we do not need to duplicate the
+    #  logic of exactly figuring out the output filepaths.
 
     def process(self, instance):
         if not self.is_active(instance.data):
