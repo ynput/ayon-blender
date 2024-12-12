@@ -442,7 +442,7 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
                 layout.separator()
                 layout.operator(
                     VersionUpWorkfile.bl_idname,
-                    text="Version Up Current Workfile"
+                    text="Version Up Workfile"
                 )
                 wm = bpy.context.window_manager
                 keyconfigs = wm.keyconfigs
