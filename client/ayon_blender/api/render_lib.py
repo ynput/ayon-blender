@@ -64,7 +64,7 @@ def get_compositing(settings):
                     ["compositing"])
 
 
-def get_render_product(output_path, name, aov_sep):
+def get_render_product(output_path, name, aov_sep, view_layers):
     """
     Generate the path to the render product. Blender interprets the `#`
     as the frame number, when it renders.
@@ -76,9 +76,12 @@ def get_render_product(output_path, name, aov_sep):
         instance (pyblish.api.Instance): The instance to publish.
         ext (str): The image format to render.
     """
-    filepath = output_path / name.lstrip("/")
-    render_product = f"{filepath}{aov_sep}beauty.####"
-    return os.path.normpath(render_product)
+    beauty_render_product = []
+    for view_layer in view_layers:
+        filepath = output_path /view_layer/ name.lstrip("/")
+        render_product = f"{filepath}_{view_layer}{aov_sep}beauty.####"
+        beauty_render_product.append(("Beauty", os.path.normpath(render_product)))
+    return beauty_render_product
 
 
 def set_render_format(ext, multilayer):
@@ -106,79 +109,77 @@ def set_render_format(ext, multilayer):
         image_settings.file_format = "TIFF"
 
 
-def set_render_passes(settings, renderer):
+def set_render_passes(settings, renderer, view_layers):
     aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
-
     # Common passes for both renderers
-    vl = bpy.context.view_layer
-
-    # Data Passes
-    vl.use_pass_combined = "combined" in aov_list
-    vl.use_pass_z = "z" in aov_list
-    vl.use_pass_mist = "mist" in aov_list
-    vl.use_pass_normal = "normal" in aov_list
-
-    # Light Passes
-    vl.use_pass_diffuse_direct = "diffuse_light" in aov_list
-    vl.use_pass_diffuse_color = "diffuse_color" in aov_list
-    vl.use_pass_glossy_direct = "specular_light" in aov_list
-    vl.use_pass_glossy_color = "specular_color" in aov_list
-    vl.use_pass_emit = "emission" in aov_list
-    vl.use_pass_environment = "environment" in aov_list
-    vl.use_pass_ambient_occlusion = "ao" in aov_list
-
-    # Cryptomatte Passes
-    vl.use_pass_cryptomatte_object = "cryptomatte_object" in aov_list
-    vl.use_pass_cryptomatte_material = "cryptomatte_material" in aov_list
-    vl.use_pass_cryptomatte_asset = "cryptomatte_asset" in aov_list
-
-    if renderer == "BLENDER_EEVEE":
-        # Eevee exclusive passes
-        eevee = vl.eevee
+    for vl in view_layers:
+        # Data Passes
+        vl.use_pass_combined = "combined" in aov_list
+        vl.use_pass_z = "z" in aov_list
+        vl.use_pass_mist = "mist" in aov_list
+        vl.use_pass_normal = "normal" in aov_list
 
         # Light Passes
-        vl.use_pass_shadow = "shadow" in aov_list
-        eevee.use_pass_volume_direct = "volume_light" in aov_list
-
-        # Effects Passes
-        eevee.use_pass_bloom = "bloom" in aov_list
-        eevee.use_pass_transparent = "transparent" in aov_list
+        vl.use_pass_diffuse_direct = "diffuse_light" in aov_list
+        vl.use_pass_diffuse_color = "diffuse_color" in aov_list
+        vl.use_pass_glossy_direct = "specular_light" in aov_list
+        vl.use_pass_glossy_color = "specular_color" in aov_list
+        vl.use_pass_emit = "emission" in aov_list
+        vl.use_pass_environment = "environment" in aov_list
+        vl.use_pass_ambient_occlusion = "ao" in aov_list
 
         # Cryptomatte Passes
-        vl.use_pass_cryptomatte_accurate = "cryptomatte_accurate" in aov_list
-    elif renderer == "CYCLES":
-        # Cycles exclusive passes
-        cycles = vl.cycles
+        vl.use_pass_cryptomatte_object = "cryptomatte_object" in aov_list
+        vl.use_pass_cryptomatte_material = "cryptomatte_material" in aov_list
+        vl.use_pass_cryptomatte_asset = "cryptomatte_asset" in aov_list
 
-        # Data Passes
-        vl.use_pass_position = "position" in aov_list
-        vl.use_pass_vector = "vector" in aov_list
-        vl.use_pass_uv = "uv" in aov_list
-        cycles.denoising_store_passes = "denoising" in aov_list
-        vl.use_pass_object_index = "object_index" in aov_list
-        vl.use_pass_material_index = "material_index" in aov_list
-        cycles.pass_debug_sample_count = "sample_count" in aov_list
+        if renderer == "BLENDER_EEVEE":
+            # Eevee exclusive passes
+            eevee = vl.eevee
 
-        # Light Passes
-        vl.use_pass_diffuse_indirect = "diffuse_indirect" in aov_list
-        vl.use_pass_glossy_indirect = "specular_indirect" in aov_list
-        vl.use_pass_transmission_direct = "transmission_direct" in aov_list
-        vl.use_pass_transmission_indirect = "transmission_indirect" in aov_list
-        vl.use_pass_transmission_color = "transmission_color" in aov_list
-        cycles.use_pass_volume_direct = "volume_light" in aov_list
-        cycles.use_pass_volume_indirect = "volume_indirect" in aov_list
-        cycles.use_pass_shadow_catcher = "shadow" in aov_list
+            # Light Passes
+            vl.use_pass_shadow = "shadow" in aov_list
+            eevee.use_pass_volume_direct = "volume_light" in aov_list
 
-    aovs_names = [aov.name for aov in vl.aovs]
-    for cp in custom_passes:
-        cp_name = cp["attribute"]
-        if cp_name not in aovs_names:
-            aov = vl.aovs.add()
-            aov.name = cp_name
-        else:
-            aov = vl.aovs[cp_name]
-        aov.type = cp["value"]
+            # Effects Passes
+            eevee.use_pass_bloom = "bloom" in aov_list
+            eevee.use_pass_transparent = "transparent" in aov_list
+
+            # Cryptomatte Passes
+            vl.use_pass_cryptomatte_accurate = "cryptomatte_accurate" in aov_list
+        elif renderer == "CYCLES":
+            # Cycles exclusive passes
+            cycles = vl.cycles
+
+            # Data Passes
+            vl.use_pass_position = "position" in aov_list
+            vl.use_pass_vector = "vector" in aov_list
+            vl.use_pass_uv = "uv" in aov_list
+            cycles.denoising_store_passes = "denoising" in aov_list
+            vl.use_pass_object_index = "object_index" in aov_list
+            vl.use_pass_material_index = "material_index" in aov_list
+            cycles.pass_debug_sample_count = "sample_count" in aov_list
+
+            # Light Passes
+            vl.use_pass_diffuse_indirect = "diffuse_indirect" in aov_list
+            vl.use_pass_glossy_indirect = "specular_indirect" in aov_list
+            vl.use_pass_transmission_direct = "transmission_direct" in aov_list
+            vl.use_pass_transmission_indirect = "transmission_indirect" in aov_list
+            vl.use_pass_transmission_color = "transmission_color" in aov_list
+            cycles.use_pass_volume_direct = "volume_light" in aov_list
+            cycles.use_pass_volume_indirect = "volume_indirect" in aov_list
+            cycles.use_pass_shadow_catcher = "shadow" in aov_list
+
+        aovs_names = [aov.name for aov in vl.aovs]
+        for cp in custom_passes:
+            cp_name = cp["attribute"]
+            if cp_name not in aovs_names:
+                aov = vl.aovs.add()
+                aov.name = cp_name
+            else:
+                aov = vl.aovs[cp_name]
+            aov.type = cp["value"]
 
     return list(aov_list), custom_passes
 
@@ -192,7 +193,8 @@ def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, r
 
 
 def set_node_tree(
-    output_path, render_product, name, aov_sep, ext, multilayer, compositing
+    output_path, render_product, name, aov_sep, ext, multilayer, compositing,
+    view_layers
 ):
     # Set the scene to use the compositor node tree to render
     bpy.context.scene.use_nodes = True
@@ -209,7 +211,14 @@ def set_node_tree(
     old_output_node = None
     for node in tree.nodes:
         if node.bl_idname == comp_layer_type:
-            render_layer_nodes.append(node)
+            for view_layer in view_layers:
+                if node.layer == view_layer.name:
+                    render_layer_nodes.append(node)
+                else:
+                    render_layer_nodes = create_node_with_new_view_layers(
+                        tree, comp_layer_type,
+                        view_layer, render_layer_nodes
+                    )
         elif node.bl_idname == compositor_type:
             composite_node = node
         elif node.bl_idname == output_type and "AYON" in node.name:
@@ -219,9 +228,11 @@ def set_node_tree(
 
     # If there's not a Render Layers node, we create it
     if not render_layer_nodes:
-        render_layer_node = tree.nodes.new(comp_layer_type)
-        render_layer_nodes.append(render_layer_node)
-
+        for view_layer in view_layers:
+            render_layer_nodes = create_node_with_new_view_layers(
+                tree, comp_layer_type,
+                view_layer, render_layer_nodes
+            )
     # Get the enabled output sockets, that are the active passes for the
     # render.
     # We also exclude some layers.
@@ -324,6 +335,14 @@ def imprint_render_settings(node, data):
         node[RENDER_DATA][key] = value
 
 
+
+def create_node_with_new_view_layers(tree, comp_layer_type, view_layer, render_layer_nodes):
+    render_layer_node = tree.nodes.new(comp_layer_type)
+    render_layer_node.layer = view_layer.name
+    render_layer_nodes.append(render_layer_node)
+    return render_layer_nodes
+
+
 def prepare_rendering(asset_group):
     name = asset_group.name
 
@@ -345,14 +364,15 @@ def prepare_rendering(asset_group):
 
     set_render_format(ext, multilayer)
     bpy.context.scene.render.engine = renderer
-    aov_list, custom_passes = set_render_passes(settings, renderer)
+    view_layers = bpy.context.scene.view_layers
+    aov_list, custom_passes = set_render_passes(settings, renderer, view_layers)
 
     output_path = Path.joinpath(dirpath, render_folder, file_name)
 
-    render_product = get_render_product(output_path, name, aov_sep)
+    render_product = get_render_product(output_path, name, aov_sep, view_layers)
     aov_file_product = set_node_tree(
         output_path, render_product, name, aov_sep,
-        ext, multilayer, compositing)
+        ext, multilayer, compositing, view_layers)
 
     # Clear the render filepath, so that the output is handled only by the
     # output node in the compositor.
