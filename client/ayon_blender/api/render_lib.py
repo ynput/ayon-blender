@@ -78,8 +78,9 @@ def get_render_product(output_path, name, aov_sep, view_layers):
     """
     beauty_render_product = []
     for view_layer in view_layers:
-        filepath = output_path /view_layer/ name.lstrip("/")
-        render_product = f"{filepath}_{view_layer}{aov_sep}beauty.####"
+        output_dir = Path(f"{output_path}/ {view_layer.name}")
+        filepath = output_dir / name.lstrip("/")
+        render_product = f"{filepath}_{view_layer.name}{aov_sep}beauty.####"
         beauty_render_product.append(("Beauty", os.path.normpath(render_product)))
     return beauty_render_product
 
@@ -111,65 +112,29 @@ def set_render_format(ext, multilayer):
 
 def set_render_passes(settings, renderer, view_layers):
     aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
+    if not aov_list:
+        aov_list = existing_aov_options(renderer, view_layers)
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
     # Common passes for both renderers
     for vl in view_layers:
-        # Data Passes
-        vl.use_pass_combined = "combined" in aov_list
-        vl.use_pass_z = "z" in aov_list
-        vl.use_pass_mist = "mist" in aov_list
-        vl.use_pass_normal = "normal" in aov_list
-
-        # Light Passes
-        vl.use_pass_diffuse_direct = "diffuse_light" in aov_list
-        vl.use_pass_diffuse_color = "diffuse_color" in aov_list
-        vl.use_pass_glossy_direct = "specular_light" in aov_list
-        vl.use_pass_glossy_color = "specular_color" in aov_list
-        vl.use_pass_emit = "emission" in aov_list
-        vl.use_pass_environment = "environment" in aov_list
-        vl.use_pass_ambient_occlusion = "ao" in aov_list
-
-        # Cryptomatte Passes
-        vl.use_pass_cryptomatte_object = "cryptomatte_object" in aov_list
-        vl.use_pass_cryptomatte_material = "cryptomatte_material" in aov_list
-        vl.use_pass_cryptomatte_asset = "cryptomatte_asset" in aov_list
-
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
-            eevee = vl.eevee
-
-            # Light Passes
-            vl.use_pass_shadow = "shadow" in aov_list
-            eevee.use_pass_volume_direct = "volume_light" in aov_list
-
-            # Effects Passes
-            eevee.use_pass_bloom = "bloom" in aov_list
-            eevee.use_pass_transparent = "transparent" in aov_list
-
-            # Cryptomatte Passes
-            vl.use_pass_cryptomatte_accurate = "cryptomatte_accurate" in aov_list
+            aov_options = get_aov_options(renderer)
+            eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
+            for pass_name, attr in aov_options.items():
+                target = vl if attr in eevee_attrs else vl.eevee
+                setattr(target, attr, pass_name in aov_list)
         elif renderer == "CYCLES":
             # Cycles exclusive passes
-            cycles = vl.cycles
-
-            # Data Passes
-            vl.use_pass_position = "position" in aov_list
-            vl.use_pass_vector = "vector" in aov_list
-            vl.use_pass_uv = "uv" in aov_list
-            cycles.denoising_store_passes = "denoising" in aov_list
-            vl.use_pass_object_index = "object_index" in aov_list
-            vl.use_pass_material_index = "material_index" in aov_list
-            cycles.pass_debug_sample_count = "sample_count" in aov_list
-
-            # Light Passes
-            vl.use_pass_diffuse_indirect = "diffuse_indirect" in aov_list
-            vl.use_pass_glossy_indirect = "specular_indirect" in aov_list
-            vl.use_pass_transmission_direct = "transmission_direct" in aov_list
-            vl.use_pass_transmission_indirect = "transmission_indirect" in aov_list
-            vl.use_pass_transmission_color = "transmission_color" in aov_list
-            cycles.use_pass_volume_direct = "volume_light" in aov_list
-            cycles.use_pass_volume_indirect = "volume_indirect" in aov_list
-            cycles.use_pass_shadow_catcher = "shadow" in aov_list
+            aov_options = get_aov_options(renderer)
+            cycle_attrs = [
+                "denoising_store_passes", "pass_debug_sample_count",
+                "use_pass_volume_direct", "use_pass_volume_indirect",
+                "use_pass_shadow_catcher"
+            ]
+            for pass_name, attr in aov_options.items():
+                target = vl.cycles if attr in cycle_attrs else vl
+                setattr(target, attr, pass_name in aov_list)
 
         aovs_names = [aov.name for aov in vl.aovs]
         for cp in custom_passes:
@@ -182,6 +147,82 @@ def set_render_passes(settings, renderer, view_layers):
             aov.type = cp["value"]
 
     return list(aov_list), custom_passes
+
+
+def get_aov_options(renderer=None):
+    aov_options = {}
+    if renderer is None:
+        aov_options = {
+            "combined": "use_pass_combined",
+            "z": "use_pass_z",
+            "mist": "use_pass_mist",
+            "normal": "use_pass_normal",
+            "diffuse_light": "use_pass_diffuse_direct",
+            "diffuse_color": "use_pass_diffuse_color",
+            "specular_light": "use_pass_glossy_direct",
+            "specular_color": "use_pass_glossy_color",
+            "emission": "use_pass_emit",
+            "environment": "use_pass_environment",
+            "ao": "use_pass_ambient_occlusion",
+            "cryptomatte_object": "use_pass_cryptomatte_object",
+            "cryptomatte_material": "use_pass_cryptomatte_material",
+            "cryptomatte_asset": "use_pass_cryptomatte_asset",
+        }
+    elif renderer == "BLENDER_EEVEE":
+        eevee_options = {
+            "shadow": "use_pass_shadow",
+            "volume_light": "use_pass_volume_direct",
+            "bloom": "use_pass_bloom",
+            "transparent": "use_pass_transparent",
+            "cryptomatte_accurate": "use_pass_cryptomatte_accurate",
+        }
+        aov_options.update(eevee_options)
+    elif renderer == "CYCLES":
+        cycles_options = {
+            "position": "use_pass_position",
+            "vector": "use_pass_vector",
+            "uv": "use_pass_uv",
+            "denoising": "denoising_store_passes",
+            "object_index": "use_pass_object_index",
+            "material_index": "use_pass_material_index",
+            "sample_count": "pass_debug_sample_count",
+            "diffuse_indirect": "use_pass_diffuse_indirect",
+            "specular_indirect": "use_pass_glossy_indirect",
+            "transmission_direct": "use_pass_transmission_direct",
+            "transmission_indirect": "use_pass_transmission_indirect",
+            "transmission_color": "use_pass_transmission_color",
+            "volume_light": "use_pass_volume_direct",
+            "volume_indirect": "use_pass_volume_indirect",
+            "shadow": "use_pass_shadow_catcher",
+        }
+        aov_options.update(cycles_options)
+
+    return aov_options
+
+
+def existing_aov_options(renderer, view_layers):
+    aov_list = []
+    aov_options = get_aov_options(renderer)
+    for vl in view_layers:
+        if renderer == "BLENDER_EEVEE":
+            eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
+            for pass_name, attr in aov_options.items():
+                target = vl if attr in eevee_attrs else vl.eevee
+                if getattr(target, attr, False):
+                    aov_list.append(pass_name)
+
+        elif renderer == "CYCLES":
+            cycle_attrs = [
+                "denoising_store_passes", "pass_debug_sample_count",
+                "use_pass_volume_direct", "use_pass_volume_indirect",
+                "use_pass_shadow_catcher"
+            ]
+            for pass_name, attr in aov_options.items():
+                target = vl.cycles if attr in cycle_attrs else vl
+                if getattr(target, attr, False):
+                    aov_list.append(pass_name)
+
+    return aov_list
 
 
 def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, render_layer):
