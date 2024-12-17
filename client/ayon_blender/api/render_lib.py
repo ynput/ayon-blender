@@ -78,10 +78,10 @@ def get_render_product(output_path, name, aov_sep, view_layers):
     """
     beauty_render_product = []
     for view_layer in view_layers:
-        output_dir = Path(f"{output_path}/ {view_layer.name}")
+        output_dir = Path(f"{output_path}/{view_layer.name}")
         filepath = output_dir / name.lstrip("/")
         render_product = f"{filepath}_{view_layer.name}{aov_sep}beauty.####"
-        beauty_render_product.append(("Beauty", os.path.normpath(render_product)))
+        beauty_render_product.append(("beauty", os.path.normpath(render_product)))
     return beauty_render_product
 
 
