@@ -149,26 +149,24 @@ def set_render_passes(settings, renderer, view_layers):
     return list(aov_list), custom_passes
 
 
-def get_aov_options(renderer=None):
-    aov_options = {}
-    if renderer is None:
-        aov_options = {
-            "combined": "use_pass_combined",
-            "z": "use_pass_z",
-            "mist": "use_pass_mist",
-            "normal": "use_pass_normal",
-            "diffuse_light": "use_pass_diffuse_direct",
-            "diffuse_color": "use_pass_diffuse_color",
-            "specular_light": "use_pass_glossy_direct",
-            "specular_color": "use_pass_glossy_color",
-            "emission": "use_pass_emit",
-            "environment": "use_pass_environment",
-            "ao": "use_pass_ambient_occlusion",
-            "cryptomatte_object": "use_pass_cryptomatte_object",
-            "cryptomatte_material": "use_pass_cryptomatte_material",
-            "cryptomatte_asset": "use_pass_cryptomatte_asset",
+def get_aov_options(renderer):
+    aov_options = {
+        "combined": "use_pass_combined",
+        "z": "use_pass_z",
+        "mist": "use_pass_mist",
+        "normal": "use_pass_normal",
+        "diffuse_light": "use_pass_diffuse_direct",
+        "diffuse_color": "use_pass_diffuse_color",
+        "specular_light": "use_pass_glossy_direct",
+        "specular_color": "use_pass_glossy_color",
+        "emission": "use_pass_emit",
+        "environment": "use_pass_environment",
+        "ao": "use_pass_ambient_occlusion",
+        "cryptomatte_object": "use_pass_cryptomatte_object",
+        "cryptomatte_material": "use_pass_cryptomatte_material",
+        "cryptomatte_asset": "use_pass_cryptomatte_asset",
         }
-    elif renderer == "BLENDER_EEVEE":
+    if renderer == "BLENDER_EEVEE":
         eevee_options = {
             "shadow": "use_pass_shadow",
             "volume_light": "use_pass_volume_direct",
