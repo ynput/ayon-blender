@@ -112,8 +112,8 @@ def set_render_format(ext, multilayer):
 
 def set_render_passes(settings, renderer, view_layers):
     aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
-    if not aov_list:
-        aov_list = existing_aov_options(renderer, view_layers)
+    existing_aov_list = set(existing_aov_options(renderer, view_layers))
+    aov_list = aov_list.union(existing_aov_list)
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
     # Common passes for both renderers
     for vl in view_layers:
@@ -245,19 +245,12 @@ def set_node_tree(
     compositor_type = "CompositorNodeComposite"
 
     # Get the Render Layer, Composite and the previous output nodes
-    render_layer_nodes = []
+    render_layer_nodes = set()
     composite_node = None
     old_output_node = None
     for node in tree.nodes:
         if node.bl_idname == comp_layer_type:
-            for view_layer in view_layers:
-                if node.layer == view_layer.name:
-                    render_layer_nodes.append(node)
-                else:
-                    render_layer_nodes = create_node_with_new_view_layers(
-                        tree, comp_layer_type,
-                        view_layer, render_layer_nodes
-                    )
+            render_layer_nodes.add(node)
         elif node.bl_idname == compositor_type:
             composite_node = node
         elif node.bl_idname == output_type and "AYON" in node.name:
@@ -267,11 +260,25 @@ def set_node_tree(
 
     # If there's not a Render Layers node, we create it
     if not render_layer_nodes:
-        for view_layer in view_layers:
-            render_layer_nodes = create_node_with_new_view_layers(
-                tree, comp_layer_type,
-                view_layer, render_layer_nodes
-            )
+        render_layer_nodes = create_node_with_new_view_layers(
+            tree, comp_layer_type,
+            view_layers, render_layer_nodes
+        )
+    else:
+        missing_render_layer_nodes = set()
+        orig_view_layers = {view_layer.name for view_layer in view_layers}
+        missing_view_layers_by_nodes = {node.layer for node in render_layer_nodes}
+        missing_view_layers_set = orig_view_layers - missing_view_layers_by_nodes
+        missing_view_layers = [
+            view_layer for view_layer in view_layers
+            if view_layer.name in missing_view_layers_set
+        ]
+        missing_render_layer_nodes = create_node_with_new_view_layers(
+            tree, comp_layer_type,
+            missing_view_layers, missing_render_layer_nodes
+        )
+        render_layer_nodes.update(missing_render_layer_nodes)
+
     # Get the enabled output sockets, that are the active passes for the
     # render.
     # We also exclude some layers.
@@ -375,10 +382,11 @@ def imprint_render_settings(node, data):
 
 
 
-def create_node_with_new_view_layers(tree, comp_layer_type, view_layer, render_layer_nodes):
-    render_layer_node = tree.nodes.new(comp_layer_type)
-    render_layer_node.layer = view_layer.name
-    render_layer_nodes.append(render_layer_node)
+def create_node_with_new_view_layers(tree, comp_layer_type, view_layers, render_layer_nodes):
+    for view_layer in view_layers:
+        render_layer_node = tree.nodes.new(comp_layer_type)
+        render_layer_node.layer = view_layer.name
+        render_layer_nodes.add(render_layer_node)
     return render_layer_nodes
 
 
