@@ -325,18 +325,20 @@ def set_node_tree(
 
     if compositing:
         # Create a new socket for the composite output
+        # with only the one view layer
         pass_name = "composite"
-        for render_layer_node in render_aovs_dict.keys():
+        render_layer_node = next((node for node in render_aovs_dict.keys()), None)
+        if render_layer_node:
             render_layer = render_layer_node.layer
             comp_socket, filepath = _create_aov_slot(
                 name, aov_sep, slots, pass_name, multi_exr, output_path, render_layer)
             aov_file_products.append(("Composite", filepath))
-        # If there's a composite node, we connect its input with the new output
-        if composite_node:
-            for link in tree.links:
-                if link.to_node == composite_node:
-                    tree.links.new(link.from_socket, comp_socket)
-                    break
+            # If there's a composite node, we connect its input with the new output
+            if composite_node:
+                for link in tree.links:
+                    if link.to_node == composite_node:
+                        tree.links.new(link.from_socket, comp_socket)
+                        break
 
         # For each active render pass, we add a new socket to the output node
         # and link it
