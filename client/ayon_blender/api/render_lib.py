@@ -327,7 +327,7 @@ def set_node_tree(
         # Create a new socket for the composite output
         # with only the one view layer
         pass_name = "composite"
-        render_layer_node = next((node for node in render_aovs_dict.keys()), None)
+        render_layer_node = next((node for node in reversed(render_aovs_dict.keys())), None)
         if render_layer_node:
             render_layer = render_layer_node.layer
             comp_socket, filepath = _create_aov_slot(
