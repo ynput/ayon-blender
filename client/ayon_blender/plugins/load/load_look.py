@@ -132,6 +132,7 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         metadata["parent"] = context["representation"]["versionId"]
         metadata["product_type"] = context["product"]["productType"]
+        metadata["project_name"] = context["project"]["name"]
 
         nodes = list(container.objects)
         nodes.append(container)
@@ -203,6 +204,7 @@ class BlendLookLoader(plugin.BlenderLoader):
         collection_metadata["materials"] = materials
         collection_metadata["libpath"] = str(libpath)
         collection_metadata["representation"] = repre_entity["id"]
+        collection_metadata["project_name"] = context["project"]["name"]
 
     def remove(self, container: Dict) -> bool:
         collection = bpy.data.collections.get(container["objectName"])

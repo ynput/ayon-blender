@@ -129,6 +129,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
             "parent": context["representation"]["versionId"],
             "productType": context["product"]["productType"],
             "objectName": group_name,
+            "project_name": context["project"]["name"],
         }
 
         self[:] = objects
@@ -210,6 +211,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
+        metadata["project_name"] = context["project"]["name"]
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene.
