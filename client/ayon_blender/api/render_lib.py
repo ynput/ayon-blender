@@ -305,7 +305,8 @@ def set_node_tree(
     # because the blender render already outputs a multilayer exr.
     multi_exr = ext == "exr" and multilayer
     slots = output.layer_slots if multi_exr else output.file_slots
-    output.base_path = render_product if multi_exr else str(output_path)
+    _, render_product_main_beauty = render_product[0]
+    output.base_path = render_product_main_beauty if multi_exr else str(output_path)
 
     slots.clear()
 
