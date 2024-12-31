@@ -1,6 +1,7 @@
 import os
 
 import bpy
+import copy
 
 from ayon_core.pipeline.publish import (
     RepairAction,
@@ -9,7 +10,24 @@ from ayon_core.pipeline.publish import (
     OptionalPyblishPluginMixin
 )
 from ayon_blender.api import plugin
-from ayon_blender.api.render_lib import prepare_rendering
+
+
+def get_composite_output_node():
+    """Get composite output node for validation
+
+    Returns:
+        node: composite output node
+    """
+    tree = bpy.context.scene.node_tree
+    output_type = "CompositorNodeOutputFile"
+    output_node = None
+    # Remove all output nodes that include "AYON" in the name.
+    # There should be only one.
+    for node in tree.nodes:
+        if node.bl_idname == output_type and "AYON" in node.name:
+            output_node = node
+            break
+    return output_node
 
 
 class ValidateDeadlinePublish(
@@ -47,15 +65,7 @@ class ValidateDeadlinePublish(
     @classmethod
     def get_invalid(cls, instance):
         invalid = []
-        tree = bpy.context.scene.node_tree
-        output_type = "CompositorNodeOutputFile"
-        output_node = None
-        # Remove all output nodes that include "AYON" in the name.
-        # There should be only one.
-        for node in tree.nodes:
-            if node.bl_idname == output_type and "AYON" in node.name:
-                output_node = node
-                break
+        output_node = get_composite_output_node()
         if not output_node:
             msg = "No output node found in the compositor tree."
             invalid.append(msg)
@@ -79,8 +89,11 @@ class ValidateDeadlinePublish(
 
     @classmethod
     def repair(cls, instance):
-        container = instance.data["transientData"]["instance_node"]
-        prepare_rendering(container)
+        output_node = get_composite_output_node()
+        output_node_dir = os.path.dirname(output_node.base_path)
+        filename = os.path.basename(bpy.data.filepath)
+        filename = os.path.splitext(filename)[0]
+        output_node.base_path = os.path.join(output_node_dir, filename)
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
         bpy.context.scene.render.filepath = "/tmp/"
         cls.log.debug("Reset the render output folder...")
