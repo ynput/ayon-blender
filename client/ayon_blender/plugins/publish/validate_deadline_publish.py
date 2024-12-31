@@ -1,7 +1,6 @@
 import os
 
 import bpy
-import copy
 
 from ayon_core.pipeline.publish import (
     RepairAction,
