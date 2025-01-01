@@ -9,6 +9,7 @@ from ayon_core.pipeline.publish import (
     OptionalPyblishPluginMixin
 )
 from ayon_blender.api import plugin
+from ayon_blender.api.render_lib import update_render_product
 
 
 def get_composite_output_node():
@@ -88,11 +89,24 @@ class ValidateDeadlinePublish(
 
     @classmethod
     def repair(cls, instance):
+        container = instance.data["transientData"]["instance_node"]
         output_node = get_composite_output_node()
         output_node_dir = os.path.dirname(output_node.base_path)
         filename = os.path.basename(bpy.data.filepath)
         filename = os.path.splitext(filename)[0]
-        output_node.base_path = os.path.join(output_node_dir, filename)
+        new_output_dir = os.path.join(output_node_dir, filename)
+        output_node.base_path = new_output_dir
+
+        render_data = container.get("render_data")
+        render_product = render_data.get("render_product")
+        aov_file_product = render_data.get("aov_file_product")
+        updated_render_product = update_render_product(
+            container.name, new_output_dir, render_product)
+        updated_aov_file_product = update_render_product(
+            container.name, new_output_dir, aov_file_product)
+        render_data["render_product"] = updated_render_product
+        render_data["aov_file_product"] = updated_aov_file_product
+
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
         bpy.context.scene.render.filepath = "/tmp/"
         cls.log.debug("Reset the render output folder...")
