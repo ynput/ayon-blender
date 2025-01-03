@@ -91,3 +91,4 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_end=frame_end
             ),
         })
+        self.log.debug(expected_files)

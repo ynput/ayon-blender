@@ -444,18 +444,18 @@ def prepare_rendering(asset_group):
 
 
 def update_render_product(name, output_path, render_product):
-    tmp_render_product = {}
+    tmp_render_product = []
     render_layers = bpy.context.scene.view_layers
 
     project = get_current_project_name()
     settings = get_project_settings(project)
-
     aov_sep = get_aov_separator(settings)
-    for rpass_name, render_pass in render_product.items():
+    for rpass_name, render_pass in render_product:
         for render_layer in render_layers:
-            if render_layer in render_pass:
-                filename = f"{render_layer}/{name}_{render_layer}{aov_sep}{rpass_name}.####"
+            rl_name = render_layer.name
+            if rl_name in render_pass:
+                filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
                 filepath = str(output_path / filename.lstrip("/"))
-                tmp_render_product[rpass_name] = filepath
+                tmp_render_product.append((rpass_name, filepath))
 
     return tmp_render_product

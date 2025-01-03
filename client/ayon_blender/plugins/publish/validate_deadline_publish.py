@@ -1,6 +1,7 @@
 import os
 
 import bpy
+from pathlib import Path
 
 from ayon_core.pipeline.publish import (
     RepairAction,
@@ -97,6 +98,7 @@ class ValidateDeadlinePublish(
         new_output_dir = os.path.join(output_node_dir, filename)
         output_node.base_path = new_output_dir
 
+        new_output_dir = Path(new_output_dir)
         render_data = container.get("render_data")
         render_product = render_data.get("render_product")
         aov_file_product = render_data.get("aov_file_product")
