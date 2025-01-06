@@ -29,12 +29,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         replaces the sequence of `#` with the frame number.
         """
         expected_files = {}
-
+        aov_files = []
         for render_name, render_file in render_product:
             path = os.path.dirname(render_file)
             file = os.path.basename(render_file)
-
-            aov_files = []
 
             for frame in range(frame_start, frame_end + 1, frame_step):
                 frame_str = str(frame).rjust(4, "0")
@@ -91,3 +89,4 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_end=frame_end
             ),
         })
+        self.log.debug(expected_files)
