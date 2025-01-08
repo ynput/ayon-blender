@@ -464,7 +464,7 @@ def update_render_product(name, output_path, render_product):
         rl_name = render_layer.name
         tmp_render_product[rl_name] = []
         rn_product = render_product[rl_name]
-        for rpass_name in rn_product.keys():
+        for rpass_name, _ in rn_product:
             filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
             filepath = str(output_path / filename.lstrip("/"))
             tmp_render_product[rl_name].append((rpass_name, filepath))
