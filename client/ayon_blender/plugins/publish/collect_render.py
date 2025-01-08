@@ -3,7 +3,6 @@
 
 import os
 import re
-import copy
 
 import bpy
 import pyblish.api
