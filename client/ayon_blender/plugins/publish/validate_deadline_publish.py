@@ -40,7 +40,7 @@ class ValidateDeadlinePublish(
     """
 
     order = ValidateContentsOrder
-    families = ["render"]
+    families = ["renderlayer"]
     hosts = ["blender"]
     label = "Validate Render Output for Deadline"
     optional = True
@@ -109,6 +109,6 @@ class ValidateDeadlinePublish(
         render_data["render_product"] = updated_render_product
         render_data["aov_file_product"] = updated_aov_file_product
 
-        bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
         bpy.context.scene.render.filepath = "/tmp/"
+        bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
         cls.log.debug("Reset the render output folder...")

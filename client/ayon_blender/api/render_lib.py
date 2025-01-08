@@ -76,13 +76,16 @@ def get_render_product(output_path, name, aov_sep, view_layers):
         instance (pyblish.api.Instance): The instance to publish.
         ext (str): The image format to render.
     """
-    beauty_render_product = []
+    beauty_render_product = {}
     for view_layer in view_layers:
-        output_dir = Path(f"{output_path}/{view_layer.name}")
+        vl_name = view_layer.name
+        beauty_render_product[vl_name] = []
+        output_dir = Path(f"{output_path}/{vl_name}")
         filepath = output_dir / name.lstrip("/")
-        render_product = f"{filepath}_{view_layer.name}{aov_sep}beauty.####"
-        beauty_render_product.append(("beauty", os.path.normpath(render_product)))
+        render_product = f"{filepath}_{vl_name}{aov_sep}beauty.####"
+        beauty_render_product[vl_name].append(("beauty", os.path.normpath(render_product)))
     return beauty_render_product
+
 
 
 def set_render_format(ext, multilayer):
@@ -232,7 +235,7 @@ def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, r
 
 
 def set_node_tree(
-    output_path, render_product, name, aov_sep, ext, multilayer, compositing,
+    output_path, name, aov_sep, ext, multilayer, compositing,
     view_layers
 ):
     # Set the scene to use the compositor node tree to render
@@ -305,12 +308,17 @@ def set_node_tree(
     # because the blender render already outputs a multilayer exr.
     multi_exr = ext == "exr" and multilayer
     slots = output.layer_slots if multi_exr else output.file_slots
-    _, render_product_main_beauty = render_product[0]
+
+    rn_layer_node = next((node for node in reversed(render_aovs_dict.keys())), None)
+    output_dir = Path(f"{output_path}/{rn_layer_node.layer}")
+    filepath = output_dir / name.lstrip("/")
+    render_product_main_beauty = f"{filepath}_{rn_layer_node.layer}{aov_sep}beauty.####"
+
     output.base_path = render_product_main_beauty if multi_exr else str(output_path)
 
     slots.clear()
 
-    aov_file_products = []
+    aov_file_products = {}
 
     old_links = {
         link.from_socket.name: link for link in tree.links
@@ -328,12 +336,12 @@ def set_node_tree(
         # Create a new socket for the composite output
         # with only the one view layer
         pass_name = "composite"
-        render_layer_node = next((node for node in reversed(render_aovs_dict.keys())), None)
-        if render_layer_node:
-            render_layer = render_layer_node.layer
+        if rn_layer_node:
+            render_layer = rn_layer_node.layer
+            aov_file_products[render_layer] = []
             comp_socket, filepath = _create_aov_slot(
                 name, aov_sep, slots, pass_name, multi_exr, output_path, render_layer)
-            aov_file_products.append(("Composite", filepath))
+            aov_file_products[render_layer].append((pass_name, filepath))
             # If there's a composite node, we connect its input with the new output
             if composite_node:
                 for link in tree.links:
@@ -345,10 +353,12 @@ def set_node_tree(
         # and link it
         for render_layer_node, passes in render_aovs_dict.items():
             render_layer = render_layer_node.layer
+            aov_file_products[render_layer] = []
             for rpass in passes:
                 slot, filepath = _create_aov_slot(
                     name, aov_sep, slots, rpass.name, multi_exr, output_path, render_layer)
-                aov_file_products.append((rpass.name, filepath))
+
+                aov_file_products[render_layer].append((rpass.name, filepath))
 
                 # If the rpass was not connected with the old output node, we connect
                 # it with the new one.
@@ -421,8 +431,9 @@ def prepare_rendering(asset_group):
 
     render_product = get_render_product(output_path, name, aov_sep, view_layers)
     aov_file_product = set_node_tree(
-        output_path, render_product, name, aov_sep,
-        ext, multilayer, compositing, view_layers)
+        output_path, name, aov_sep, ext,
+        multilayer, compositing, view_layers
+    )
 
     # Clear the render filepath, so that the output is handled only by the
     # output node in the compositor.
@@ -444,18 +455,18 @@ def prepare_rendering(asset_group):
 
 
 def update_render_product(name, output_path, render_product):
-    tmp_render_product = []
+    tmp_render_product = {}
     render_layers = bpy.context.scene.view_layers
-
     project = get_current_project_name()
     settings = get_project_settings(project)
     aov_sep = get_aov_separator(settings)
-    for rpass_name, render_pass in render_product:
-        for render_layer in render_layers:
-            rl_name = render_layer.name
-            if rl_name in render_pass:
-                filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
-                filepath = str(output_path / filename.lstrip("/"))
-                tmp_render_product.append((rpass_name, filepath))
+    for render_layer in render_layers:
+        rl_name = render_layer.name
+        tmp_render_product[rl_name] = []
+        rn_product = render_product[rl_name]
+        for rpass_name in rn_product.keys():
+            filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
+            filepath = str(output_path / filename.lstrip("/"))
+            tmp_render_product[rl_name].append((rpass_name, filepath))
 
     return tmp_render_product
