@@ -13,7 +13,7 @@ class CreateRenderlayer(plugin.BlenderCreator):
 
     identifier = "io.openpype.creators.blender.render"
     label = "Render"
-    product_type = "render"
+    product_type = "renderlayer"
     icon = "eye"
 
     def create(
