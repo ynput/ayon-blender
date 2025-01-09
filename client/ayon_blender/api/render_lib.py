@@ -5,6 +5,7 @@ import bpy
 
 from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import get_current_project_name
+from . import lib
 
 
 def get_default_render_folder(settings):
@@ -420,6 +421,11 @@ def prepare_rendering(asset_group):
     ext = get_image_format(settings)
     multilayer = get_multilayer(settings)
     renderer = get_renderer(settings)
+    ver_major, ver_minor, _ = lib.get_blender_version()
+    if renderer == "BLENDER_EEVEE" and (
+        ver_major >= 4 and ver_minor >=2
+    ):
+        renderer = "BLENDER_EEVEE_NEXT"
     compositing = get_compositing(settings)
 
     set_render_format(ext, multilayer)
