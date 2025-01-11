@@ -119,11 +119,15 @@ def set_render_passes(settings, renderer, view_layers):
     existing_aov_list = set(existing_aov_options(renderer, view_layers))
     aov_list = aov_list.union(existing_aov_list)
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
+    ver_major, ver_minor, _ = lib.get_blender_version()
     # Common passes for both renderers
     for vl in view_layers:
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
+            # TODO: Remove compatibility for 3.6.x LTS version
+            if ver_major <= 3 and ver_minor <= 6:
+                aov_options.pop("combined")
             eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
             for pass_name, attr in aov_options.items():
                 target = vl if attr in eevee_attrs else vl.eevee
