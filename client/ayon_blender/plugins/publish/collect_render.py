@@ -80,8 +80,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         for view_layer in bpy.context.scene.view_layers:
             viewlayer_name = view_layer.name
             rn_product = render_product[viewlayer_name]
-            aov_product = aov_file_product[viewlayer_name]
-            self.log.debug(f"aov: {aov_product}")
+            aov_product = aov_file_product[viewlayer_name] if aov_file_product else {}
             viewlayer_product_name = get_product_name(
                 context.data["projectName"],
                 task_entity["name"],
@@ -129,6 +128,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                     frame_start=frame_start,
                     frame_end=frame_end
                 ),
+                "publish_attributes": instance.data["publish_attributes"]
             })
             instance.append(rn_layer_instance)
             self.log.debug([expected_files])
