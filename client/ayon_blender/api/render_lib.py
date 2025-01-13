@@ -125,12 +125,12 @@ def set_render_passes(settings, renderer, view_layers):
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
-            # TODO: Remove compatibility for 3.6.x LTS version
-            if ver_major <= 3 and ver_minor <= 6:
-                aov_options.pop("combined")
-            eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
+            eevee_attrs = [
+                "use_pass_shadow", "use_pass_volume_direct",
+                "cryptomatte_accurate"
+            ]
             for pass_name, attr in aov_options.items():
-                target = vl if attr in eevee_attrs else vl.eevee
+                target = vl.eevee if attr in eevee_attrs else vl
                 setattr(target, attr, pass_name in aov_list)
         elif renderer == "CYCLES":
             # Cycles exclusive passes
@@ -142,6 +142,9 @@ def set_render_passes(settings, renderer, view_layers):
             ]
             for pass_name, attr in aov_options.items():
                 target = vl.cycles if attr in cycle_attrs else vl
+                # TODO: Remove compatibility for 3.6.x LTS version
+                if ver_major <= 3 and ver_minor <= 6:
+                    target = vl
                 setattr(target, attr, pass_name in aov_list)
 
         aovs_names = [aov.name for aov in vl.aovs]
