@@ -142,9 +142,6 @@ def set_render_passes(settings, renderer, view_layers):
             ]
             for pass_name, attr in aov_options.items():
                 target = vl.cycles if attr in cycle_attrs else vl
-                # TODO: Remove compatibility for 3.6.x LTS version
-                if ver_major <= 3 and ver_minor <= 6:
-                    target = vl
                 setattr(target, attr, pass_name in aov_list)
 
         aovs_names = [aov.name for aov in vl.aovs]
