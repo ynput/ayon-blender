@@ -119,7 +119,6 @@ def set_render_passes(settings, renderer, view_layers):
     existing_aov_list = set(existing_aov_options(renderer, view_layers))
     aov_list = aov_list.union(existing_aov_list)
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
-    ver_major, ver_minor, _ = lib.get_blender_version()
     # Common passes for both renderers
     for vl in view_layers:
         if renderer == "BLENDER_EEVEE":
