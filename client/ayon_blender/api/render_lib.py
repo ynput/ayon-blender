@@ -353,7 +353,8 @@ def set_node_tree(
         # and link it
         for render_layer_node, passes in render_aovs_dict.items():
             render_layer = render_layer_node.layer
-            aov_file_products[render_layer] = []
+            if not aov_file_products.get(render_layer, []):
+                aov_file_products[render_layer] = []
             for rpass in passes:
                 slot, filepath = _create_aov_slot(
                     name, aov_sep, slots, rpass.name, multi_exr, output_path, render_layer)
@@ -381,7 +382,7 @@ def set_node_tree(
     output.name = "AYON File Output"
     output.label = "AYON File Output"
 
-    return [] if multi_exr else aov_file_products
+    return {} if multi_exr else aov_file_products
 
 
 def imprint_render_settings(node, data):
