@@ -1,7 +1,6 @@
 import os
 
 import bpy
-import tempfile
 from pathlib import Path
 
 from ayon_core.pipeline.publish import (
@@ -111,7 +110,9 @@ class ValidateDeadlinePublish(
                 container.name, new_output_dir, aov_file_product)
             render_data["aov_file_product"] = updated_aov_file_product
 
-        tmp_render_path = os.path.join(tempfile.gettempdir(), "renders", "tmp")
+        tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
         tmp_render_path = tmp_render_path.replace("\\", "/")
+        os.makedirs(tmp_render_path, exist_ok=True)
         bpy.context.scene.render.filepath = f"{tmp_render_path}/"
+
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
