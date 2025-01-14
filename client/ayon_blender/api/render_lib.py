@@ -125,11 +125,16 @@ def set_render_passes(settings, renderer, view_layers):
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
             eevee_attrs = [
-                "use_pass_shadow", "use_pass_volume_direct",
-                "cryptomatte_accurate"
+                "use_pass_bloom",
+                "use_pass_transparent",
+                "use_pass_volume_direct"
             ]
             for pass_name, attr in aov_options.items():
                 target = vl.eevee if attr in eevee_attrs else vl
+                ver_major, ver_minor, _ = lib.get_blender_version()
+                if ver_major >= 3 and ver_minor > 6:
+                    if attr == "use_pass_bloom":
+                        continue
                 setattr(target, attr, pass_name in aov_list)
         elif renderer == "CYCLES":
             # Cycles exclusive passes
