@@ -110,6 +110,9 @@ class ValidateDeadlinePublish(
                 container.name, new_output_dir, aov_file_product)
             render_data["aov_file_product"] = updated_aov_file_product
 
-        bpy.context.scene.render.filepath = "/tmp/"
+        tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
+        tmp_render_path = tmp_render_path.replace("\\", "/")
+        os.makedirs(tmp_render_path, exist_ok=True)
+        bpy.context.scene.render.filepath = f"{tmp_render_path}/"
+
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
-        cls.log.debug("Reset the render output folder...")
