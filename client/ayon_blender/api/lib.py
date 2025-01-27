@@ -577,3 +577,10 @@ def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
                                    if modifier.type == modifier_type]
                 modifiers_dict[ob.name] = cache_modifiers
     return modifiers_dict
+
+
+def get_blender_version():
+    """Get Blender Version
+    """
+    major, minor, subversion = bpy.app.version
+    return major, minor, subversion

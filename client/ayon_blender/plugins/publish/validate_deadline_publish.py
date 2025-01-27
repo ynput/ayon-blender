@@ -1,6 +1,7 @@
 import os
 
 import bpy
+from pathlib import Path
 
 from ayon_core.pipeline.publish import (
     RepairAction,
@@ -9,7 +10,25 @@ from ayon_core.pipeline.publish import (
     OptionalPyblishPluginMixin
 )
 from ayon_blender.api import plugin
-from ayon_blender.api.render_lib import prepare_rendering
+from ayon_blender.api.render_lib import update_render_product
+
+
+def get_composite_output_node():
+    """Get composite output node for validation
+
+    Returns:
+        node: composite output node
+    """
+    tree = bpy.context.scene.node_tree
+    output_type = "CompositorNodeOutputFile"
+    output_node = None
+    # Remove all output nodes that include "AYON" in the name.
+    # There should be only one.
+    for node in tree.nodes:
+        if node.bl_idname == output_type and "AYON" in node.name:
+            output_node = node
+            break
+    return output_node
 
 
 class ValidateDeadlinePublish(
@@ -21,7 +40,7 @@ class ValidateDeadlinePublish(
     """
 
     order = ValidateContentsOrder
-    families = ["render"]
+    families = ["renderlayer"]
     hosts = ["blender"]
     label = "Validate Render Output for Deadline"
     optional = True
@@ -47,15 +66,7 @@ class ValidateDeadlinePublish(
     @classmethod
     def get_invalid(cls, instance):
         invalid = []
-        tree = bpy.context.scene.node_tree
-        output_type = "CompositorNodeOutputFile"
-        output_node = None
-        # Remove all output nodes that include "AYON" in the name.
-        # There should be only one.
-        for node in tree.nodes:
-            if node.bl_idname == output_type and "AYON" in node.name:
-                output_node = node
-                break
+        output_node = get_composite_output_node()
         if not output_node:
             msg = "No output node found in the compositor tree."
             invalid.append(msg)
@@ -80,7 +91,28 @@ class ValidateDeadlinePublish(
     @classmethod
     def repair(cls, instance):
         container = instance.data["transientData"]["instance_node"]
-        prepare_rendering(container)
+        output_node = get_composite_output_node()
+        output_node_dir = os.path.dirname(output_node.base_path)
+        filename = os.path.basename(bpy.data.filepath)
+        filename = os.path.splitext(filename)[0]
+        new_output_dir = os.path.join(output_node_dir, filename)
+        output_node.base_path = new_output_dir
+
+        new_output_dir = Path(new_output_dir)
+        render_data = container.get("render_data")
+        render_product = render_data.get("render_product")
+        aov_file_product = render_data.get("aov_file_product")
+        updated_render_product = update_render_product(
+            container.name, new_output_dir, render_product)
+        render_data["render_product"] = updated_render_product
+        if aov_file_product:
+            updated_aov_file_product = update_render_product(
+                container.name, new_output_dir, aov_file_product)
+            render_data["aov_file_product"] = updated_aov_file_product
+
+        tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
+        tmp_render_path = tmp_render_path.replace("\\", "/")
+        os.makedirs(tmp_render_path, exist_ok=True)
+        bpy.context.scene.render.filepath = f"{tmp_render_path}/"
+
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
-        bpy.context.scene.render.filepath = "/tmp/"
-        cls.log.debug("Reset the render output folder...")
