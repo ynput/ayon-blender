@@ -52,7 +52,12 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         # If the currently selected object has one or more materials, let's use
         # the first one. If it has no material, let's create a new one.
-        if not cur_obj.data.materials:
+        materials = [
+            material for material in cur_obj.data.materials
+            # Ignore empty material slots
+            if material is not None
+        ]
+        if not materials:
             # Create a new material
             current_material = bpy.data.materials.new(name="material")
             current_material.use_nodes = True
