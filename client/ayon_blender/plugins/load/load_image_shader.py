@@ -63,7 +63,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             current_material.use_nodes = True
             cur_obj.data.materials.append(current_material)
         else:
-            current_material = cur_obj.data.materials[0]
+            current_material = materials[0]
             current_material.use_nodes = True
 
         nodes = current_material.node_tree.nodes
