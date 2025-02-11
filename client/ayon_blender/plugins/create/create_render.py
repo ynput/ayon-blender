@@ -43,7 +43,7 @@ class CreateRenderlayer(plugin.BlenderCreator):
         if not bpy.data.filepath:
             version_up_current_workfile()
         else:
-            filepath = version_up(bpy.data.filepath)
+            filepath = bpy.data.filepath
             save_file(filepath, copy=False)
 
         return collection

@@ -92,10 +92,16 @@ class ValidateDeadlinePublish(
     def repair(cls, instance):
         container = instance.data["transientData"]["instance_node"]
         output_node = get_composite_output_node()
+        is_multilayer = container.get("multilayer_exr")
         output_node_dir = os.path.dirname(output_node.base_path)
         filename = os.path.basename(bpy.data.filepath)
         filename = os.path.splitext(filename)[0]
-        new_output_dir = os.path.join(output_node_dir, filename)
+        if is_multilayer:
+            old_filename = os.path.basename(output_node.base_path)
+            old_filename = os.path.splitext(old_filename)[0]
+            new_output_dir = output_node_dir.replace(old_filename, filename)
+        else:
+            new_output_dir = os.path.join(output_node_dir, filename)
         output_node.base_path = new_output_dir
 
         new_output_dir = Path(new_output_dir)
