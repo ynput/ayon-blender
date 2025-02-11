@@ -1,4 +1,5 @@
 import os
+import re
 
 import bpy
 from pathlib import Path
@@ -11,6 +12,25 @@ from ayon_core.pipeline.publish import (
 )
 from ayon_blender.api import plugin
 from ayon_blender.api.render_lib import update_render_product
+
+
+def get_correct_workfile_directory(old_workfile_dir):
+    """Get correct workfile directory for the repair action
+
+    Args:
+        old_workfile_dir (str): old workfile directory
+        new_workfile_name (str): new workfile name
+
+    Returns:
+        str: new_workfile_name
+    """
+    # Use regex to extract the numeric part
+    # Matches one or more digits at the end of the string
+    for directory in old_workfile_dir.split("\\"):
+        old_workfile_match = re.search(r"(\d+)$", directory)
+        if old_workfile_match:
+            old_workfile_name = directory
+            return old_workfile_name
 
 
 def get_composite_output_node():
@@ -92,20 +112,21 @@ class ValidateDeadlinePublish(
     def repair(cls, instance):
         container = instance.data["transientData"]["instance_node"]
         output_node = get_composite_output_node()
-        is_multilayer = container.get("multilayer_exr")
-        output_node_dir = os.path.dirname(output_node.base_path)
+        render_data = container.get("render_data")
+        is_multilayer = render_data.get("multilayer_exr")
         filename = os.path.basename(bpy.data.filepath)
         filename = os.path.splitext(filename)[0]
         if is_multilayer:
-            old_filename = os.path.basename(output_node.base_path)
-            old_filename = os.path.splitext(old_filename)[0]
-            new_output_dir = output_node_dir.replace(old_filename, filename)
+            output_node_path = output_node.base_path
+            new_output_workfile = get_correct_workfile_directory(output_node_path)
+            new_output_dir = output_node_path.replace(new_output_workfile, filename)
         else:
+            output_node_dir = os.path.dirname(output_node.base_path)
             new_output_dir = os.path.join(output_node_dir, filename)
+
         output_node.base_path = new_output_dir
 
         new_output_dir = Path(new_output_dir)
-        render_data = container.get("render_data")
         render_product = render_data.get("render_product")
         aov_file_product = render_data.get("aov_file_product")
         updated_render_product = update_render_product(
