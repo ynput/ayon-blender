@@ -1,7 +1,6 @@
 """Create render."""
 import bpy
 
-from ayon_core.lib import version_up
 from ayon_core.pipeline.context_tools import version_up_current_workfile
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.render_lib import prepare_rendering
