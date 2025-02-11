@@ -102,9 +102,9 @@ class ValidateDeadlinePublish(
             output_dir = os.path.dirname(bpy.data.filepath)
             output_dir = os.path.join(output_dir, render_folder, filename)
             output_node.base_path = f"{output_dir}_{output_node.layer}{aov_sep}beauty.####"
-
-        output_node_dir = os.path.dirname(output_node.base_path)
-        new_output_dir = os.path.join(output_node_dir, filename)
+        else:
+            output_node_dir = os.path.dirname(output_node.base_path)
+            new_output_dir = os.path.join(output_node_dir, filename)
 
         output_node.base_path = new_output_dir
 
