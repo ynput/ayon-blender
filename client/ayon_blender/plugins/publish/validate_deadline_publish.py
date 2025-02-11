@@ -1,5 +1,4 @@
 import os
-import re
 
 import bpy
 from pathlib import Path
@@ -12,26 +11,6 @@ from ayon_core.pipeline.publish import (
 )
 from ayon_blender.api import plugin
 from ayon_blender.api.render_lib import update_render_product
-
-
-def get_workfile_directory(old_workfile_dir):
-    """Get correct workfile directory for the repair action
-
-    Args:
-        old_workfile_dir (str): old workfile directory
-
-    Returns:
-        str: new_workfile_name
-    """
-    # Use regex to extract the numeric part
-    # Matches one or more digits at the end of the string
-    path = Path(old_workfile_dir)
-
-    old_workfile_name = path.parent.name
-    print(old_workfile_name)
-    old_workfile_match = re.search(r"(\d+)$", old_workfile_name)
-    if old_workfile_match:
-        return old_workfile_name
 
 
 def get_composite_output_node():
@@ -117,13 +96,15 @@ class ValidateDeadlinePublish(
         is_multilayer = render_data.get("multilayer_exr")
         filename = os.path.basename(bpy.data.filepath)
         filename = os.path.splitext(filename)[0]
-        output_node_path = output_node.base_path
-        output_node_dir = os.path.dirname(output_node_path)
         if is_multilayer:
-            new_output_workfile = get_workfile_directory(output_node_dir)
-            new_output_dir = output_node_path.replace(new_output_workfile, filename)
-        else:
-            new_output_dir = os.path.join(output_node_dir, filename)
+            render_folder = render_data.get("render_folder")
+            aov_sep = render_data.get("aov_separator")
+            output_dir = os.path.dirname(bpy.data.filepath)
+            output_dir = os.path.join(output_dir, render_folder, filename)
+            output_node.base_path = f"{output_dir}_{output_node.layer}{aov_sep}beauty.####"
+
+        output_node_dir = os.path.dirname(output_node.base_path)
+        new_output_dir = os.path.join(output_node_dir, filename)
 
         output_node.base_path = new_output_dir
 
