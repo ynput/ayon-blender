@@ -105,8 +105,7 @@ class ValidateDeadlinePublish(
         else:
             output_node_dir = os.path.dirname(output_node.base_path)
             new_output_dir = os.path.join(output_node_dir, filename)
-
-        output_node.base_path = new_output_dir
+            output_node.base_path = new_output_dir
 
         new_output_dir = Path(new_output_dir)
         render_product = render_data.get("render_product")
