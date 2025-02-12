@@ -96,19 +96,23 @@ class ValidateDeadlinePublish(
         is_multilayer = render_data.get("multilayer_exr")
         filename = os.path.basename(bpy.data.filepath)
         filename = os.path.splitext(filename)[0]
+        orig_output_path = output_node.base_path
         if is_multilayer:
             render_folder = render_data.get("render_folder")
-            aov_sep = render_data.get("aov_separator")
             output_dir = os.path.dirname(bpy.data.filepath)
             output_dir = os.path.join(output_dir, render_folder, filename)
-            output_node.base_path = f"{output_dir}_{output_node.layer}{aov_sep}beauty.####"
-            new_output_dir = os.path.dirname(output_node.base_path)
+            orig_output_dir = os.path.dirname(os.path.dirname(orig_output_path))
+            new_output_dir = orig_output_path.replace(orig_output_dir, output_dir)
         else:
-            output_node_dir = os.path.dirname(output_node.base_path)
+            output_node_dir = os.path.dirname(orig_output_path)
             new_output_dir = os.path.join(output_node_dir, filename)
-            output_node.base_path = new_output_dir
 
-        new_output_dir = Path(new_output_dir)
+        output_node.base_path = new_output_dir
+
+        new_output_dir = (
+            Path(new_output_dir).parent.parent
+            if is_multilayer else Path(new_output_dir)
+        )
         render_product = render_data.get("render_product")
         aov_file_product = render_data.get("aov_file_product")
         updated_render_product = update_render_product(
