@@ -49,7 +49,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         return expected_files
 
     def process(self, instance):
-        context = instance.context
 
         instance_node = instance.data["transientData"]["instance_node"]
         render_data = instance_node.get("render_data")
@@ -60,9 +59,54 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         aov_file_product = render_data.get("aov_file_product")
         ext = render_data.get("image_format")
         multilayer = render_data.get("multilayer_exr")
+        review = render_data.get("review", False)
 
         frame_start = instance.data["frameStartHandle"]
         frame_end = instance.data["frameEndHandle"]
+
+        if multilayer:
+            expected_files = next((rn_product for rn_product in render_product.values()), None)
+            expected_beauty = self.generate_expected_files(
+                expected_files, int(frame_start), int(frame_end),
+                int(bpy.context.scene.frame_step), ext)
+
+            instance.data.update({
+                "families": ["render", "render.farm"],
+                "frameStart": frame_start,
+                "frameEnd": frame_end,
+                "productType": "render",
+                "frameStartHandle": frame_start,
+                "frameEndHandle": frame_end,
+                "fps": instance.context.data["fps"],
+                "byFrameStep": bpy.context.scene.frame_step,
+                "review": review,
+                "multipartExr": ext == "exr" and multilayer,
+                "farm": True,
+                "expectedFiles": [expected_beauty],
+                # OCIO not currently implemented in Blender, but the following
+                # settings are required by the schema, so it is hardcoded.
+                # TODO: Implement OCIO in Blender
+                "colorspaceConfig": "",
+                "colorspaceDisplay": "sRGB",
+                "colorspaceView": "ACES 1.0 SDR-video",
+                "renderProducts": colorspace.ARenderProduct(
+                    frame_start=frame_start,
+                    frame_end=frame_end
+                ),
+            })
+
+        else:
+            instance.data["integrate"] = False
+            self.create_renderlayer_instance(
+                instance, render_product,
+                aov_file_product, ext, multilayer,
+                frame_start, frame_end, review)
+
+    def create_renderlayer_instance(self, instance, render_product,
+                                    aov_file_product, ext, multilayer,
+                                    frame_start, frame_end, review):
+        context = instance.context
+        prod_type = "render"
         project_name = instance.context.data["projectName"]
         folder_entity = ayon_api.get_folder_by_path(
             project_name,
@@ -74,9 +118,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             task_entity = ayon_api.get_task_by_name(
                 project_name, folder_entity["id"], task_name
             )
-        instance.data["integrate"] = False
 
-        prod_type = "render"
         for view_layer in bpy.context.scene.view_layers:
             viewlayer_name = view_layer.name
             rn_product = render_product[viewlayer_name]
@@ -106,7 +148,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 "families": [prod_type, "render.farm"],
                 "fps": context.data["fps"],
                 "byFrameStep": instance.data["creator_attributes"].get("step", 1),
-                "review": render_data.get("review", False),
+                "review": review,
                 "multipartExr": ext == "exr" and multilayer,
                 "farm": True,
                 "folderPath": instance.data["folderPath"],
@@ -131,4 +173,3 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 "publish_attributes": instance.data["publish_attributes"]
             })
             instance.append(rn_layer_instance)
-            self.log.debug([expected_files])
