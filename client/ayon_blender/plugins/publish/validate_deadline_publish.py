@@ -92,22 +92,42 @@ class ValidateDeadlinePublish(
     def repair(cls, instance):
         container = instance.data["transientData"]["instance_node"]
         output_node = get_composite_output_node()
-        output_node_dir = os.path.dirname(output_node.base_path)
+        render_data = container.get("render_data")
+        aov_sep = render_data.get("aov_separator")
         filename = os.path.basename(bpy.data.filepath)
-        filename = os.path.splitext(filename)[0]
-        new_output_dir = os.path.join(output_node_dir, filename)
+        filename, ext = os.path.splitext(filename)
+        ext = ext.strip(".")
+        is_multilayer = render_data.get("multilayer_exr")
+        orig_output_path = output_node.base_path
+        if is_multilayer:
+            render_folder = render_data.get("render_folder")
+            output_dir = os.path.dirname(bpy.data.filepath)
+            output_dir = os.path.join(output_dir, render_folder, filename)
+            orig_output_dir = os.path.dirname(orig_output_path)
+            new_output_dir = orig_output_path.replace(orig_output_dir, output_dir)
+        else:
+            output_node_dir = os.path.dirname(orig_output_path)
+            new_output_dir = os.path.join(output_node_dir, filename)
+
         output_node.base_path = new_output_dir
 
-        new_output_dir = Path(new_output_dir)
-        render_data = container.get("render_data")
+        new_output_dir = (
+            Path(new_output_dir).parent
+            if is_multilayer else Path(new_output_dir)
+        )
         render_product = render_data.get("render_product")
         aov_file_product = render_data.get("aov_file_product")
         updated_render_product = update_render_product(
-            container.name, new_output_dir, render_product)
+            container.name, new_output_dir,
+            render_product, aov_sep,
+            multilayer=is_multilayer
+        )
         render_data["render_product"] = updated_render_product
         if aov_file_product:
             updated_aov_file_product = update_render_product(
-                container.name, new_output_dir, aov_file_product)
+                container.name, new_output_dir,
+                aov_file_product, aov_sep
+            )
             render_data["aov_file_product"] = updated_aov_file_product
 
         tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
