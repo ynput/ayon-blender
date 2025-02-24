@@ -2,7 +2,8 @@
 import bpy
 
 from ayon_core.lib import version_up
-from ayon_blender.api import plugin
+from ayon_core.pipeline.context_tools import version_up_current_workfile
+from ayon_blender.api import plugin, lib
 from ayon_blender.api.render_lib import prepare_rendering
 from ayon_blender.api.workio import save_file
 
@@ -12,7 +13,7 @@ class CreateRenderlayer(plugin.BlenderCreator):
 
     identifier = "io.openpype.creators.blender.render"
     label = "Render"
-    product_type = "render"
+    product_type = "renderlayer"
     icon = "eye"
 
     def create(
@@ -39,7 +40,15 @@ class CreateRenderlayer(plugin.BlenderCreator):
         # settings. Even the validator to check that the file is saved will
         # detect the file as saved, even if it isn't. The only solution for
         # now it is to force the file to be saved.
-        filepath = version_up(bpy.data.filepath)
-        save_file(filepath, copy=False)
+        if not bpy.data.filepath:
+            version_up_current_workfile()
+        else:
+            filepath = version_up(bpy.data.filepath)
+            save_file(filepath, copy=False)
 
         return collection
+
+    def get_instance_attr_defs(self):
+        defs = lib.collect_animation_defs(self.create_context)
+
+        return defs
