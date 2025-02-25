@@ -1,4 +1,6 @@
 import os
+
+from ayon_core.lib.env_tools import env_value_to_bool
 from ayon_core.addon import AYONAddon, IHostAddon
 
 from .version import __version__
@@ -29,25 +31,27 @@ class BlenderAddon(AYONAddon, IHostAddon):
         python_path_parts.insert(0, implementation_script_path)
         env["PYTHONPATH"] = os.pathsep.join(python_path_parts)
 
-        # TODO: What setting or flag will we user before launching Blender
-        #  to define whether it supports the new BLENDER_SYSTEM_SCRIPTS
-        #  with multiple paths?
-        supports_blender_system_scripts = True
-        if supports_blender_system_scripts:
-            self.configure_blender_env(env, implementation_script_path)
+        # If `AYON_BLENDER_USE_SYSTEM_PATH` is set use `BLENDER_SYSTEM_PATH`
+        # to initialize the Blender startup environment, otherwise use the
+        # `BLENDER_USER_PATH`.
+        use_system_path = env_value_to_bool("AYON_BLENDER_USE_SYSTEM_PATH")
+        if use_system_path:
+            self._configure_blender_system_paths(
+                env, implementation_script_path
+            )
         else:
             # Old versions of Blender had broken BLENDER_SYSTEM_SCRIPTS
             # nor supported multiple paths for it. See:
             # https://projects.blender.org/blender/blender/issues/127013
-            self.configure_blender_pre_44_env(env, implementation_script_path)
+            self._configure_blender_user_paths(env, implementation_script_path)
 
         # Define Qt binding if not defined
         env.pop("QT_PREFERRED_BINDING", None)
 
-    def configure_blender_pre_44_env(
+    def _configure_blender_user_paths(
         self, env: dict, implementation_script_path: str
     ):
-        # Modify Blender user scripts path
+        """Modify BLENDER_USER_SCRIPTS to configure AYON startup"""
         previous_user_scripts = set()
         # Implementation path is added to set for easier paths check inside
         #   loops - will be removed at the end
@@ -73,10 +77,14 @@ class BlenderAddon(AYONAddon, IHostAddon):
             previous_user_scripts
         )
 
-    def configure_blender_env(
+    def _configure_blender_system_paths(
         self, env: dict, implementation_script_path: str
     ):
-        # With Blender 4.4+ we can just use BLENDER_SYSTEM_SCRIPTS
+        """Modify BLENDER_SYSTEM_SCRIPTS to configure AYON startup.
+
+        This would only work with Blender 4.4+ due to new changes implemented
+        to `BLENDER_SYSTEM_SCRIPTS` functionality starting with that release.
+        """
         paths = [implementation_script_path]
 
         # Support older AYON_BLENDER_USER_SCRIPTS for compatibility
