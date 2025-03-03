@@ -122,7 +122,7 @@ class ExtractAnimationFBX(
 
         # Remove : from the armature name for the export
         armature_name = armature.name
-        original_name = armature_name.split(':')[1]
+        original_name = armature_name.rsplit(':', 1)[-1]
         armature.name = original_name
 
         object_action_pairs.append((armature, copy_action))
