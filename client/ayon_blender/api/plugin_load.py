@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Union, Generator, TYPE_CHECKING
+from typing import Generator, TYPE_CHECKING
 
 import bpy
 from ayon_core.pipeline.load import LoadError
@@ -22,7 +22,7 @@ def add_override(
     scene = context.scene
     loaded_objects = loaded_collection.all_objects
     # This slightly convoluted way of running the operator seems necessary to
-    # have it work reliably for more then 1 rig on both Linux and Windows.
+    # have it work reliably for more than 1 rig on both Linux and Windows.
     # Giving it a 'random' object from the collection seems to override
     # everything contained in the loaded collection.
     context.view_layer.objects.active = loaded_objects[0]
