@@ -5,10 +5,6 @@ import bpy
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
-import ayon_blender.api.plugin_load
-import importlib
-importlib.reload(ayon_blender.api.plugin_load)
-
 from ayon_blender.api.plugin_load import (
     add_override,
     load_collection
