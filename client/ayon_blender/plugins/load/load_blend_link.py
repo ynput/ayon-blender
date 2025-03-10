@@ -52,15 +52,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
             link=True
         )
 
-        # Define names
-        folder_name = context["folder"]["name"]
-        product_name = context["product"]["name"]
-        asset_name = plugin.prepare_scene_name(folder_name, product_name)
-        unique_number = plugin.get_unique_number(folder_name, product_name)
-        group_name = plugin.prepare_scene_name(
-            folder_name, product_name, unique_number
-        )
-
         scene = bpy.context.scene
         scene.collection.children.link(loaded_collection)
 
@@ -72,6 +63,14 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # TODO: Implement grouping of the loaded collection
         # if options.get("group", True):
+        #     # Define names (for grouping)
+        #     folder_name = context["folder"]["name"]
+        #     product_name = context["product"]["name"]
+        #     asset_name = plugin.prepare_scene_name(folder_name, product_name)
+        #     unique_number = plugin.get_unique_number(folder_name, product_name)
+        #     group_name = plugin.prepare_scene_name(
+        #         folder_name, product_name, unique_number
+        #     )
         #     add_asset_to_group(context["asset"], loaded_collection)
 
         # TODO: Store loader options for later use (e.g. on update)
