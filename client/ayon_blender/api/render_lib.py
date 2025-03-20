@@ -64,7 +64,7 @@ def get_compositing(settings):
                     ["compositing"])
 
 
-def get_render_product(output_path, name, aov_sep, view_layers):
+def get_render_product(output_path, name, aov_sep, view_layers, multiexr=False):
     """
     Generate the path to the render product. Blender interprets the `#`
     as the frame number, when it renders.
@@ -77,15 +77,25 @@ def get_render_product(output_path, name, aov_sep, view_layers):
         ext (str): The image format to render.
     """
     beauty_render_product = {}
-    for view_layer in view_layers:
-        vl_name = view_layer.name
+    if multiexr:
+        vl_name = "_"
         beauty_render_product[vl_name] = []
-        output_dir = Path(f"{output_path}/{vl_name}")
+        output_dir = Path(output_path)
         filepath = output_dir / name.lstrip("/")
-        render_product = f"{filepath}_{vl_name}{aov_sep}beauty.####"
-        beauty_render_product[vl_name].append(("beauty", os.path.normpath(render_product)))
-    return beauty_render_product
+        render_product = f"{filepath}{aov_sep}beauty.####"
+        beauty_render_product[vl_name].append(
+            ("beauty", os.path.normpath(render_product)))
+    else:
+        for view_layer in view_layers:
+            vl_name = view_layer.name
+            beauty_render_product[vl_name] = []
+            output_dir = Path(f"{output_path}/{vl_name}")
+            filepath = output_dir / name.lstrip("/")
+            render_product = f"{filepath}_{vl_name}{aov_sep}beauty.####"
+            beauty_render_product[vl_name].append(
+                ("beauty", os.path.normpath(render_product)))
 
+    return beauty_render_product
 
 
 def set_render_format(ext, multilayer):
@@ -318,9 +328,9 @@ def set_node_tree(
     slots = output.layer_slots if multi_exr else output.file_slots
 
     rn_layer_node = next((node for node in reversed(render_aovs_dict.keys())), None)
-    output_dir = Path(f"{output_path}/{rn_layer_node.layer}")
+    output_dir = Path(output_path)
     filepath = output_dir / name.lstrip("/")
-    render_product_main_beauty = f"{filepath}_{rn_layer_node.layer}{aov_sep}beauty.####"
+    render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
 
     output.base_path = render_product_main_beauty if multi_exr else str(output_path)
 
@@ -443,7 +453,9 @@ def prepare_rendering(asset_group):
 
     output_path = Path.joinpath(dirpath, render_folder, file_name)
 
-    render_product = get_render_product(output_path, name, aov_sep, view_layers)
+    render_product = get_render_product(
+        output_path, name, aov_sep, view_layers, multiexr=multilayer
+    )
     aov_file_product = set_node_tree(
         output_path, name, aov_sep, ext,
         multilayer, compositing, view_layers
@@ -470,19 +482,25 @@ def prepare_rendering(asset_group):
     imprint_render_settings(asset_group, render_settings)
 
 
-def update_render_product(name, output_path, render_product):
+def update_render_product(name, output_path, render_product, aov_sep, multilayer=False):
     tmp_render_product = {}
-    render_layers = bpy.context.scene.view_layers
-    project = get_current_project_name()
-    settings = get_project_settings(project)
-    aov_sep = get_aov_separator(settings)
-    for render_layer in render_layers:
-        rl_name = render_layer.name
+    if multilayer:
+        rl_name = "_"
         tmp_render_product[rl_name] = []
         rn_product = render_product[rl_name]
         for rpass_name, _ in rn_product:
-            filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
+            filename = f"{name}{aov_sep}{rpass_name}.####"
             filepath = str(output_path / filename.lstrip("/"))
             tmp_render_product[rl_name].append((rpass_name, filepath))
+    else:
+        render_layers = bpy.context.scene.view_layers
+        for render_layer in render_layers:
+            rl_name = render_layer.name
+            tmp_render_product[rl_name] = []
+            rn_product = render_product[rl_name]
+            for rpass_name, _ in rn_product:
+                filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
+                filepath = str(output_path / filename.lstrip("/"))
+                tmp_render_product[rl_name].append((rpass_name, filepath))
 
     return tmp_render_product
