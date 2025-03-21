@@ -54,8 +54,9 @@ class ExtractLayout(
             asset_group_name = asset.name
             asset.name = asset.get(AVALON_PROPERTY).get("asset_name")
 
+            # Remove : from the armature name for the export
             armature_name = obj.name
-            original_name = armature_name.split(':')[1]
+            original_name = armature_name.rsplit(":", 1)[-1]
             obj.name = original_name
 
             object_action_pairs.append((obj, copy_action))
