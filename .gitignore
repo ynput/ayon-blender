@@ -160,3 +160,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# ignore mkdocs build
+site/
