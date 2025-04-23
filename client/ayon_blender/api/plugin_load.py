@@ -3,7 +3,7 @@ from typing import Generator, TYPE_CHECKING
 
 import bpy
 from ayon_core.pipeline.load import LoadError
-# from typing import Union, Iterable
+from typing import Union, Iterable
 
 
 if TYPE_CHECKING:
@@ -122,75 +122,97 @@ def load_collection(
     return container_collection
 
 
-# def add_asset_to_group(
-#     asset: dict, data_block: Union[bpy.types.Collection, bpy.types.Object]
-# ) -> None:
-#     """Group an asset according to the asset type.
-#     """
-#     asset_type = asset["data"]["group"].lower()
-#     group_hierarchy = (asset_type,)
-#     scene = bpy.context.scene
-#     if group_hierarchy:
-#         group_data_block(
-#             data_block,
-#             group_hierarchy,
-#         )
-#         if isinstance(data_block, bpy.types.Collection):
-#             try:
-#                 scene.collection.children.unlink(data_block)
-#             except RuntimeError:
-#                 # The collection wasn't a child of the scene collection
-#                 pass
-#         if isinstance(data_block, bpy.types.Object):
-#             try:
-#                 scene.collection.objects.unlink(data_block)
-#             except RuntimeError:
-#                 # The object wasn't part of the scene collection
-#                 pass
+def add_asset_to_group(
+    context: dict, data_block: Union[bpy.types.Collection, bpy.types.Object]
+) -> None:
+    """Group an asset according to the asset type.
+    """
+    asset_type = context["product"]["productType"]
+    group_data_block(data_block, asset_type)
+
+    # Ensure the data_block is unlinked from the scene's root collection
+    scene = bpy.context.scene
+    scene_collection = scene.collection
+    if isinstance(data_block, bpy.types.Collection):
+        if data_block in scene_collection.children:
+            scene_collection.children.unlink(data_block)
+    elif isinstance(data_block, bpy.types.Object):
+        if data_block in scene_collection.objects:
+            scene_collection.objects.unlink(data_block)
 
 
-# def group_data_block(
-#     data_block: Union[bpy.types.Collection, bpy.types.Object],
-#     group_hierarchy: Iterable[str],
-# ) -> list[bpy.types.Collection]:
-#     """Link the collection or object under parent collections.
+def group_data_block(
+    data_block: Union[bpy.types.Collection, bpy.types.Object],
+    group_hierarchy: str,
+) -> list[bpy.types.Collection]:
+    """Link the collection or object under parent collections.
 
-#     Arguments:
-#         data_block: The collection or object to group.
+    Arguments:
+        data_block: The collection or object to group.
 
-#         group_hierarchy: The group collections to use for grouping. The first one will
-#             be the top parent with every next one as child and the given collection or
-#             object will be the last child. E.g.:
+        group_hierarchy: The group collections to use for grouping. The first one will
+            be the top parent with every next one as child and the given collection or
+            object will be the last child. E.g.:
 
-#             .. code::
+            .. code::
 
-#                 animation
-#                     └── character
-#                         └── data block
+                animation
+                    └── character
+                        └── data block
 
-#     Returns:
-#         The group collections, starting with the top parent.
+    Returns:
+        The group collections, starting with the top parent.
+    """
+    group_collections = []
+    parent =  bpy.context.scene.collection
+    for group_name in group_hierarchy:
+        group_collection = bpy.data.collections.get(group_name)
+        if (
+            not group_collection
+            or group_collection.library
+            or group_collection.override_library
+        ):
+            group_collection = bpy.data.collections.new(group_name)
+            if not _is_child_of(parent, data_block):
+                link_data_block(parent, data_block)
+            group_collections.append(group_collection)
+            # Set the group collection as parent for the next one.
+            parent = group_collection
 
-#     Example:
-#         >>> group_data_block(my_asset, ("animation", "prop"))
-#         [bpy.data.collections['animation'], bpy.data.collections['character']]
-#     """
-#     parent_collections = []
-#     parent = None
-#     for group_name in group_hierarchy:
-#         group_collection = _get_group_collection(group_name)
-#         _group_under(group_collection, parent)
-#         parent_collections.append(group_collection)
-#         # Set the group collection as parent for the next one.
-#         parent = group_collection
+    if not _is_child_of(parent, data_block):
+        link_data_block(parent, data_block)
 
-#     if not parent:
-#         return parent_collections
+    return group_collections
 
-#     if isinstance(data_block, bpy.types.Collection):
-#         if not _is_child_of(parent, data_block):
-#             parent.children.link(data_block)
-#     if isinstance(data_block, bpy.types.Object):
-#         if not _is_child_of(parent, data_block):
-#             parent.objects.link(data_block)
-#     return parent_collections
+
+def _is_child_of(
+    parent: bpy.types.Collection,
+    data_block: Union[bpy.types.Collection, bpy.types.Object],
+) -> bool:
+    """Checks if the data block is already a child of parent."""
+    if isinstance(data_block, bpy.types.Collection):
+        for child in parent.children:
+            if child == data_block:
+                return True
+    if isinstance(data_block, bpy.types.Object):
+        for obj in parent.objects:
+            if obj == data_block:
+                return True
+
+    return False
+
+
+def link_data_block(
+        parent: bpy.types.Collection,
+        data_block: Union[bpy.types.Collection, bpy.types.Object]
+    ):
+    """Link collection under a hierarchy of collection
+
+    Args:
+        parent: The collection which is the parent
+        data_block: The collection or object to group.
+    """
+    if isinstance(data_block, bpy.types.Collection):
+        parent.children.link(data_block)
+    if isinstance(data_block, bpy.types.Object):
+        parent.objects.link(data_block)

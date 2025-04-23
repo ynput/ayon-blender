@@ -7,7 +7,8 @@ from ayon_blender.api import plugin
 
 from ayon_blender.api.plugin_load import (
     add_override,
-    load_collection
+    load_collection,
+    add_asset_to_group
 )
 from ayon_blender.api.pipeline import (
     containerise,
@@ -34,7 +35,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         BoolDef(
             "group",
             label="Group",
-            default=True,
+            default=False,
             tooltip="Group the loaded asset in collections.",
         ),
     ]
@@ -72,16 +73,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
             loader=self.__class__.__name__,
         )
         # TODO: Implement grouping of the loaded collection
-        # if options.get("group", True):
-        #     # Define names (for grouping)
-        #     folder_name = context["folder"]["name"]
-        #     product_name = context["product"]["name"]
-        #     asset_name = plugin.prepare_scene_name(folder_name, product_name)
-        #     unique_number = plugin.get_unique_number(folder_name, product_name)
-        #     group_name = plugin.prepare_scene_name(
-        #         folder_name, product_name, unique_number
-        #     )
-        #     add_asset_to_group(context["asset"], loaded_collection)
+        if options.get("group", True):
+            add_asset_to_group(context, loaded_collection)
 
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
