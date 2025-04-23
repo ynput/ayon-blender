@@ -9,7 +9,10 @@ from ayon_blender.api.plugin_load import (
     add_override,
     load_collection
 )
-
+from ayon_blender.api.pipeline import (
+    containerise,
+    metadata_update
+)
 
 class BlendLinkLoader(plugin.BlenderLoader):
     """Link assets from a .blend file."""
@@ -61,6 +64,13 @@ class BlendLinkLoader(plugin.BlenderLoader):
             if local_copy:
                 loaded_collection = local_copy
 
+        container_collection = containerise(
+            name=name,
+            namespace=namespace,
+            nodes=[loaded_collection],
+            context=context,
+            loader=self.__class__.__name__,
+        )
         # TODO: Implement grouping of the loaded collection
         # if options.get("group", True):
         #     # Define names (for grouping)
@@ -75,7 +85,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
-        # update_ayon_data(container_collection, {"options": options})
+        metadata_update(container_collection, {"options": options})
 
         # Link the scene file
         with bpy.data.libraries.load(filepath,
@@ -92,7 +102,9 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
-        collection = container["_collection"]
+        repre = context["representation"]
+        group_name = container["objectName"]
+        collection = bpy.data.collections.get(group_name)
         library = self._get_library_from_collection(collection)
 
         # Update library filepath and reload it
@@ -100,24 +112,27 @@ class BlendLinkLoader(plugin.BlenderLoader):
         library.reload()
 
         # Update container metadata
-        # update_representation_on_container(container, representation)
+        metadata_update(collection, {"representation": str(repre["id"])})
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
-        collection = container["_collection"]
+        group_name = container["objectName"]
+        collection = bpy.data.collections.get(group_name)
         library = self._get_library_from_collection(collection)
-
         # TODO: Skip removal if used by other containers
         self.log.info("Deleting library: %s...", library.name_full)
         bpy.data.libraries.remove(library)
+        # remove the container collection
+        bpy.data.collections.remove(collection)
 
         return True
 
     def _get_library_from_collection(
             self, collection: bpy.types.Collection) -> bpy.types.Library:
         """Get the library from the collection."""
-        if collection.library and not collection.override_library:
-            # No override library
-            return collection.library
-        # With override library
-        return collection.override_library.reference.library
+        for child in collection.children:
+            if child.library or child.override_library:
+                # No override library
+                return child.library
+            # With override library
+            return child.override_library.reference.library

@@ -528,7 +528,12 @@ def containerise(name: str,
     container = bpy.data.collections.new(name=node_name)
     # Link the children nodes
     for obj in nodes:
-        container.objects.link(obj)
+        if isinstance(obj, bpy.types.Object):
+            container.objects.link(obj)
+        elif isinstance(obj, bpy.types.Collection):
+            container.children.link(obj)
+        else:
+            raise TypeError(f"Unsupported type {type(obj)} in nodes list.")
 
     data = {
         "schema": "openpype:container-2.0",

@@ -3,6 +3,8 @@ from typing import Generator, TYPE_CHECKING
 
 import bpy
 from ayon_core.pipeline.load import LoadError
+# from typing import Union, Iterable
+
 
 if TYPE_CHECKING:
     from ayon_core.pipeline.create import CreateContext  # noqa: F401
@@ -120,75 +122,75 @@ def load_collection(
     return container_collection
 
 
-# def remove_link(container: dict) -> bool:
-#     """Remove an existing container from a Blender scene.
-#
+# def add_asset_to_group(
+#     asset: dict, data_block: Union[bpy.types.Collection, bpy.types.Object]
+# ) -> None:
+#     """Group an asset according to the asset type.
+#     """
+#     asset_type = asset["data"]["group"].lower()
+#     group_hierarchy = (asset_type,)
+#     scene = bpy.context.scene
+#     if group_hierarchy:
+#         group_data_block(
+#             data_block,
+#             group_hierarchy,
+#         )
+#         if isinstance(data_block, bpy.types.Collection):
+#             try:
+#                 scene.collection.children.unlink(data_block)
+#             except RuntimeError:
+#                 # The collection wasn't a child of the scene collection
+#                 pass
+#         if isinstance(data_block, bpy.types.Object):
+#             try:
+#                 scene.collection.objects.unlink(data_block)
+#             except RuntimeError:
+#                 # The object wasn't part of the scene collection
+#                 pass
+
+
+# def group_data_block(
+#     data_block: Union[bpy.types.Collection, bpy.types.Object],
+#     group_hierarchy: Iterable[str],
+# ) -> list[bpy.types.Collection]:
+#     """Link the collection or object under parent collections.
+
 #     Arguments:
-#         container (turbine:container-3.0): Container to remove,
-#             dictionary from :func:`turbine.blender.api.ls()`.
-#
+#         data_block: The collection or object to group.
+
+#         group_hierarchy: The group collections to use for grouping. The first one will
+#             be the top parent with every next one as child and the given collection or
+#             object will be the last child. E.g.:
+
+#             .. code::
+
+#                 animation
+#                     └── character
+#                         └── data block
+
 #     Returns:
-#         bool: Whether the container was deleted.
+#         The group collections, starting with the top parent.
+
+#     Example:
+#         >>> group_data_block(my_asset, ("animation", "prop"))
+#         [bpy.data.collections['animation'], bpy.data.collections['character']]
 #     """
-#     container_collection = get_container_collection(container)
-#     library = get_library_from_linked_container(container_collection)
-#     if library and not is_library_used_by_others(library, container_collection):
-#
-#     return _remove(loader, container)
-#
-#
-# def _is_collection_in_scene(collection: bpy.types.Collection) -> bool:
-#     """Check if the collection is part of the scene.
-#
-#     Arguments:
-#         collection: The collection for which to check if it's part of the current scene.
-#
-#     Returns:
-#         True if the collection is already found in the scene, False otherwise.
-#     """
-#     return collection in _get_scene_collections()
-#
-#
-# def _get_scene_collections() -> Generator[bpy.types.Collection, None, None]:
-#     """Get all collections that are part of the scene.
-#
-#     Loop over all collections in the scene to see if the collection is a child. The
-#     Turbine container group collection and turbine container collections are ignored.
-#     """
-#     for data_block in get_child_hierarchy(bpy.context.scene.collection):
-#         if not isinstance(data_block, bpy.types.Collection):
-#             continue
-#         if is_container_group(data_block):
-#             continue
-#         if is_container(data_block):
-#             continue
-#         yield data_block
-#
-#
-# def _remove(container: dict) -> bool:
-#     """Remove a loaded container and it's data blocks."""
-#     container_collection = get_container_collection(container)
-#
-#     # Remove any immediate objects
-#     for obj in container_collection.objects[:]:
-#         bpy.data.objects.remove(obj)
-#
-#     # Remove all child containers
-#     for child in container_collection.children[:]:
-#         if not child.users:
-#             bpy.data.collections.remove(child)
-#         for collection in bpy.data.collections:
-#             if collection.children:
-#                 for child_collection in collection.children:
-#                     if child == child_collection:
-#                         collection.children.unlink(child)
-#         for child_collection in bpy.context.scene.collection.children:
-#             if child_collection == child:
-#                 bpy.context.scene.collection.children.unlink(child)
-#
-#     # And lastly remove the container itself
-#     bpy.data.collections.remove(container_collection)
-#
-#     # TODO: Perform cleanup and purging operations?
-#
-#     return True
+#     parent_collections = []
+#     parent = None
+#     for group_name in group_hierarchy:
+#         group_collection = _get_group_collection(group_name)
+#         _group_under(group_collection, parent)
+#         parent_collections.append(group_collection)
+#         # Set the group collection as parent for the next one.
+#         parent = group_collection
+
+#     if not parent:
+#         return parent_collections
+
+#     if isinstance(data_block, bpy.types.Collection):
+#         if not _is_child_of(parent, data_block):
+#             parent.children.link(data_block)
+#     if isinstance(data_block, bpy.types.Object):
+#         if not _is_child_of(parent, data_block):
+#             parent.objects.link(data_block)
+#     return parent_collections
