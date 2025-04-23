@@ -3,7 +3,7 @@ from typing import Generator, TYPE_CHECKING
 
 import bpy
 from ayon_core.pipeline.load import LoadError
-from typing import Union, Iterable
+from typing import Union
 
 
 if TYPE_CHECKING:
