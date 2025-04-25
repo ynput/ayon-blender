@@ -148,8 +148,11 @@ def set_app_templates_path():
     # We look among the scripts paths for one of the paths that contains
     # the app templates. The path must contain the subfolder
     # `startup/bl_app_templates_user`.
-    paths = os.environ.get("AYON_BLENDER_USER_SCRIPTS").split(os.pathsep)
+    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS")
+    if not user_scripts:
+        return
 
+    paths = user_scripts.split(os.pathsep)
     app_templates_path = None
     for path in paths:
         if os.path.isdir(
