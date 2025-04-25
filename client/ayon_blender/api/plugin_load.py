@@ -134,10 +134,10 @@ def add_asset_to_group(
     scene = bpy.context.scene
     scene_collection = scene.collection
     if isinstance(data_block, bpy.types.Collection):
-        if data_block in scene_collection.children:
+        if any(child.name == data_block.name for child in scene_collection.children):
             scene_collection.children.unlink(data_block)
     elif isinstance(data_block, bpy.types.Object):
-        if data_block in scene_collection.objects:
+        if any(obj.name == data_block.name for obj in scene_collection.objects):
             scene_collection.objects.unlink(data_block)
 
 
