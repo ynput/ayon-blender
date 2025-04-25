@@ -8,6 +8,7 @@ import bpy_extras.anim_utils
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import AVALON_PROPERTY
+from ayon_blender.api.lib import get_blender_version
 
 
 def get_all_parents(obj):
@@ -132,13 +133,35 @@ class ExtractAnimationFBX(
         max_frame = min(starting_frames)
         min_frame = max(ending_frames)
 
-        # We bake the copy of the current action for each object
-        bpy_extras.anim_utils.bake_action_objects(
-            object_action_pairs,
-            frames=range(int(min_frame), int(max_frame)),
-            do_object=False,
-            do_clean=False
-        )
+        blender_version = get_blender_version()
+        if blender_version >= (4, 1, 0):
+            # We bake the copy of the current action for each object
+            bake_options = bpy_extras.anim_utils.BakeOptions(
+                only_selected=False,
+                do_pose=True,
+                do_object=False,
+                do_visual_keying=True,
+                do_constraint_clear=False,
+                do_parents_clear=False,
+                do_clean=False,
+                do_location=True,
+                do_rotation=True,
+                do_scale=True,
+                do_bbone=True,
+                do_custom_props=True
+            )
+            bpy_extras.anim_utils.bake_action_objects(
+                object_action_pairs,
+                frames=range(int(min_frame), int(max_frame)),
+                bake_options=bake_options
+            )
+        else:
+            bpy_extras.anim_utils.bake_action_objects(
+                object_action_pairs,
+                frames=range(int(min_frame), int(max_frame)),
+                do_object=False,
+                do_clean=False
+            )
 
         for obj in bpy.data.objects:
             obj.select_set(False)
