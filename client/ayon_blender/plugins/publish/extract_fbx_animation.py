@@ -133,16 +133,16 @@ class ExtractAnimationFBX(
         max_frame = min(starting_frames)
         min_frame = max(ending_frames)
 
-        ver_major, _, _ = get_blender_version()
-        if ver_major >= 4:
+        ver_major, ver_min, _ = get_blender_version()
+        if ver_major >= 4 and ver_min >= 1:
             # We bake the copy of the current action for each object
             bake_options = bpy_extras.anim_utils.BakeOptions(
-                only_selected=True,
+                only_selected=False,
                 do_pose=True,
                 do_object=False,
                 do_visual_keying=True,
-                do_constraint_clear=True,
-                do_parents_clear=True,
+                do_constraint_clear=False,
+                do_parents_clear=False,
                 do_clean=False,
                 do_location=True,
                 do_rotation=True,
