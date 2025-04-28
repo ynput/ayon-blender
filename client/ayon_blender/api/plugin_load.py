@@ -105,9 +105,12 @@ def load_collection(
         data_to,
     ):
         if lib_container_name is None:
-            lib_container_name = data_from.collections[0]
+            lib_container_name = [
+                instance for instance in data_from.collections
+                if instance == "AVALON_INSTANCES"
+            ]
 
-        data_to.collections = [lib_container_name]
+        data_to.collections = lib_container_name
     loaded_containers = data_to.collections
 
     if len(loaded_containers) != 1:

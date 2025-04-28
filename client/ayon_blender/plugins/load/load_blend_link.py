@@ -79,7 +79,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
         metadata_update(container_collection, {"options": options})
-        # Link the scene file
+        # # Link the scene file
         with bpy.data.libraries.load(filepath,
                                      link=True) as (data_from, data_to):
             data_to.objects = data_from.objects
@@ -90,7 +90,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
                 continue
             bpy.context.collection.objects.link(obj)
 
-        return [loaded_collection]
+        return (container_collection, loaded_collection)
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
