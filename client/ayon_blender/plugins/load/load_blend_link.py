@@ -88,16 +88,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
         metadata_update(container_collection, {"options": options})
-        # # Link the scene file
-        with bpy.data.libraries.load(filepath,
-                                     link=True) as (data_from, data_to):
-            data_to.objects = data_from.objects
-
-        # Add to the active collection
-        for obj in data_to.objects:
-            if obj is None:
-                continue
-            bpy.context.collection.objects.link(obj)
 
         return (container_collection, loaded_collection)
 
@@ -110,7 +100,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # Update library filepath and reload it
         library.filepath = self.filepath_from_context(context)
         library.reload()
-
+        # refresh UI refresh
+        bpy.context.view_layer.update()
         # Update container metadata
         metadata_update(collection, {"representation": str(repre["id"])})
 
@@ -118,8 +109,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Remove existing container from the Blender scene."""
         collection = container["node"]
         library = self._get_library_from_collection(collection)
-        # TODO: Skip removal if used by other containers
-        self.log.info("Deleting library: %s...", library.name_full)
+
         bpy.data.libraries.remove(library)
         # remove the container collection
         bpy.data.collections.remove(collection)
@@ -135,3 +125,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
                 return child.library
             # With override library
             return child.override_library.reference.library
+
+        return None
