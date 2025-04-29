@@ -109,7 +109,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Remove existing container from the Blender scene."""
         collection = container["node"]
         library = self._get_library_from_collection(collection)
-
+        # TODO: make sure it also works with overriding option enabled
         bpy.data.libraries.remove(library)
         # remove the container collection
         bpy.data.collections.remove(collection)
