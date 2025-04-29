@@ -14,6 +14,8 @@ from ayon_blender.api.pipeline import (
     containerise,
     metadata_update
 )
+from ayon_blender.api.lib import get_container_name
+
 
 class BlendLinkLoader(plugin.BlenderLoader):
     """Link assets from a .blend file."""
@@ -51,6 +53,14 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # Load a single Collection from the .blend file
         # TODO: Disallow loading same collection?
+        container_name = get_container_name(
+            name, namespace, context, suffix="CON"
+        )
+        loaded_collection = bpy.data.collections.get(container_name)
+        if loaded_collection:
+            self.log.debug(f"Collection {container_name} already loaded.")
+            return
+
         loaded_collection = load_collection(
             filepath,
             link=True
