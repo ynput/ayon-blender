@@ -84,8 +84,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
         # TODO: Implement grouping of the loaded collection
         if options.get("group", True):
-            add_asset_to_group(context, loaded_collection)
-
+            add_asset_to_group(context["folder"], loaded_collection)
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
         metadata_update(container_collection, {"options": options})

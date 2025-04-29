@@ -126,22 +126,22 @@ def load_collection(
 
 
 def add_asset_to_group(
-    context: dict, data_block: Union[bpy.types.Collection, bpy.types.Object]
+    asset: dict, data_block: Union[bpy.types.Collection, bpy.types.Object]
 ) -> None:
     """Group an asset according to the asset type.
     """
-    asset_type = context["product"]["productType"]
-    group_data_block(data_block, asset_type)
-
-    # Ensure the data_block is unlinked from the scene's root collection
+    asset_type = asset["folderType"].lower()
     scene = bpy.context.scene
-    scene_collection = scene.collection
-    if isinstance(data_block, bpy.types.Collection):
-        if any(child.name == data_block.name for child in scene_collection.children):
-            scene_collection.children.unlink(data_block)
-    elif isinstance(data_block, bpy.types.Object):
-        if any(obj.name == data_block.name for obj in scene_collection.objects):
-            scene_collection.objects.unlink(data_block)
+    if asset_type:
+        group_data_block(data_block, asset_type)
+        # Ensure the data_block is unlinked from the scene's root collection
+        scene_collection = scene.collection
+        if isinstance(data_block, bpy.types.Collection):
+            if any(child.name == data_block.name for child in scene_collection.children):
+                scene_collection.children.unlink(data_block)
+        elif isinstance(data_block, bpy.types.Object):
+            if any(obj.name == data_block.name for obj in scene_collection.objects):
+                scene_collection.objects.unlink(data_block)
 
 
 def group_data_block(
@@ -166,26 +166,21 @@ def group_data_block(
     Returns:
         The group collections, starting with the top parent.
     """
-    group_collections = []
     parent =  bpy.context.scene.collection
-    for group_name in group_hierarchy:
-        group_collection = bpy.data.collections.get(group_name)
-        if (
-            not group_collection
-            or group_collection.library
-            or group_collection.override_library
-        ):
-            group_collection = bpy.data.collections.new(group_name)
-            if not _is_child_of(parent, data_block):
-                link_data_block(parent, data_block)
-            group_collections.append(group_collection)
-            # Set the group collection as parent for the next one.
-            parent = group_collection
+    group_collection = bpy.data.collections.get(group_hierarchy)
+    if (
+        not group_collection
+        or group_collection.library
+        or group_collection.override_library
+    ):
+        group_collection = bpy.data.collections.new(group_hierarchy)
+        if not _is_child_of(parent, data_block):
+            link_data_block(parent, data_block)
+        # Set the group collection as parent for the next one.
+        parent = group_collection
 
     if not _is_child_of(parent, data_block):
         link_data_block(parent, data_block)
-
-    return group_collections
 
 
 def _is_child_of(
