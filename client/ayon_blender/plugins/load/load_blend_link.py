@@ -95,12 +95,12 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Update the loaded asset."""
         repre = context["representation"]
         collection = container["node"]
-        library = self._get_library_from_collection(collection)
-
+        new_filepath = self.filepath_from_context(context)
         # Update library filepath and reload it
-        library.filepath = self.filepath_from_context(context)
+        library = self._get_library_from_collection(collection)
+        library.filepath = new_filepath
         library.reload()
-        # refresh UI refresh
+        # refresh UI
         bpy.context.view_layer.update()
         # Update container metadata
         metadata_update(collection, {"representation": str(repre["id"])})
@@ -110,7 +110,13 @@ class BlendLinkLoader(plugin.BlenderLoader):
         collection = container["node"]
         library = self._get_library_from_collection(collection)
         # TODO: make sure it also works with overriding option enabled
-        bpy.data.libraries.remove(library)
+        if library:
+            bpy.data.libraries.remove(library)
+        else:
+            # Ensure the collection is linked to the scene's master collection
+            scene_collection = bpy.context.scene.collection
+            for col in collection.children:
+                scene_collection.children.unlink(col)
         # remove the container collection
         bpy.data.collections.remove(collection)
 
