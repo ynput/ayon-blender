@@ -104,8 +104,17 @@ def load_collection(
         data_from,
         data_to,
     ):
+        # Validate source collections
+        if not data_from.collections:
+            raise LoadError(f"No collections found in: {filepath}")
+
         if lib_container_name is None:
             lib_container_name = data_from.collections[0]
+
+        elif lib_container_name not in data_from.collections:
+            raise LoadError(
+                f"Collection '{lib_container_name}' not found in: {filepath}"
+            )
         data_to.collections = [lib_container_name]
     loaded_containers = data_to.collections
 
