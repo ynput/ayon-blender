@@ -7,8 +7,7 @@ from ayon_blender.api import plugin
 
 from ayon_blender.api.plugin_load import (
     add_override,
-    load_collection,
-    add_asset_to_group
+    load_collection
 )
 from ayon_blender.api.pipeline import (
     containerise,
@@ -33,13 +32,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             label="Add Override",
             default=False,
             tooltip="Add a library override for the loaded asset.",
-        ),
-        BoolDef(
-            "group",
-            label="Group",
-            default=False,
-            tooltip="Group the loaded asset in collections.",
-        ),
+        )
     ]
 
     def process_asset(
@@ -83,9 +76,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
             context=context,
             loader=self.__class__.__name__,
         )
-        # TODO: Implement grouping of the loaded collection
-        if options.get("group", True):
-            add_asset_to_group(context["folder"], loaded_collection)
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
         extra_data =  {
