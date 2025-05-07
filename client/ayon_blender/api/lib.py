@@ -621,14 +621,14 @@ def strip_namespace():
             original_name = children.name
             namespace, name = original_name.rsplit(':', 1)
             children.name = name
-            namespace_dict[node] = namespace
+            namespace_dict[children] = namespace
 
     try:
         yield
 
     finally:
         for node in nodes:
-            namespace = namespace_dict[node]
             for children in node.children_recursive:
+                namespace = namespace_dict[children]
                 name = children.name
                 children.name = f"{namespace}:{name}"
