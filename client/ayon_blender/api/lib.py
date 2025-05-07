@@ -587,3 +587,48 @@ def get_blender_version():
     """
     major, minor, subversion = bpy.app.version
     return major, minor, subversion
+
+
+@contextlib.contextmanager
+def strip_container_data():
+    """Remove container data during context
+    """
+    container_data = {}
+    for container in pipeline.ls():
+        node = container["node"]
+        container_data[node] = dict(
+            node.get(pipeline.AVALON_PROPERTY)
+        )
+        del node[pipeline.AVALON_PROPERTY]
+    try:
+        yield
+
+    finally:
+        for key, item in container_data.items():
+            key[pipeline.AVALON_PROPERTY] = item
+
+
+@contextlib.contextmanager
+def strip_namespace():
+    """Strip namespace during context
+    """
+    nodes = [
+        container["node"] for container in pipeline.ls()
+    ]
+    namespace_dict = {}
+    for node in nodes:
+        for children in node.children_recursive:
+            original_name = children.name
+            namespace, name = original_name.rsplit(':', 1)
+            children.name = name
+            namespace_dict[node] = namespace
+
+    try:
+        yield
+
+    finally:
+        for node in nodes:
+            namespace = namespace_dict[node]
+            for children in node.children_recursive:
+                name = children.name
+                children.name = f"{namespace}:{name}"
