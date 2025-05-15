@@ -9,12 +9,12 @@ import os
 
 from ayon_core.pipeline import (
     get_representation_path,
-    AVALON_CONTAINER_ID,
+    AYON_CONTAINER_ID,
 )
 
 from ayon_blender.api.pipeline import (
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
+    AYON_CONTAINERS,
+    AYON_PROPERTY,
 )
 from ayon_blender.api import plugin, lib
 
@@ -129,11 +129,11 @@ class CacheModelLoader(plugin.BlenderLoader):
                     name_mat = material_slot.material.name
                     material_slot.material.name = f"{group_name}:{name_mat}"
 
-            if not obj.get(AVALON_PROPERTY):
-                obj[AVALON_PROPERTY] = {}
+            if not obj.get(AYON_PROPERTY):
+                obj[AYON_PROPERTY] = {}
 
-            avalon_info = obj[AVALON_PROPERTY]
-            avalon_info.update({"container_name": group_name})
+            ayon_info = obj[AYON_PROPERTY]
+            ayon_info.update({"container_name": group_name})
 
         plugin.deselect_all()
 
@@ -141,7 +141,7 @@ class CacheModelLoader(plugin.BlenderLoader):
 
     def _link_objects(self, objects, collection, containers, asset_group):
         # Link the imported objects to any collection where the asset group is
-        # linked to, except the AVALON_CONTAINERS collection
+        # linked to, except the AYON_CONTAINERS collection
         group_collections = [
             collection
             for collection in asset_group.users_collection
@@ -174,9 +174,9 @@ class CacheModelLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        containers = bpy.data.collections.get(AVALON_CONTAINERS)
+        containers = bpy.data.collections.get(AYON_CONTAINERS)
         if not containers:
-            containers = bpy.data.collections.new(name=AVALON_CONTAINERS)
+            containers = bpy.data.collections.new(name=AYON_CONTAINERS)
             bpy.context.scene.collection.children.link(containers)
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
@@ -192,9 +192,9 @@ class CacheModelLoader(plugin.BlenderLoader):
         self._link_objects(objects, asset_group, containers, asset_group)
 
         product_type = context["product"]["productType"]
-        asset_group[AVALON_PROPERTY] = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+        asset_group[AYON_PROPERTY] = {
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
@@ -247,7 +247,7 @@ class CacheModelLoader(plugin.BlenderLoader):
             f"Unsupported file: {libpath}"
         )
 
-        metadata = asset_group.get(AVALON_PROPERTY)
+        metadata = asset_group.get(AYON_PROPERTY)
         group_libpath = metadata["libpath"]
 
         normalized_group_libpath = (
@@ -272,7 +272,7 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             objects = self._process(str(libpath), asset_group, object_name)
 
-            containers = bpy.data.collections.get(AVALON_CONTAINERS)
+            containers = bpy.data.collections.get(AYON_CONTAINERS)
             self._link_objects(objects, asset_group, containers, asset_group)
 
             asset_group.matrix_basis = mat
@@ -289,7 +289,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         """Remove an existing container from a Blender scene.
 
         Arguments:
-            container (openpype:container-1.0): Container to remove,
+            container (ayon:container-1.0): Container to remove,
                 from `host.ls()`.
 
         Returns:

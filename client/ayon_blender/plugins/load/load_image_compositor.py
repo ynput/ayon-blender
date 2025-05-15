@@ -5,7 +5,7 @@ import bpy
 
 from ayon_core.lib.transcoding import VIDEO_EXTENSIONS
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import AVALON_CONTAINER_ID
+from ayon_blender.api.pipeline import AYON_CONTAINER_ID
 
 
 class LoadImageCompositor(plugin.BlenderLoader):
@@ -48,8 +48,8 @@ class LoadImageCompositor(plugin.BlenderLoader):
         self.set_source_and_colorspace(context, img_comp_node)
 
         data = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),

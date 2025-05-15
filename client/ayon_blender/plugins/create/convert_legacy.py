@@ -14,21 +14,21 @@ class BlenderLegacyConvertor(ProductConvertorPlugin):
 
     Its limitation is that you can have multiple creators creating product
     of the same product type and there is no way to handle it. This code
-    should nevertheless cover all creators that came with OpenPype.
+    should nevertheless cover all creators that came with ayon.
 
     """
-    identifier = "io.openpype.creators.blender.legacy"
+    identifier = "io.ayon.creators.blender.legacy"
     product_type_to_id = {
-        "action": "io.openpype.creators.blender.action",
-        "camera": "io.openpype.creators.blender.camera",
-        "animation": "io.openpype.creators.blender.animation",
-        "blendScene": "io.openpype.creators.blender.blendscene",
-        "layout": "io.openpype.creators.blender.layout",
-        "model": "io.openpype.creators.blender.model",
-        "pointcache": "io.openpype.creators.blender.pointcache",
-        "render": "io.openpype.creators.blender.render",
-        "review": "io.openpype.creators.blender.review",
-        "rig": "io.openpype.creators.blender.rig",
+        "action": "io.ayon.creators.blender.action",
+        "camera": "io.ayon.creators.blender.camera",
+        "animation": "io.ayon.creators.blender.animation",
+        "blendScene": "io.ayon.creators.blender.blendscene",
+        "layout": "io.ayon.creators.blender.layout",
+        "model": "io.ayon.creators.blender.model",
+        "pointcache": "io.ayon.creators.blender.pointcache",
+        "render": "io.ayon.creators.blender.render",
+        "review": "io.ayon.creators.blender.review",
+        "rig": "io.ayon.creators.blender.rig",
     }
 
     def __init__(self, *args, **kwargs):

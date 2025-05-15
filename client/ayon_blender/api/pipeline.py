@@ -20,7 +20,6 @@ from ayon_core.pipeline import (
     register_creator_plugin_path,
     deregister_loader_plugin_path,
     deregister_creator_plugin_path,
-    AVALON_CONTAINER_ID,
     AYON_CONTAINER_ID,
     get_current_project_name
 )
@@ -55,9 +54,9 @@ CREATE_PATH = os.path.join(PLUGINS_DIR, "create")
 
 ORIGINAL_EXCEPTHOOK = sys.excepthook
 
-AVALON_INSTANCES = "AVALON_INSTANCES"
-AVALON_CONTAINERS = "AVALON_CONTAINERS"
-AVALON_PROPERTY = 'avalon'
+AYON_INSTANCES = "AYON_INSTANCES"
+AYON_CONTAINERS = "AYON_CONTAINERS"
+AYON_PROPERTY = 'ayon'
 IS_HEADLESS = bpy.app.background
 
 log = Logger.get_logger(__name__)
@@ -141,7 +140,7 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
         Returns:
             dict: Context data stored using 'update_context_data'.
         """
-        property = bpy.context.scene.get(AVALON_PROPERTY)
+        property = bpy.context.scene.get(AYON_PROPERTY)
         if property:
             return property.to_dict()
         return {}
@@ -155,7 +154,7 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
             changes (dict): Only data that has been changed. Each value has
                 tuple with '(<old>, <new>)' value.
         """
-        bpy.context.scene[AVALON_PROPERTY] = data
+        bpy.context.scene[AYON_PROPERTY] = data
 
 
 def pype_excepthook_handler(*args):
@@ -163,7 +162,7 @@ def pype_excepthook_handler(*args):
 
 
 def install():
-    """Install Blender configuration for Avalon."""
+    """Install Blender configuration for AYON."""
     sys.excepthook = pype_excepthook_handler
 
     pyblish.api.register_host("blender")
@@ -186,7 +185,7 @@ def install():
 
 
 def uninstall():
-    """Uninstall Blender configuration for Avalon."""
+    """Uninstall Blender configuration for AYON."""
     sys.excepthook = ORIGINAL_EXCEPTHOOK
 
     pyblish.api.deregister_host("blender")
@@ -460,25 +459,25 @@ def _discover_gui() -> Optional[Callable]:
     return None
 
 
-def add_to_avalon_container(container: bpy.types.Collection):
-    """Add the container to the Avalon container."""
+def add_to_ayon_container(container: bpy.types.Collection):
+    """Add the container to the AYON container."""
 
-    avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-    if not avalon_container:
-        avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
+    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+    if not ayon_container:
+        ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
 
         # Link the container to the scene so it's easily visible to the artist
         # and can be managed easily. Otherwise it's only found in "Blender
         # File" view and it will be removed by Blenders garbage collection,
         # unless you set a 'fake user'.
-        bpy.context.scene.collection.children.link(avalon_container)
+        bpy.context.scene.collection.children.link(ayon_container)
 
-    avalon_container.children.link(container)
+    ayon_container.children.link(container)
 
-    # Disable Avalon containers for the view layers.
+    # Disable AYON containers for the view layers.
     for view_layer in bpy.context.scene.view_layers:
         for child in view_layer.layer_collection.children:
-            if child.collection == avalon_container:
+            if child.collection == ayon_container:
                 child.exclude = True
 
 
@@ -488,12 +487,12 @@ def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):
     Existing metadata will be updated.
     """
 
-    if not node.get(AVALON_PROPERTY):
-        node[AVALON_PROPERTY] = dict()
+    if not node.get(AYON_PROPERTY):
+        node[AYON_PROPERTY] = dict()
     for key, value in data.items():
         if value is None:
             continue
-        node[AVALON_PROPERTY][key] = value
+        node[AYON_PROPERTY][key] = value
 
 
 def containerise(name: str,
@@ -531,8 +530,8 @@ def containerise(name: str,
         container.objects.link(obj)
 
     data = {
-        "schema": "openpype:container-2.0",
-        "id": AVALON_CONTAINER_ID,
+        "schema": "ayon:container-3.0",
+        "id": AYON_CONTAINER_ID,
         "name": name,
         "namespace": namespace or '',
         "loader": str(loader),
@@ -540,7 +539,7 @@ def containerise(name: str,
     }
 
     metadata_update(container, data)
-    add_to_avalon_container(container)
+    add_to_ayon_container(container)
 
     return container
 
@@ -570,8 +569,8 @@ def containerise_existing(
         node_name = f"{node_name}_{suffix}"
     container.name = node_name
     data = {
-        "schema": "openpype:container-2.0",
-        "id": AVALON_CONTAINER_ID,
+        "schema": "ayon:container-3.0",
+        "id": AYON_CONTAINER_ID,
         "name": name,
         "namespace": namespace or '',
         "loader": str(loader),
@@ -580,7 +579,7 @@ def containerise_existing(
     }
 
     metadata_update(container, data)
-    add_to_avalon_container(container)
+    add_to_ayon_container(container)
 
     return container
 
@@ -620,7 +619,7 @@ def ls() -> Iterator:
     container_ids = {
         AYON_CONTAINER_ID,
         # Backwards compatibility
-        AVALON_CONTAINER_ID
+        AYON_CONTAINER_ID
     }
 
     for id_type in container_ids:
@@ -631,10 +630,10 @@ def ls() -> Iterator:
     node_tree = bpy.context.scene.node_tree
     if node_tree:
         for node in node_tree.nodes:
-            if not node.get(AVALON_PROPERTY):
+            if not node.get(AYON_PROPERTY):
                 continue
 
-            if node.get(AVALON_PROPERTY).get("id") not in container_ids:
+            if node.get(AYON_PROPERTY).get("id") not in container_ids:
                 continue
 
             yield parse_container(node)
@@ -646,10 +645,10 @@ def ls() -> Iterator:
             continue
 
         for shader_node in material_node_tree.nodes:
-            if not shader_node.get(AVALON_PROPERTY):
+            if not shader_node.get(AYON_PROPERTY):
                 continue
 
-            if shader_node.get(AVALON_PROPERTY).get("id") not in container_ids:
+            if shader_node.get(AYON_PROPERTY).get("id") not in container_ids:
                 continue
 
             yield parse_container(shader_node)

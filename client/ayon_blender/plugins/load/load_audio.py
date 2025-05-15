@@ -8,12 +8,12 @@ import bpy
 
 from ayon_core.pipeline import (
     get_representation_path,
-    AVALON_CONTAINER_ID,
+    AYON_CONTAINER_ID,
 )
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import (
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
+    AYON_CONTAINERS,
+    AYON_PROPERTY,
 )
 
 
@@ -49,13 +49,13 @@ class AudioLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        if not avalon_container:
-            avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
-            bpy.context.scene.collection.children.link(avalon_container)
+        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        if not ayon_container:
+            ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+            bpy.context.scene.collection.children.link(ayon_container)
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
-        avalon_container.objects.link(asset_group)
+        ayon_container.objects.link(asset_group)
 
         # Blender needs the Sequence Editor in the current window, to be able
         # to load the audio. We take one of the areas in the window, save its
@@ -77,9 +77,9 @@ class AudioLoader(plugin.BlenderLoader):
         p = Path(libpath)
         audio = p.name
 
-        asset_group[AVALON_PROPERTY] = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+        asset_group[AYON_PROPERTY] = {
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
@@ -101,9 +101,9 @@ class AudioLoader(plugin.BlenderLoader):
         """Update an audio strip in the sequence editor.
 
         Arguments:
-            container (openpype:container-1.0): Container to update,
+            container (ayon:container-1.0): Container to update,
                 from `host.ls()`.
-            representation (openpype:representation-1.0): Representation to
+            representation (ayon:representation-1.0): Representation to
                 update, from `host.ls()`.
         """
         repre_entity = context["representation"]
@@ -127,7 +127,7 @@ class AudioLoader(plugin.BlenderLoader):
             f"The file doesn't exist: {libpath}"
         )
 
-        metadata = asset_group.get(AVALON_PROPERTY)
+        metadata = asset_group.get(AYON_PROPERTY)
         group_libpath = metadata["libpath"]
 
         normalized_group_libpath = (
@@ -186,7 +186,7 @@ class AudioLoader(plugin.BlenderLoader):
         """Remove an audio strip from the sequence editor and the container.
 
         Arguments:
-            container (openpype:container-1.0): Container to remove,
+            container (ayon:container-1.0): Container to remove,
                 from `host.ls()`.
 
         Returns:
