@@ -590,11 +590,11 @@ def get_blender_version():
 
 
 @contextlib.contextmanager
-def strip_container_data():
+def strip_container_data(containers):
     """Remove container data during context
     """
     container_data = {}
-    for container in pipeline.ls():
+    for container in containers:
         node = container["node"]
         container_data[node] = dict(
             node.get(pipeline.AVALON_PROPERTY)
@@ -609,11 +609,11 @@ def strip_container_data():
 
 
 @contextlib.contextmanager
-def strip_namespace():
+def strip_namespace(containers):
     """Strip namespace during context
     """
     nodes = [
-        container["node"] for container in pipeline.ls()
+        container["node"] for container in containers
     ]
     namespace_dict = {}
     for node in nodes:
