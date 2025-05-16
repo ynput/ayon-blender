@@ -615,20 +615,18 @@ def strip_namespace(containers):
     nodes = [
         container["node"] for container in containers
     ]
-    namespace_dict = {}
+    original_namespaces = {}
     for node in nodes:
-        for children in node.children_recursive:
-            original_name = children.name
+        for child in node.children_recursive:
+            original_name = child.name
+            if ":" not in original_name:
+                continue
             namespace, name = original_name.rsplit(':', 1)
-            children.name = name
-            namespace_dict[children] = namespace
+            child.name = name
+            original_namespaces[child] = namespace
 
     try:
         yield
-
     finally:
-        for node in nodes:
-            for children in node.children_recursive:
-                namespace = namespace_dict[children]
-                name = children.name
-                children.name = f"{namespace}:{name}"
+        for node, original_namespace in original_namespaces.items():
+           node.name = f"{namespace}:{name}"
