@@ -621,6 +621,8 @@ def strip_namespace(containers):
             children = node.children_recursive
         elif isinstance(node, bpy.types.Object):
             children = node.children
+        else:
+            raise TypeError(f"Unsupported type: {node} ({type(node)})")
 
         for child in children:
             original_name = child.name
