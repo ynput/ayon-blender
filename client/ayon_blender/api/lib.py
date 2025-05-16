@@ -617,7 +617,12 @@ def strip_namespace(containers):
     ]
     original_namespaces = {}
     for node in nodes:
-        for child in node.children_recursive:
+        if isinstance(node, bpy.types.Collection):
+            children = node.children_recursive
+        elif isinstance(node, bpy.types.Object):
+            children = node.children
+
+        for child in children:
             original_name = child.name
             if ":" not in original_name:
                 continue
