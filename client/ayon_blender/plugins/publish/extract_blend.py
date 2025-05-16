@@ -65,7 +65,7 @@ class ExtractBlend(
                     if node.image and node.image.packed_file is None:
                         node.image.pack()
 
-        containers = ls()
+        containers = list(ls())
         with contextlib.ExitStack() as stack:
             stack.enter_context(strip_namespace(containers))
             stack.enter_context(strip_container_data(containers))
