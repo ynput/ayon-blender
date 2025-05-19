@@ -237,7 +237,6 @@ class BlenderCreator(Creator):
 
             shared_data["blender_cached_instances"] = cache
             shared_data["blender_cached_legacy_instances"] = cache_legacy
-        print(shared_data)
         return shared_data
 
     def create(
