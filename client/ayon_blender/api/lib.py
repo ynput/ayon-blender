@@ -251,10 +251,16 @@ def lsattrs(attrs: Dict) -> List:
         ):
             continue
         for node in getattr(bpy.data, coll):
-            for attr, value in attrs.items():
-                ayon_prop = node.get(pipeline.AYON_PROPERTY)
-                if not ayon_prop:
+            ayon_prop = node.get(pipeline.AYON_PROPERTY)
+            if not ayon_prop:
+                avalon_prop = node.get(pipeline.AVALON_PROPERTY)
+                if not avalon_prop:
                     continue
+                else:
+                    node[pipeline.AYON_PROPERTY] = avalon_prop
+                    ayon_prop = avalon_prop
+                    del avalon_prop
+            for attr, value in attrs.items():
                 if (ayon_prop.get(attr)
                         and (value is None or ayon_prop.get(attr) == value)):
                     matches.add(node)

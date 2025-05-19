@@ -12,6 +12,7 @@ from ayon_core.pipeline import (
     CreatedInstance,
     LoaderPlugin,
     AYON_INSTANCE_ID,
+    AVALON_INSTANCE_ID
 )
 from ayon_core.pipeline.publish import Extractor
 from ayon_core.lib import BoolDef
@@ -20,6 +21,7 @@ from .pipeline import (
     AYON_CONTAINERS,
     AYON_INSTANCES,
     AYON_PROPERTY,
+    AVALON_PROPERTY
 )
 from .ops import (
     MainThreadItem,
@@ -210,12 +212,13 @@ class BlenderCreator(Creator):
                     ayon_instance_objs,
                     bpy.data.collections
             ):
+                print(obj_or_col)
                 ayon_prop = obj_or_col.get(AYON_PROPERTY, {})
                 if not ayon_prop:
                     continue
 
                 if ayon_prop.get('id') not in {
-                    AYON_INSTANCE_ID, AYON_INSTANCE_ID
+                    AYON_INSTANCE_ID, AVALON_INSTANCE_ID
                 }:
                     continue
 

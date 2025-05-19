@@ -21,6 +21,7 @@ from ayon_core.pipeline import (
     deregister_loader_plugin_path,
     deregister_creator_plugin_path,
     AYON_CONTAINER_ID,
+    AVALON_CONTAINER_ID,
     get_current_project_name
 )
 from ayon_core.pipeline.context_tools import (
@@ -56,6 +57,7 @@ ORIGINAL_EXCEPTHOOK = sys.excepthook
 
 AYON_INSTANCES = "AYON_INSTANCES"
 AYON_CONTAINERS = "AYON_CONTAINERS"
+AVALON_PROPERTY = 'avalon'
 AYON_PROPERTY = 'ayon'
 IS_HEADLESS = bpy.app.background
 
@@ -619,7 +621,7 @@ def ls() -> Iterator:
     container_ids = {
         AYON_CONTAINER_ID,
         # Backwards compatibility
-        AYON_CONTAINER_ID
+        AVALON_CONTAINER_ID
     }
 
     for id_type in container_ids:
@@ -630,10 +632,17 @@ def ls() -> Iterator:
     node_tree = bpy.context.scene.node_tree
     if node_tree:
         for node in node_tree.nodes:
-            if not node.get(AYON_PROPERTY):
-                continue
+            ayon_prop = node.get(AYON_PROPERTY)
+            if not ayon_prop:
+                avalon_prop = node.get(AVALON_PROPERTY)
+                if not avalon_prop:
+                    continue
+                else:
+                    node[AYON_PROPERTY] = avalon_prop
+                    ayon_prop = avalon_prop
+                    del node[AVALON_PROPERTY]
 
-            if node.get(AYON_PROPERTY).get("id") not in container_ids:
+            if ayon_prop.get("id") not in container_ids:
                 continue
 
             yield parse_container(node)
@@ -645,10 +654,21 @@ def ls() -> Iterator:
             continue
 
         for shader_node in material_node_tree.nodes:
-            if not shader_node.get(AYON_PROPERTY):
-                continue
+            ayon_shader_node = shader_node.get(
+                AYON_PROPERTY)
+            if not ayon_shader_node:
+                avalon_shader_node = shader_node.get(
+                    AVALON_PROPERTY)
+                if not avalon_shader_node:
+                    continue
+                else:
+                    ayon_shader_node[AYON_PROPERTY] = (
+                        avalon_shader_node
+                    )
+                    ayon_shader_node = avalon_shader_node
+                    del ayon_shader_node[AVALON_PROPERTY]
 
-            if shader_node.get(AYON_PROPERTY).get("id") not in container_ids:
+            if ayon_shader_node.get("id") not in container_ids:
                 continue
 
             yield parse_container(shader_node)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Converter for legacy Houdini products."""
+"""Converter for legacy Blender products."""
 from ayon_core.pipeline.create.creator_plugins import ProductConvertorPlugin
 from ayon_blender.api.lib import imprint
 
