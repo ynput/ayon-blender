@@ -212,10 +212,12 @@ class BlenderCreator(Creator):
                     ayon_instance_objs,
                     bpy.data.collections
             ):
-                print(obj_or_col)
                 ayon_prop = obj_or_col.get(AYON_PROPERTY, {})
                 if not ayon_prop:
-                    continue
+                    avalon_prop = obj_or_col.get(AVALON_PROPERTY, {})
+                    if not avalon_prop:
+                        continue
+                    ayon_prop = avalon_prop
 
                 if ayon_prop.get('id') not in {
                     AYON_INSTANCE_ID, AVALON_INSTANCE_ID
@@ -223,18 +225,19 @@ class BlenderCreator(Creator):
                     continue
 
                 creator_id = ayon_prop.get('creator_identifier')
-                if creator_id:
+                if "openpype" not in creator_id:
                     # Creator instance
                     cache.setdefault(creator_id, []).append(obj_or_col)
                 else:
-                    family = ayon_prop.get('family')
-                    if family:
-                        # Legacy creator instance
-                        cache_legacy.setdefault(family, []).append(obj_or_col)
+                    # Legacy creator instance
+                    family = ayon_prop.get('family') or (
+                        ayon_prop.get("productType")
+                    )
+                    cache_legacy.setdefault(family, []).append(obj_or_col)
 
             shared_data["blender_cached_instances"] = cache
             shared_data["blender_cached_legacy_instances"] = cache_legacy
-
+        print(shared_data)
         return shared_data
 
     def create(
@@ -318,6 +321,8 @@ class BlenderCreator(Creator):
         """
 
         for created_instance, changes in update_list:
+            print(changes)
+            print(created_instance)
             data = created_instance.data_to_store()
             node = created_instance.transient_data["instance_node"]
             if not node:

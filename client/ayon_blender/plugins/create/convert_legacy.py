@@ -2,6 +2,7 @@
 """Converter for legacy Blender products."""
 from ayon_core.pipeline.create.creator_plugins import ProductConvertorPlugin
 from ayon_blender.api.lib import imprint
+from ayon_blender.api.pipeline import AYON_PROPERTY, AVALON_PROPERTY
 
 
 class BlenderLegacyConvertor(ProductConvertorPlugin):
@@ -76,3 +77,8 @@ class BlenderLegacyConvertor(ProductConvertorPlugin):
                     imprint(instance_node, data={
                         "creator_identifier": creator_identifier
                     })
+                    avalon_prop = instance_node.get(AVALON_PROPERTY)
+                    if not avalon_prop:
+                        continue
+                    instance_node[AYON_PROPERTY] = avalon_prop
+                    del instance_node[AVALON_PROPERTY]
