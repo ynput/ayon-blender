@@ -30,6 +30,7 @@ class BlenderLegacyConvertor(ProductConvertorPlugin):
         "render": "io.ayon.creators.blender.render",
         "review": "io.ayon.creators.blender.review",
         "rig": "io.ayon.creators.blender.rig",
+        "workfile": "io.ayon.creators.blender.workfile",
     }
 
     def __init__(self, *args, **kwargs):

@@ -321,8 +321,6 @@ class BlenderCreator(Creator):
         """
 
         for created_instance, changes in update_list:
-            print(changes)
-            print(created_instance)
             data = created_instance.data_to_store()
             node = created_instance.transient_data["instance_node"]
             if not node:
