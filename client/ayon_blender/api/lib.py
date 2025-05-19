@@ -603,15 +603,15 @@ def strip_container_data(containers):
     for container in containers:
         node = container["node"]
         container_data[node] = dict(
-            node.get(pipeline.AVALON_PROPERTY)
+            node.get(pipeline.AYON_PROPERTY)
         )
-        del node[pipeline.AVALON_PROPERTY]
+        del node[pipeline.AYON_PROPERTY]
     try:
         yield
 
     finally:
         for key, item in container_data.items():
-            key[pipeline.AVALON_PROPERTY] = item
+            key[pipeline.AYON_PROPERTY] = item
 
 
 @contextlib.contextmanager
