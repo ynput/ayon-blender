@@ -67,8 +67,8 @@ class ExtractBlend(
 
         containers = list(ls())
         with contextlib.ExitStack() as stack:
-            stack.enter_context(strip_namespace(containers))
             stack.enter_context(strip_container_data(containers))
+            stack.enter_context(strip_namespace(containers))
             bpy.data.libraries.write(
                 filepath, data_blocks, compress=self.compress
             )
