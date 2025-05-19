@@ -636,4 +636,4 @@ def strip_namespace(containers):
         yield
     finally:
         for node, original_namespace in original_namespaces.items():
-           node.name = f"{original_namespace}:{name}"
+            node.name = f"{original_namespace}:{name}"
