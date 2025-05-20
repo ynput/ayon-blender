@@ -1,4 +1,4 @@
-"""Blender operators and menus for use with Ayon."""
+"""Blender operators and menus for use with AYON."""
 
 import os
 import sys
