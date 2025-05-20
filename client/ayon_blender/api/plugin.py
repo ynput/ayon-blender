@@ -224,8 +224,12 @@ class BlenderCreator(Creator):
                 }:
                     continue
 
-                creator_id = ayon_prop.get('creator_identifier')
-                if "openpype" not in creator_id:
+                creator_id = ayon_prop.get("creator_identifier")
+                if "openpype" in creator_id:
+                    creator_id = creator_id.replace("openpype", "ayon")
+                    ayon_prop["creator_identifier"] = creator_id
+
+                if creator_id:
                     # Creator instance
                     cache.setdefault(creator_id, []).append(obj_or_col)
                 else:
