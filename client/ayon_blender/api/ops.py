@@ -472,7 +472,7 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
 def draw_ayon_menu(self, context):
-    """Draw the Ayon menu in the top bar."""
+    """Draw the AYON menu in the top bar."""
 
     self.layout.menu(TOPBAR_MT_ayon.bl_idname)
 
