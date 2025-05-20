@@ -661,12 +661,11 @@ def ls() -> Iterator:
                     AVALON_PROPERTY)
                 if not avalon_shader_node:
                     continue
-                else:
-                    ayon_shader_node[AYON_PROPERTY] = (
-                        avalon_shader_node
-                    )
-                    ayon_shader_node = avalon_shader_node
-                    del ayon_shader_node[AVALON_PROPERTY]
+                ayon_shader_node[AYON_PROPERTY] = (
+                    avalon_shader_node
+                )
+                ayon_shader_node = avalon_shader_node
+                del ayon_shader_node[AVALON_PROPERTY]
 
             if ayon_shader_node.get("id") not in container_ids:
                 continue
