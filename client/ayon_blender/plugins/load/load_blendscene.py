@@ -9,7 +9,7 @@ from ayon_core.pipeline import (
 )
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import imprint
-from ayon_blender.api.pipeline import (
+from ayon_blender.api.constants import (
     AYON_CONTAINERS,
     AYON_PROPERTY,
 )

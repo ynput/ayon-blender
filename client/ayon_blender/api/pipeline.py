@@ -39,6 +39,16 @@ from ayon_blender import BLENDER_ADDON_ROOT
 from . import lib
 from . import ops
 
+from .constants import (
+    AVALON_INSTANCES,
+    AYON_INSTANCES,
+    AYON_CONTAINERS,
+    AVALON_PROPERTY,
+    AYON_PROPERTY,
+    IS_HEADLESS
+
+)
+
 from .workio import (
     open_file,
     save_file,
@@ -55,11 +65,6 @@ CREATE_PATH = os.path.join(PLUGINS_DIR, "create")
 
 ORIGINAL_EXCEPTHOOK = sys.excepthook
 
-AYON_INSTANCES = "AYON_INSTANCES"
-AYON_CONTAINERS = "AYON_CONTAINERS"
-AVALON_PROPERTY = 'avalon'
-AYON_PROPERTY = 'ayon'
-IS_HEADLESS = bpy.app.background
 
 log = Logger.get_logger(__name__)
 
@@ -459,6 +464,23 @@ def _discover_gui() -> Optional[Callable]:
             return gui
 
     return None
+
+
+def get_ayon_property(node):
+    property = node.get(AYON_PROPERTY)
+    if not property:
+        property = node.get(AVALON_PROPERTY)
+        if property:
+            node[AYON_PROPERTY] = property
+            del node[AVALON_PROPERTY]
+    return property
+
+
+def get_ayon_instances():
+    avalon_instances = bpy.data.collections.get(AVALON_INSTANCES)
+    if not avalon_instances:
+        return
+    avalon_instances.name = AYON_INSTANCES
 
 
 def add_to_ayon_container(container: bpy.types.Collection):

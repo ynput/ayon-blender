@@ -10,9 +10,10 @@ import bpy
 
 from ayon_core.pipeline import get_representation_path
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import (
-    containerise_existing,
-    AYON_PROPERTY
+from ayon_blender.api.pipeline import containerise_existing
+from ayon_blender.api.constants import (
+    AYON_PROPERTY,
+    VALID_EXTENSIONS,
 )
 
 
@@ -163,7 +164,7 @@ class BlendLookLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 

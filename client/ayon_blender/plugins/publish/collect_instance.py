@@ -4,7 +4,7 @@ import pyblish.api
 
 from ayon_core.pipeline.publish import KnownPublishError
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import AYON_PROPERTY
+from ayon_blender.api.constants import AYON_PROPERTY
 
 
 class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):

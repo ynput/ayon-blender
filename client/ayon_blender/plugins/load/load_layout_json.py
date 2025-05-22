@@ -15,10 +15,11 @@ from ayon_core.pipeline import (
     loaders_from_representation,
     AYON_CONTAINER_ID,
 )
-from ayon_blender.api.pipeline import (
+from ayon_blender.api.constants import (
     AYON_INSTANCES,
     AYON_CONTAINERS,
     AYON_PROPERTY,
+    VALID_EXTENSIONS
 )
 from ayon_blender.api import plugin
 
@@ -219,7 +220,7 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 

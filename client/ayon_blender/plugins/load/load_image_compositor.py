@@ -5,7 +5,7 @@ import bpy
 
 from ayon_core.lib.transcoding import VIDEO_EXTENSIONS
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import AYON_CONTAINER_ID
+from ayon_blender.api.constants import AYON_CONTAINER_ID
 
 
 class LoadImageCompositor(plugin.BlenderLoader):

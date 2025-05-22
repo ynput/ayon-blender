@@ -16,6 +16,11 @@ if TYPE_CHECKING:
 
 from . import pipeline
 
+from .constants import (
+    AYON_PROPERTY,
+    AVALON_PROPERTY
+)
+
 log = Logger.get_logger(__name__)
 
 
@@ -251,15 +256,16 @@ def lsattrs(attrs: Dict) -> List:
         ):
             continue
         for node in getattr(bpy.data, coll):
-            ayon_prop = node.get(pipeline.AYON_PROPERTY)
+            ayon_prop = node.get(AYON_PROPERTY)
             if not ayon_prop:
-                avalon_prop = node.get(pipeline.AVALON_PROPERTY)
+                avalon_prop = node.get(AVALON_PROPERTY)
                 if not avalon_prop:
                     continue
                 else:
-                    node[pipeline.AYON_PROPERTY] = avalon_prop
+                    node[AYON_PROPERTY] = avalon_prop
                     ayon_prop = avalon_prop
-                    del avalon_prop
+                    del node[AVALON_PROPERTY]
+
             for attr, value in attrs.items():
                 if (ayon_prop.get(attr)
                         and (value is None or ayon_prop.get(attr) == value)):
@@ -270,7 +276,7 @@ def lsattrs(attrs: Dict) -> List:
 def read(node: bpy.types.bpy_struct_meta_idprop):
     """Return user-defined attributes from `node`"""
 
-    data = dict(node.get(pipeline.AYON_PROPERTY, {}))
+    data = dict(node.get(AYON_PROPERTY, {}))
 
     # Ignore hidden/internal data
     data = {
@@ -603,15 +609,15 @@ def strip_container_data(containers):
     for container in containers:
         node = container["node"]
         container_data[node] = dict(
-            node.get(pipeline.AYON_PROPERTY)
+            node.get(AYON_PROPERTY)
         )
-        del node[pipeline.AYON_PROPERTY]
+        del node[AYON_PROPERTY]
     try:
         yield
 
     finally:
         for key, item in container_data.items():
-            key[pipeline.AYON_PROPERTY] = item
+            key[AYON_PROPERTY] = item
 
 
 @contextlib.contextmanager

@@ -2,7 +2,7 @@ import bpy
 
 from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
-from ayon_blender.api.pipeline import (
+from ayon_blender.api.constants import (
     AYON_PROPERTY,
     AYON_CONTAINERS
 )

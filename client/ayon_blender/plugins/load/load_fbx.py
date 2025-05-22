@@ -11,9 +11,10 @@ from ayon_core.pipeline import (
     AYON_CONTAINER_ID,
 )
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import (
+from ayon_blender.api.constants import (
     AYON_CONTAINERS,
     AYON_PROPERTY,
+    VALID_EXTENSIONS,
 )
 
 
@@ -211,7 +212,7 @@ class FbxModelLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 

@@ -12,9 +12,10 @@ from ayon_core.pipeline import (
     AYON_CONTAINER_ID,
 )
 
-from ayon_blender.api.pipeline import (
+from ayon_blender.api.constants import (
     AYON_CONTAINERS,
     AYON_PROPERTY,
+    VALID_EXTENSIONS,
 )
 from ayon_blender.api import plugin, lib
 
@@ -243,7 +244,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 

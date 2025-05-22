@@ -12,25 +12,26 @@ from ayon_core.pipeline import (
     CreatedInstance,
     LoaderPlugin,
     AYON_INSTANCE_ID,
-    AVALON_INSTANCE_ID
+    AVALON_INSTANCE_ID,
 )
 from ayon_core.pipeline.publish import Extractor
 from ayon_core.lib import BoolDef
 
 from .pipeline import (
+    get_ayon_property,
+    get_ayon_instances,
+)
+from .constants import (
     AYON_CONTAINERS,
     AYON_INSTANCES,
     AYON_PROPERTY,
-    AVALON_PROPERTY
+    AVALON_PROPERTY,
 )
 from .ops import (
     MainThreadItem,
     execute_in_main_thread
 )
 from .lib import imprint
-
-VALID_EXTENSIONS = [".blend", ".json", ".abc", ".fbx",
-                    ".usd", ".usdc", ".usda"]
 
 
 def prepare_scene_name(
@@ -204,20 +205,18 @@ class BlenderCreator(Creator):
             cache_legacy = {}
 
             ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
+            get_ayon_instances()
             ayon_instance_objs = (
                 ayon_instances.objects if ayon_instances else []
             )
 
             for obj_or_col in itertools.chain(
-                    ayon_instance_objs,
-                    bpy.data.collections
+                ayon_instance_objs,
+                bpy.data.collections
             ):
-                ayon_prop = obj_or_col.get(AYON_PROPERTY, {})
+                ayon_prop = get_ayon_property(obj_or_col)
                 if not ayon_prop:
-                    avalon_prop = obj_or_col.get(AVALON_PROPERTY, {})
-                    if not avalon_prop:
-                        continue
-                    ayon_prop = avalon_prop
+                    continue
 
                 if ayon_prop.get('id') not in {
                     AYON_INSTANCE_ID, AVALON_INSTANCE_ID
@@ -234,9 +233,7 @@ class BlenderCreator(Creator):
                     cache.setdefault(creator_id, []).append(obj_or_col)
                 else:
                     # Legacy creator instance
-                    family = ayon_prop.get('family') or (
-                        ayon_prop.get("productType")
-                    )
+                    family = ayon_prop.get('family')
                     cache_legacy.setdefault(family, []).append(obj_or_col)
 
             shared_data["blender_cached_instances"] = cache

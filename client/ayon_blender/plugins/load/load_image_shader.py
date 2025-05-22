@@ -6,7 +6,7 @@ import bpy
 from ayon_core.tools.utils import host_tools
 from ayon_core.lib import EnumDef
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import AYON_CONTAINER_ID
+from ayon_blender.api.constants import AYON_CONTAINER_ID
 
 
 class LoadImageShaderEditor(plugin.BlenderLoader):
