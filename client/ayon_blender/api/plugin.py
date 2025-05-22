@@ -25,7 +25,6 @@ from .constants import (
     AYON_CONTAINERS,
     AYON_INSTANCES,
     AYON_PROPERTY,
-    AVALON_PROPERTY,
 )
 from .ops import (
     MainThreadItem,
