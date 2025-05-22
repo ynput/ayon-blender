@@ -520,15 +520,16 @@ def containerise(name: str,
 
     """
 
-    node_name = f"{context['folder']['name']}_{name}"
-    if namespace:
-        node_name = f"{namespace}:{node_name}"
-    if suffix:
-        node_name = f"{node_name}_{suffix}"
+    node_name = lib.get_container_name(name, namespace, context, suffix)
     container = bpy.data.collections.new(name=node_name)
     # Link the children nodes
     for obj in nodes:
-        container.objects.link(obj)
+        if isinstance(obj, bpy.types.Object):
+            container.objects.link(obj)
+        elif isinstance(obj, bpy.types.Collection):
+            container.children.link(obj)
+        else:
+            raise TypeError(f"Unsupported type {type(obj)} in nodes list.")
 
     data = {
         "schema": "openpype:container-2.0",
@@ -537,6 +538,7 @@ def containerise(name: str,
         "namespace": namespace or '',
         "loader": str(loader),
         "representation": context["representation"]["id"],
+        "project_name": context["project"]["name"],
     }
 
     metadata_update(container, data)
