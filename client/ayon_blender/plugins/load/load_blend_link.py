@@ -54,10 +54,18 @@ class BlendLinkLoader(plugin.BlenderLoader):
         if loaded_collection and container_name in scene_collection.children:
             self.log.debug(f"Collection {container_name} already loaded.")
             return
+        folder_name = context["folder"]["name"]
+        product_name = context["product"]["name"]
 
+        unique_number = plugin.get_unique_number(folder_name, product_name)
+        group_name = plugin.prepare_scene_name(
+            folder_name, product_name, unique_number
+        )
+        namespace = namespace or f"{folder_name}_{unique_number}"
         loaded_collection = load_collection(
             filepath,
-            link=True
+            link=True,
+            group_name=group_name
         )
 
         scene = bpy.context.scene

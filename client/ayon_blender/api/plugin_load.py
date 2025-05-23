@@ -1,8 +1,9 @@
 import logging
-from typing import Generator, TYPE_CHECKING
+from typing import Generator, TYPE_CHECKING, Union
 
 import bpy
 from ayon_core.pipeline.load import LoadError
+from ayon_blender.api.pipeline import AVALON_PROPERTY
 
 
 if TYPE_CHECKING:
@@ -93,10 +94,21 @@ def get_overridden_collections_from_reference_collection(
             yield collection
 
 
+def get_asset_container(objects):
+    empties = [obj for obj in objects if obj.type == 'EMPTY']
+
+    for empty in empties:
+        if empty.get(AVALON_PROPERTY) and empty.parent is None:
+            return empty
+
+    return None
+
+
 def load_collection(
     filepath,
     link=True,
-    lib_container_name = None
+    lib_container_name = None,
+    group_name = None
 ) -> bpy.types.Collection:
     """Load a collection to the scene."""
     with bpy.data.libraries.load(filepath, link=link, relative=False) as (
@@ -104,18 +116,28 @@ def load_collection(
         data_to,
     ):
         # Validate source collections
-        if not data_from.collections:
-            raise LoadError(f"No collections found in: {filepath}")
+        if data_from.collections:
+            if lib_container_name is None:
+                lib_container_name = data_from.collections[0]
 
-        if lib_container_name is None:
-            lib_container_name = data_from.collections[0]
+            elif lib_container_name not in data_from.collections:
+                raise LoadError(
+                    f"Collection '{lib_container_name}' not found in: {filepath}"
+                )
+            data_to.collections = [lib_container_name]
+            loaded_containers = data_to.collections
 
-        elif lib_container_name not in data_from.collections:
-            raise LoadError(
-                f"Collection '{lib_container_name}' not found in: {filepath}"
-            )
-        data_to.collections = [lib_container_name]
-    loaded_containers = data_to.collections
+        else:
+            # Get the collection with input group name
+            # as the asset container
+            asset_container = get_collection(group_name)
+            data_to.objects = [name for name in data_from.objects]
+            # Link the loaded objects to the collection
+            for obj in data_to.objects:
+                if not asset_container.objects:
+                    asset_container.objects.link(obj)
+
+            loaded_containers = [asset_container]
 
     if len(loaded_containers) != 1:
         for loaded_container in loaded_containers:
@@ -127,3 +149,13 @@ def load_collection(
     container_collection = loaded_containers[0]
 
     return container_collection
+
+
+def get_collection(group_name):
+    if group_name not in bpy.data.collections:
+        asset_container = bpy.data.collections.new(group_name)
+        bpy.context.scene.collection.children.link(asset_container)
+    else:
+        asset_container = bpy.data.collections[group_name]
+
+    return asset_container
