@@ -1,5 +1,5 @@
 import logging
-from typing import Generator, TYPE_CHECKING, Union
+from typing import Generator, TYPE_CHECKING
 
 import bpy
 from ayon_core.pipeline.load import LoadError
