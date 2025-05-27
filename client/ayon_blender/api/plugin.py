@@ -18,7 +18,7 @@ from ayon_core.pipeline.publish import Extractor
 from ayon_core.lib import BoolDef
 
 from .pipeline import (
-    convert_avalon_property,
+    get_ayon_property_by_avalon_property,
     convert_avalon_instances,
 )
 from .constants import (
@@ -213,7 +213,7 @@ class BlenderCreator(Creator):
                 ayon_instance_objs,
                 bpy.data.collections
             ):
-                ayon_prop = convert_avalon_property(obj_or_col)
+                ayon_prop = get_ayon_property_by_avalon_property(obj_or_col)
                 if not ayon_prop:
                     continue
 

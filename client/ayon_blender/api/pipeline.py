@@ -466,7 +466,7 @@ def _discover_gui() -> Optional[Callable]:
     return None
 
 
-def convert_avalon_property(node):
+def get_ayon_property_by_avalon_property(node):
     property = node.get(AYON_PROPERTY)
     if not property:
         property = node.get(AVALON_PROPERTY)
@@ -480,7 +480,26 @@ def convert_avalon_instances():
     avalon_instances = bpy.data.collections.get(AVALON_INSTANCES)
     if not avalon_instances:
         return
-    avalon_instances.name = AYON_INSTANCES
+    ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
+    if ayon_instances:
+        avalon_instance_objs = (
+            avalon_instances.objects if avalon_instances else []
+        )
+        # link the objects parented from
+        # avalon instance to ayon instance
+        for instance_obj in avalon_instance_objs:
+            ayon_instances.children.link(instance_obj)
+
+        for children in avalon_instances.children_recursive:
+            if isinstance(children, bpy.types.Collection):
+                bpy.data.collections.remove(children)
+            else:
+                bpy.data.objects.remove(children)
+
+        # remove deprecated avalon references
+        bpy.data.collections.remove(avalon_instances)
+    else:
+        avalon_instances.name = AYON_INSTANCES
 
 
 def add_to_ayon_container(container: bpy.types.Collection):
