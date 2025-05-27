@@ -466,7 +466,7 @@ def _discover_gui() -> Optional[Callable]:
     return None
 
 
-def get_ayon_property(node):
+def convert_avalon_property(node):
     property = node.get(AYON_PROPERTY)
     if not property:
         property = node.get(AVALON_PROPERTY)
@@ -476,7 +476,7 @@ def get_ayon_property(node):
     return property
 
 
-def get_ayon_instances():
+def convert_avalon_instances():
     avalon_instances = bpy.data.collections.get(AVALON_INSTANCES)
     if not avalon_instances:
         return

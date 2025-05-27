@@ -18,8 +18,8 @@ from ayon_core.pipeline.publish import Extractor
 from ayon_core.lib import BoolDef
 
 from .pipeline import (
-    get_ayon_property,
-    get_ayon_instances,
+    convert_avalon_property,
+    convert_avalon_instances,
 )
 from .constants import (
     AYON_CONTAINERS,
@@ -204,7 +204,7 @@ class BlenderCreator(Creator):
             cache_legacy = {}
 
             ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
-            get_ayon_instances()
+            convert_avalon_instances()
             ayon_instance_objs = (
                 ayon_instances.objects if ayon_instances else []
             )
@@ -213,7 +213,7 @@ class BlenderCreator(Creator):
                 ayon_instance_objs,
                 bpy.data.collections
             ):
-                ayon_prop = get_ayon_property(obj_or_col)
+                ayon_prop = convert_avalon_property(obj_or_col)
                 if not ayon_prop:
                     continue
 
