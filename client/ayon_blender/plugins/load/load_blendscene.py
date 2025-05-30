@@ -13,6 +13,7 @@ from ayon_blender.api.constants import (
     AYON_CONTAINERS,
     AYON_PROPERTY,
 )
+from ayon_blender.api.pipeline import convert_avalon_containers
 
 
 class BlendSceneLoader(plugin.BlenderLoader):
@@ -98,6 +99,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
         namespace = namespace or f"{folder_name}_{unique_number}"
 
         ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        convert_avalon_containers()
         if not ayon_container:
             ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
             bpy.context.scene.collection.children.link(ayon_container)
@@ -154,6 +156,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
         member_transforms = {}
         members = asset_group.get(AYON_PROPERTY).get("members", [])
         loaded_collections = {c for c in bpy.data.collections if c in members}
+        convert_avalon_containers()
         loaded_collections.add(bpy.data.collections.get(AYON_CONTAINERS))
         for member in members:
             if isinstance(member, bpy.types.Object):
@@ -192,6 +195,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
             ):
                 member.matrix_basis = member_transforms[member.name]
 
+        convert_avalon_containers()
         ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
         ayon_container.children.link(asset_group)
 

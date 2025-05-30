@@ -18,6 +18,7 @@ from ayon_blender.api.constants import (
     VALID_EXTENSIONS,
 )
 from ayon_blender.api import plugin, lib
+from ayon_blender.api.pipeline import convert_avalon_containers
 
 
 class CacheModelLoader(plugin.BlenderLoader):
@@ -176,6 +177,8 @@ class CacheModelLoader(plugin.BlenderLoader):
         namespace = namespace or f"{folder_name}_{unique_number}"
 
         containers = bpy.data.collections.get(AYON_CONTAINERS)
+        convert_avalon_containers()
+
         if not containers:
             containers = bpy.data.collections.new(name=AYON_CONTAINERS)
             bpy.context.scene.collection.children.link(containers)
@@ -274,6 +277,7 @@ class CacheModelLoader(plugin.BlenderLoader):
             objects = self._process(str(libpath), asset_group, object_name)
 
             containers = bpy.data.collections.get(AYON_CONTAINERS)
+            convert_avalon_containers()
             self._link_objects(objects, asset_group, containers, asset_group)
 
             asset_group.matrix_basis = mat

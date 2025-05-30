@@ -16,6 +16,7 @@ from ayon_blender.api.constants import (
     AYON_PROPERTY,
     VALID_EXTENSIONS,
 )
+from ayon_blender.api.pipeline import convert_avalon_containers
 
 
 class FbxModelLoader(plugin.BlenderLoader):
@@ -143,6 +144,7 @@ class FbxModelLoader(plugin.BlenderLoader):
         namespace = namespace or f"{folder_name}_{unique_number}"
 
         ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        convert_avalon_containers()
         if not ayon_container:
             ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
             bpy.context.scene.collection.children.link(ayon_container)

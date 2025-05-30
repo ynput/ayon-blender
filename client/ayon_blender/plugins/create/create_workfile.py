@@ -2,6 +2,7 @@ import bpy
 
 from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
+from ayon_blender.api.pipeline import convert_avalon_containers
 from ayon_blender.api.constants import (
     AYON_PROPERTY,
     AYON_CONTAINERS
@@ -86,6 +87,7 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["productName"] = product_name
 
         instance_node = bpy.data.collections.get(AYON_CONTAINERS)
+        convert_avalon_containers()
         if not instance_node:
             instance_node = bpy.data.collections.new(name=AYON_CONTAINERS)
         workfile_instance.transient_data["instance_node"] = instance_node
