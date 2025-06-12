@@ -13,14 +13,16 @@ from ayon_core.pipeline import (
     load_container,
     get_representation_path,
     loaders_from_representation,
-    AVALON_CONTAINER_ID,
+    AYON_CONTAINER_ID,
 )
-from ayon_blender.api.pipeline import (
-    AVALON_INSTANCES,
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
+from ayon_blender.api.constants import (
+    AYON_INSTANCES,
+    AYON_CONTAINERS,
+    AYON_PROPERTY,
+    VALID_EXTENSIONS
 )
 from ayon_blender.api import plugin
+from ayon_blender.api.pipeline import convert_avalon_containers
 
 
 class JsonLayoutLoader(plugin.BlenderLoader):
@@ -39,10 +41,10 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         objects = list(asset_group.children)
 
         for obj in objects:
-            remove_container(obj.get(AVALON_PROPERTY))
+            remove_container(obj.get(AYON_PROPERTY))
 
     def _remove_animation_instances(self, asset_group):
-        instances = bpy.data.collections.get(AVALON_INSTANCES)
+        instances = bpy.data.collections.get(AYON_INSTANCES)
         if instances:
             for obj in list(asset_group.children):
                 anim_collection = instances.children.get(
@@ -158,22 +160,23 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        if not avalon_container:
-            avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
-            bpy.context.scene.collection.children.link(avalon_container)
+        convert_avalon_containers()
+        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        if not ayon_container:
+            ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+            bpy.context.scene.collection.children.link(ayon_container)
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         asset_group.empty_display_type = 'SINGLE_ARROW'
-        avalon_container.objects.link(asset_group)
+        ayon_container.objects.link(asset_group)
 
         self._process(libpath, asset_name, asset_group, None)
 
         bpy.context.scene.collection.objects.link(asset_group)
 
-        asset_group[AVALON_PROPERTY] = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+        asset_group[AYON_PROPERTY] = {
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
@@ -219,11 +222,11 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 
-        metadata = asset_group.get(AVALON_PROPERTY)
+        metadata = asset_group.get(AYON_PROPERTY)
         group_libpath = metadata["libpath"]
 
         normalized_group_libpath = (
@@ -244,7 +247,7 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         actions = {}
 
         for obj in asset_group.children:
-            obj_meta = obj.get(AVALON_PROPERTY)
+            obj_meta = obj.get(AYON_PROPERTY)
             product_type = obj_meta.get("productType")
             if product_type is None:
                 product_type = obj_meta.get("family")
@@ -278,7 +281,7 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         """Remove an existing container from a Blender scene.
 
         Arguments:
-            container (openpype:container-1.0): Container to remove,
+            container (ayon:container-1.0): Container to remove,
                 from `host.ls()`.
 
         Returns:

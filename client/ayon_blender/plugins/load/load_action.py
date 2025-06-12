@@ -9,9 +9,13 @@ import bpy
 from ayon_core.pipeline import get_representation_path
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import (
-    containerise_existing,
-    AVALON_PROPERTY,
+    containerise_existing
 )
+from ayon_blender.api.constants import (
+    AYON_PROPERTY,
+    VALID_EXTENSIONS,
+)
+
 
 logger = logging.getLogger("ayon").getChild("blender").getChild("load_action")
 
@@ -61,7 +65,7 @@ class BlendActionLoader(plugin.BlenderLoader):
             self.__class__.__name__,
         )
 
-        container_metadata = container.get(AVALON_PROPERTY)
+        container_metadata = container.get(AYON_PROPERTY)
 
         container_metadata["libpath"] = libpath
         container_metadata["lib_container"] = lib_container
@@ -93,16 +97,16 @@ class BlendActionLoader(plugin.BlenderLoader):
 
                 anim_data.action.make_local()
 
-            if not obj.get(AVALON_PROPERTY):
+            if not obj.get(AYON_PROPERTY):
 
-                obj[AVALON_PROPERTY] = dict()
+                obj[AYON_PROPERTY] = dict()
 
-            avalon_info = obj[AVALON_PROPERTY]
-            avalon_info.update({"container_name": container_name})
+            ayon_info = obj[AYON_PROPERTY]
+            ayon_info.update({"container_name": container_name})
 
             objects_list.append(obj)
 
-        animation_container.pop(AVALON_PROPERTY)
+        animation_container.pop(AYON_PROPERTY)
 
         # Save the list of objects in the metadata container
         container_metadata["objects"] = objects_list
@@ -152,11 +156,11 @@ class BlendActionLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 
-        collection_metadata = collection.get(AVALON_PROPERTY)
+        collection_metadata = collection.get(AYON_PROPERTY)
 
         collection_libpath = collection_metadata["libpath"]
         normalized_collection_libpath = (
@@ -227,16 +231,16 @@ class BlendActionLoader(plugin.BlenderLoader):
                     strip.action = anim_data.action
                     strip.action_frame_end = anim_data.action.frame_range[1]
 
-            if not obj.get(AVALON_PROPERTY):
+            if not obj.get(AYON_PROPERTY):
 
-                obj[AVALON_PROPERTY] = dict()
+                obj[AYON_PROPERTY] = dict()
 
-            avalon_info = obj[AVALON_PROPERTY]
-            avalon_info.update({"container_name": collection.name})
+            ayon_info = obj[AYON_PROPERTY]
+            ayon_info.update({"container_name": collection.name})
 
             objects_list.append(obj)
 
-        anim_container.pop(AVALON_PROPERTY)
+        anim_container.pop(AYON_PROPERTY)
 
         # Save the list of objects in the metadata container
         collection_metadata["objects"] = objects_list
@@ -250,7 +254,7 @@ class BlendActionLoader(plugin.BlenderLoader):
         """Remove an existing container from a Blender scene.
 
         Arguments:
-            container (openpype:container-1.0): Container to remove,
+            container (ayon:container-1.0): Container to remove,
                 from `host.ls()`.
 
         Returns:
@@ -269,7 +273,7 @@ class BlendActionLoader(plugin.BlenderLoader):
             "Nested collections are not supported."
         )
 
-        collection_metadata = collection.get(AVALON_PROPERTY)
+        collection_metadata = collection.get(AYON_PROPERTY)
         objects = collection_metadata["objects"]
         lib_container = collection_metadata["lib_container"]
 

@@ -8,7 +8,7 @@ from ayon_blender.api import plugin, lib
 class CreateModel(plugin.BlenderCreator):
     """Polygonal static geometry."""
 
-    identifier = "io.openpype.creators.blender.model"
+    identifier = "io.ayon.creators.blender.model"
     label = "Model"
     product_type = "model"
     icon = "cube"

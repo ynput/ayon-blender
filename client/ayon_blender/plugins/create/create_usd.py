@@ -6,7 +6,7 @@ from ayon_blender.api import plugin, lib
 class CreateUSD(plugin.BlenderCreator):
     """Create USD Export"""
 
-    identifier = "io.openpype.creators.blender.usd"
+    identifier = "io.ayon.creators.blender.usd"
     name = "usdMain"
     label = "USD"
     product_type = "usd"

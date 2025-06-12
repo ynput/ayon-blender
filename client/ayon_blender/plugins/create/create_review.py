@@ -6,7 +6,7 @@ from ayon_blender.api import plugin, lib
 class CreateReview(plugin.BlenderCreator):
     """Single baked camera."""
 
-    identifier = "io.openpype.creators.blender.review"
+    identifier = "io.ayon.creators.blender.review"
     label = "Review"
     product_type = "review"
     icon = "video-camera"
