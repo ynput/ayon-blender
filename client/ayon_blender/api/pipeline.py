@@ -505,25 +505,7 @@ def convert_avalon_instances():
 
 def convert_avalon_containers():
     avalon_containers = bpy.data.collections.get(AVALON_CONTAINERS)
-    ayon_containers = bpy.data.collections.get(AYON_CONTAINERS)
-    if ayon_containers:
-        avalon_container_objs = (
-            avalon_containers.objects if avalon_containers else []
-        )
-        # link the objects parented from
-        # avalon container to ayon container
-        for container_obj in avalon_container_objs:
-            ayon_containers.children.link(container_obj)
-
-        for children in avalon_containers.children_recursive:
-            if isinstance(children, bpy.types.Collection):
-                bpy.data.collections.remove(children)
-            else:
-                bpy.data.objects.remove(children)
-
-        # remove deprecated avalon references
-        bpy.data.collections.remove(avalon_containers)
-    else:
+    if avalon_containers:
         avalon_containers.name = AYON_CONTAINERS
 
 

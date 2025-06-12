@@ -86,8 +86,8 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["task"] = task_name
             workfile_instance["productName"] = product_name
 
-        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
         convert_avalon_containers()
+        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
         if not instance_node:
             instance_node = bpy.data.collections.new(name=AYON_CONTAINERS)
         workfile_instance.transient_data["instance_node"] = instance_node

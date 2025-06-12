@@ -50,11 +50,11 @@ class AudioLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
         convert_avalon_containers()
+        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
         if not ayon_container:
             ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
-            bpy.context.scene.collection.children.link(ayon_container)
+        bpy.context.scene.collection.children.link(ayon_container)
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         ayon_container.objects.link(asset_group)
