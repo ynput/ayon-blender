@@ -86,7 +86,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 # OCIO not currently implemented in Blender, but the following
                 # settings are required by the schema, so it is hardcoded.
                 # TODO: Implement OCIO in Blender
-                "colorspaceConfig": "",
+                "colorspaceConfig": os.environ.get("OCIO", ""),
                 "colorspaceDisplay": "sRGB",
                 "colorspaceView": "ACES 1.0 SDR-video",
                 "renderProducts": colorspace.ARenderProduct(
