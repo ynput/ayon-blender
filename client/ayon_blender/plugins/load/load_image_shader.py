@@ -4,6 +4,7 @@ from qtpy import QtWidgets
 import bpy
 
 from ayon_core.tools.utils import host_tools
+from ayon_core.lib import EnumDef
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.pipeline import AVALON_CONTAINER_ID
 
@@ -17,6 +18,44 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
     label = "Load to Shader Editor"
     icon = "code-fork"
     color = "orange"
+
+    CREATE_NEW = "create_new"
+
+    @classmethod
+    def get_options(cls, contexts):
+
+        selected_object = cls.get_selected_object()
+        if not selected_object:
+            return []
+
+        slot_materials = [
+            (i, material) for i, material
+            in enumerate(selected_object.data.materials)
+            # Ignore empty material slots
+            if material is not None
+        ]
+        items = [
+            {"value": i, "label": material.name}
+            for i, material in slot_materials
+        ]
+        items.append(
+            {"value": cls.CREATE_NEW, "label": "New Material"}
+        )
+        return [
+            EnumDef(
+                "material_slot",
+                label="Material Slot",
+                items=items,
+                default=items[0]["value"]
+            )
+        ]
+
+    @staticmethod
+    def get_selected_object():
+        selected_objects = lib.get_selection()
+        for obj in selected_objects:
+            if obj.type in {'MESH', 'SURFACE'}:
+                return obj
 
     def process_asset(
             self, context: dict, name: str, namespace: Optional[str] = None,
@@ -35,12 +74,8 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         # TODO: We tend to avoid acting on 'user selection' so that the loaders
         #  can run completely automatically, without user interaction or popups
         #  So we may want to investigate different approaches to this.
-        selected_objects = lib.get_selection()
-        for obj in selected_objects:
-            if obj.type in {'MESH', 'SURFACE'}:
-                cur_obj = obj
-                break
-        else:
+        cur_obj = self.get_selected_object()
+        if cur_obj is None:
             self.log.info(
                 "Load in Shader Editor: The process (image load) was "
                 "cancelled, because no object (mesh or surface) was selected "
@@ -52,13 +87,23 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         # If the currently selected object has one or more materials, let's use
         # the first one. If it has no material, let's create a new one.
-        if not cur_obj.data.materials:
+        material_slot = options.get("material_slot")
+        if material_slot is None:
+            # Get first slot with a material
+            material_slot = next(
+                (
+                    i for i, material in enumerate(cur_obj.data.materials)
+                    # Ignore empty material slots
+                    if material is not None
+                ), None
+            )
+        if material_slot is None or material_slot == self.CREATE_NEW:
             # Create a new material
             current_material = bpy.data.materials.new(name="material")
             current_material.use_nodes = True
             cur_obj.data.materials.append(current_material)
         else:
-            current_material = cur_obj.data.materials[0]
+            current_material = cur_obj.data.materials[material_slot]
             current_material.use_nodes = True
 
         nodes = current_material.node_tree.nodes

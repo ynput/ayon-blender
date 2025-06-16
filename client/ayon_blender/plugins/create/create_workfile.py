@@ -1,5 +1,4 @@
 import bpy
-import ayon_api
 
 from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
@@ -32,22 +31,15 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             None,
         )
 
-        project_name = self.project_name
-        folder_path = self.create_context.get_current_folder_path()
-        task_name = self.create_context.get_current_task_name()
+        project_entity = self.create_context.get_current_project_entity()
+        project_name = project_entity["name"]
+        folder_entity = self.create_context.get_current_folder_entity()
+        folder_path = folder_entity["path"]
+        task_entity = self.create_context.get_current_task_entity()
+        task_name = task_entity["name"]
         host_name = self.create_context.host_name
 
-        existing_folder_path = None
-        if workfile_instance is not None:
-            existing_folder_path = workfile_instance.get("folderPath")
-
         if not workfile_instance:
-            folder_entity = ayon_api.get_folder_by_path(
-                project_name, folder_path
-            )
-            task_entity = ayon_api.get_task_by_name(
-                project_name, folder_entity["id"], task_name
-            )
             product_name = self.get_product_name(
                 project_name,
                 folder_entity,
@@ -77,16 +69,10 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             self._add_instance_to_context(workfile_instance)
 
         elif (
-            existing_folder_path != folder_path
+            workfile_instance["folderPath"]  != folder_path
             or workfile_instance["task"] != task_name
         ):
             # Update instance context if it's different
-            folder_entity = ayon_api.get_folder_by_path(
-                project_name, folder_path
-            )
-            task_entity = ayon_api.get_task_by_name(
-                project_name, folder_entity["id"], task_name
-            )
             product_name = self.get_product_name(
                 project_name,
                 folder_entity,

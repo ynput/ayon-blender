@@ -1,6 +1,6 @@
 name = "blender"
 title = "Blender"
-version = "0.2.7+dev"
+version = "0.2.11+dev"
 app_host_name = "blender"
 client_dir = "ayon_blender"
 

@@ -148,8 +148,11 @@ def set_app_templates_path():
     # We look among the scripts paths for one of the paths that contains
     # the app templates. The path must contain the subfolder
     # `startup/bl_app_templates_user`.
-    paths = os.environ.get("AYON_BLENDER_USER_SCRIPTS").split(os.pathsep)
+    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS")
+    if not user_scripts:
+        return
 
+    paths = user_scripts.split(os.pathsep)
     app_templates_path = None
     for path in paths:
         if os.path.isdir(
@@ -577,3 +580,60 @@ def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
                                    if modifier.type == modifier_type]
                 modifiers_dict[ob.name] = cache_modifiers
     return modifiers_dict
+
+
+def get_blender_version():
+    """Get Blender Version
+    """
+    major, minor, subversion = bpy.app.version
+    return major, minor, subversion
+
+
+@contextlib.contextmanager
+def strip_container_data(containers):
+    """Remove container data during context
+    """
+    container_data = {}
+    for container in containers:
+        node = container["node"]
+        container_data[node] = dict(
+            node.get(pipeline.AVALON_PROPERTY)
+        )
+        del node[pipeline.AVALON_PROPERTY]
+    try:
+        yield
+
+    finally:
+        for key, item in container_data.items():
+            key[pipeline.AVALON_PROPERTY] = item
+
+
+@contextlib.contextmanager
+def strip_namespace(containers):
+    """Strip namespace during context
+    """
+    nodes = [
+        container["node"] for container in containers
+    ]
+    original_namespaces = {}
+    for node in nodes:
+        if isinstance(node, bpy.types.Collection):
+            children = node.children_recursive
+        elif isinstance(node, bpy.types.Object):
+            children = node.children
+        else:
+            raise TypeError(f"Unsupported type: {node} ({type(node)})")
+
+        for child in children:
+            original_name = child.name
+            if ":" not in original_name:
+                continue
+            namespace, name = original_name.rsplit(':', 1)
+            child.name = name
+            original_namespaces[child] = namespace
+
+    try:
+        yield
+    finally:
+        for node, original_namespace in original_namespaces.items():
+            node.name = f"{original_namespace}:{name}"
