@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional
 import bpy
 
 from ayon_core.settings import get_project_settings
@@ -7,18 +8,16 @@ from ayon_core.pipeline import get_current_project_name
 from . import lib
 
 
-def get_default_render_folder(settings) -> str:
+def get_default_render_folder(project_settings) -> str:
     """Get default render folder from blender settings."""
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["default_render_image_folder"])
+    return project_settings["blender"]["RenderSettings"][
+        "default_render_image_folder"
+    ]
 
 
-def get_aov_separator(settings) -> str:
+def get_aov_separator(project_settings) -> str:
     """Get aov separator from blender settings."""
-    aov_sep = (settings["blender"]
-                       ["RenderSettings"]
-                       ["aov_separator"])
+    aov_sep = project_settings["blender"]["RenderSettings"]["aov_separator"]
 
     if aov_sep == "dash":
         return "-"
@@ -30,35 +29,33 @@ def get_aov_separator(settings) -> str:
         raise ValueError(f"Invalid aov separator: {aov_sep}")
 
 
-def get_image_format(settings) -> str:
+def get_image_format(project_settings) -> str:
     """Get image format from blender settings."""
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["image_format"])
+    return project_settings["blender"]["RenderSettings"]["image_format"]
 
 
-def get_multilayer(settings) -> bool:
+def get_multilayer(project_settings) -> bool:
     """Get multilayer from blender settings."""
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["multilayer_exr"])
+    return project_settings["blender"]["RenderSettings"]["multilayer_exr"]
 
 
-def get_renderer(settings) -> str:
+def get_renderer(project_settings) -> str:
     """Get renderer from blender settings."""
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["renderer"])
+    return project_settings["blender"]["RenderSettings"]["renderer"]
 
 
-def get_compositing(settings) -> bool:
+def get_compositing(project_settings) -> bool:
     """Get whether 'Composite' render is enabled from blender settings."""
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["compositing"])
+    return project_settings["blender"]["RenderSettings"]["compositing"]
 
 
-def get_render_product(output_path, name, aov_sep, view_layers, multiexr=False):
+def get_render_product(
+    output_path: str,
+    name: str,
+    aov_sep: str,
+    view_layers: list["bpy.types.ViewLayer"],
+    multiexr: bool = False,
+) -> dict[str, list[tuple[str, str]]]:
     """
     Generate the path to the render product. Blender interprets the `#`
     as the frame number, when it renders.
@@ -124,6 +121,8 @@ def set_render_passes(settings, renderer, view_layers):
     Args:
         settings (dict): The project settings.
         renderer (str): The renderer to use, either CYCLES or BLENDER_EEVEE.
+        view_layers (list[bpy.types.ViewLayer]): The list of view layers to
+        set the passes for.
     """
     aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     existing_aov_list = set(existing_aov_options(renderer, view_layers))
@@ -171,7 +170,7 @@ def set_render_passes(settings, renderer, view_layers):
     return list(aov_list), custom_passes
 
 
-def get_aov_options(renderer):
+def get_aov_options(renderer: str) -> dict[str, str]:
     aov_options = {
         "combined": "use_pass_combined",
         "z": "use_pass_z",
@@ -220,7 +219,9 @@ def get_aov_options(renderer):
     return aov_options
 
 
-def existing_aov_options(renderer, view_layers):
+def existing_aov_options(
+    renderer: str, view_layers: list["bpy.types.ViewLayer"]
+) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
     for vl in view_layers:
@@ -402,16 +403,6 @@ def set_node_tree(
     return {} if multi_exr else aov_file_products
 
 
-def imprint_render_settings(node, data):
-    RENDER_DATA = "render_data"
-    if not node.get(RENDER_DATA):
-        node[RENDER_DATA] = {}
-    for key, value in data.items():
-        if value is None:
-            continue
-        node[RENDER_DATA][key] = value
-
-
 def create_node_with_new_view_layers(tree, comp_layer_type, view_layers, render_layer_nodes):
     for view_layer in view_layers:
         render_layer_node = tree.nodes.new(comp_layer_type)
@@ -420,9 +411,8 @@ def create_node_with_new_view_layers(tree, comp_layer_type, view_layers, render_
     return render_layer_nodes
 
 
-def prepare_rendering(asset_group):
+def prepare_rendering(name: str, project_settings: Optional[dict] = None):
     """Initialize render setup using render settings from project settings."""
-    name = asset_group.name
 
     filepath = Path(bpy.data.filepath)
     assert filepath, "Workfile not saved. Please save the file first."
@@ -430,32 +420,29 @@ def prepare_rendering(asset_group):
     dirpath = filepath.parent
     file_name = Path(filepath.name).stem
 
-    project = get_current_project_name()
-    settings = get_project_settings(project)
+    if project_settings is None:
+        project_name: str = get_current_project_name()
+        project_settings = get_project_settings(project_name)
 
-    render_folder = get_default_render_folder(settings)
-    aov_sep = get_aov_separator(settings)
-    ext = get_image_format(settings)
-    multilayer = get_multilayer(settings)
-    renderer = get_renderer(settings)
+    render_folder = get_default_render_folder(project_settings)
+    aov_sep = get_aov_separator(project_settings)
+    ext = get_image_format(project_settings)
+    multilayer = get_multilayer(project_settings)
+    renderer = get_renderer(project_settings)
     ver_major, ver_minor, _ = lib.get_blender_version()
     if renderer == "BLENDER_EEVEE" and (
         ver_major >= 4 and ver_minor >=2
     ):
         renderer = "BLENDER_EEVEE_NEXT"
-    compositing = get_compositing(settings)
+    compositing = get_compositing(project_settings)
 
     set_render_format(ext, multilayer)
     bpy.context.scene.render.engine = renderer
     view_layers = bpy.context.scene.view_layers
-    aov_list, custom_passes = set_render_passes(settings, renderer, view_layers)
+    set_render_passes(project_settings, renderer, view_layers)
 
     output_path = Path.joinpath(dirpath, render_folder, file_name)
-
-    render_product = get_render_product(
-        output_path, name, aov_sep, view_layers, multiexr=multilayer
-    )
-    aov_file_product = set_node_tree(
+    set_node_tree(
         output_path, name, aov_sep, ext,
         multilayer, compositing, view_layers
     )
@@ -466,19 +453,6 @@ def prepare_rendering(asset_group):
     tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
     bpy.context.scene.render.filepath = f"{tmp_render_path}/"
-    render_settings = {
-        "render_folder": render_folder,
-        "aov_separator": aov_sep,
-        "image_format": ext,
-        "multilayer_exr": multilayer,
-        "aov_list": aov_list,
-        "custom_passes": custom_passes,
-        "render_product": render_product,
-        "aov_file_product": aov_file_product,
-        "review": True,
-    }
-
-    imprint_render_settings(asset_group, render_settings)
 
 
 def update_render_product(name, output_path, render_product, aov_sep, multilayer=False):
