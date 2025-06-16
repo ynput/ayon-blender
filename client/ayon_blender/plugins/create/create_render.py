@@ -5,28 +5,27 @@ from ayon_core.pipeline.create import CreatedInstance
 from ayon_blender.api import plugin, lib, prepare_rendering
 
 
-class CreateRenderlayer(plugin.BlenderCreator):
+class CreateRender(plugin.BlenderCreator):
     """Create render instance."""
 
     identifier = "io.openpype.creators.blender.render"
     label = "Render"
-    product_type = "renderlayer"
+    product_type = "render"
     icon = "eye"
 
     # TODO: Convert legacy instances to new style instances by finding the
     #  relevant file output node and moving the imprinted data there.
 
-    def _find_existing_compositor_output_node(self):
+    def _find_existing_compositor_output_node(self) -> bpy.types.CompositorNode:
         if not bpy.context.scene.use_nodes:
-            return
+            return None
 
         # TODO: If user has a selected compositor node, prefer that one
         # TODO: What to do if multiples exist?
         tree = bpy.context.scene.node_tree
         for node in tree.nodes:
-            if node.bl_idname != "CompositorNodeOutputFile":
-                continue
-            return node
+            if node.bl_idname == "CompositorNodeOutputFile":
+                return node
 
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict
