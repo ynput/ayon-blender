@@ -1,5 +1,6 @@
 """Create render."""
 import bpy
+from typing import Optional
 
 from ayon_core.pipeline.create import CreatedInstance
 from ayon_blender.api import plugin, lib, prepare_rendering
@@ -16,7 +17,7 @@ class CreateRender(plugin.BlenderCreator):
     # TODO: Convert legacy instances to new style instances by finding the
     #  relevant file output node and moving the imprinted data there.
 
-    def _find_existing_compositor_output_node(self) -> bpy.types.CompositorNode:
+    def _find_existing_compositor_output_node(self) -> Optional["bpy.types.CompositorNodeOutputFile"]:
         if not bpy.context.scene.use_nodes:
             return None
 
