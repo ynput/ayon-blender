@@ -66,7 +66,8 @@ def get_render_product(
         aov_sep (str): The AOV separator token, e.g. `.` or `_`.
 
     Returns:
-        str: The full path to the render product without extension.
+        dict[str, list[tuple[str, str]]]: The full path to the render product
+          without extension.
 
     """
     beauty_render_product = {}
@@ -77,7 +78,8 @@ def get_render_product(
         filepath = output_dir / name.lstrip("/")
         render_product = f"{filepath}{aov_sep}beauty.####"
         beauty_render_product[vl_name].append(
-            ("beauty", os.path.normpath(render_product)))
+            ("beauty", os.path.normpath(render_product))
+        )
     else:
         for view_layer in view_layers:
             vl_name = view_layer.name
@@ -86,7 +88,8 @@ def get_render_product(
             filepath = output_dir / name.lstrip("/")
             render_product = f"{filepath}_{vl_name}{aov_sep}beauty.####"
             beauty_render_product[vl_name].append(
-                ("beauty", os.path.normpath(render_product)))
+                ("beauty", os.path.normpath(render_product))
+            )
 
     return beauty_render_product
 
