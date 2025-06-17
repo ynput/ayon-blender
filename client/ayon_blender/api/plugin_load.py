@@ -135,7 +135,12 @@ def load_collection(
             # Link the loaded objects to the collection
             for obj in data_to.objects:
                 if not asset_container.objects:
-                    asset_container.objects.link(obj)
+                    if isinstance(obj, str):
+                        # do we need to check on collection too?
+                        obj_ref = bpy.data.objects.get(obj)
+                        asset_container.objects.link(obj_ref)
+                    else:
+                        asset_container.objects.link(obj)
 
             loaded_containers = [asset_container]
 
