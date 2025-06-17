@@ -8,7 +8,7 @@ from ayon_blender.api import plugin, lib
 class CreateLayout(plugin.BlenderCreator):
     """Layout output for character rigs."""
 
-    identifier = "io.openpype.creators.blender.layout"
+    identifier = "io.ayon.creators.blender.layout"
     label = "Layout"
     product_type = "layout"
     icon = "cubes"

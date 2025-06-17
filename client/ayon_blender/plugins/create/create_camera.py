@@ -3,13 +3,13 @@
 import bpy
 
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import AVALON_INSTANCES
+from ayon_blender.api.constants import AYON_INSTANCES
 
 
 class CreateCamera(plugin.BlenderCreator):
     """Polygonal static geometry."""
 
-    identifier = "io.openpype.creators.blender.camera"
+    identifier = "io.ayon.creators.blender.camera"
     label = "Camera"
     product_type = "camera"
     icon = "video-camera"
@@ -33,7 +33,7 @@ class CreateCamera(plugin.BlenderCreator):
             camera = bpy.data.cameras.new(product_name)
             camera_obj = bpy.data.objects.new(product_name, camera)
 
-            instances = bpy.data.collections.get(AVALON_INSTANCES)
+            instances = bpy.data.collections.get(AYON_INSTANCES)
             instances.objects.link(camera_obj)
 
             bpy.context.view_layer.objects.active = asset_group
