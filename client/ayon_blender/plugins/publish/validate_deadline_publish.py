@@ -11,22 +11,44 @@ from ayon_core.pipeline.publish import (
 from ayon_blender.api import plugin
 
 
-def get_composite_output_node():
-    """Get composite output node for validation
+class ValidateSceneRenderFilePath(
+    plugin.BlenderInstancePlugin,
+    OptionalPyblishPluginMixin
+):
+    """Validate Scene Render Output File Path is not empty.
 
-    Returns:
-        node: composite output node
+    Validates `bpy.context.scene.render.filepath` is set to a valid directory.
     """
-    tree = bpy.context.scene.node_tree
-    output_type = "CompositorNodeOutputFile"
-    output_node = None
-    # Remove all output nodes that include "AYON" in the name.
-    # There should be only one.
-    for node in tree.nodes:
-        if node.bl_idname == output_type and "AYON" in node.name:
-            output_node = node
-            break
-    return output_node
+    order = ValidateContentsOrder
+    families = ["render"]
+    hosts = ["blender"]
+    label = "Validate Scene Render Output"
+    optional = True
+    actions = [RepairAction]
+
+    def process(self, instance):
+        if not self.is_active(instance.data):
+            return
+
+        if not bpy.context.scene.render.filepath:
+            raise PublishValidationError(
+                message=(
+                    "No render filepath set in the scene!"
+                    "Use Repair action to fix the render filepath."
+                ),
+                title="No scene render filepath set"
+            )
+
+    @classmethod
+    def repair(cls, instance):
+        tmp_render_path = os.path.join(
+            os.getenv("AYON_WORKDIR"), "renders", "tmp"
+        )
+        tmp_render_path = tmp_render_path.replace("\\", "/")
+        os.makedirs(tmp_render_path, exist_ok=True)
+        bpy.context.scene.render.filepath = f"{tmp_render_path}/"
+
+        bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
 
 
 class ValidateDeadlinePublish(
@@ -34,6 +56,8 @@ class ValidateDeadlinePublish(
     OptionalPyblishPluginMixin
 ):
     """Validates Render File Directory is not the same in every submission
+
+    Validates the render outputs of the `CompositorNodeOutputFile` node.
     """
 
     order = ValidateContentsOrder
@@ -83,24 +107,21 @@ class ValidateDeadlinePublish(
                 "Use Repair action to fix the folder file path."
             )
             invalid.append(msg)
-        if not bpy.context.scene.render.filepath:
-            msg = (
-                "No render filepath set in the scene!"
-                "Use Repair action to fix the render filepath."
-            )
-            invalid.append(msg)
         return invalid
 
     @classmethod
     def repair(cls, instance):
-        container = instance.data["transientData"]["instance_node"]
-        output_node = get_composite_output_node()
-        render_data = container.get("render_data")
-        aov_sep = render_data.get("aov_separator")
+        """Update the render output path to include the scene name."""
+        output_node: "bpy.types.CompositorNodeOutputFile" = (
+            instance.data["transientData"]["instance_node"]
+        )
+
+        # TODO: Fix the repair logic below to not rely on the 'render_data'
+        render_data = {}  # TODO: Fix
+        aov_sep: str = render_data.get("aov_separator", "_")
         filename = os.path.basename(bpy.data.filepath)
         filename, ext = os.path.splitext(filename)
-        ext = ext.strip(".")
-        is_multilayer = render_data.get("multilayer_exr")
+        is_multilayer: bool = render_data.get("multilayer_exr", True)
         orig_output_path = output_node.base_path
         if is_multilayer:
             render_folder = render_data.get("render_folder")
@@ -114,12 +135,3 @@ class ValidateDeadlinePublish(
             new_output_dir = os.path.join(output_node_dir, filename)
 
         output_node.base_path = new_output_dir
-
-        tmp_render_path = os.path.join(
-            os.getenv("AYON_WORKDIR"), "renders", "tmp"
-        )
-        tmp_render_path = tmp_render_path.replace("\\", "/")
-        os.makedirs(tmp_render_path, exist_ok=True)
-        bpy.context.scene.render.filepath = f"{tmp_render_path}/"
-
-        bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
