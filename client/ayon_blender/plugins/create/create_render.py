@@ -27,6 +27,7 @@ class CreateRender(plugin.BlenderCreator):
         for node in tree.nodes:
             if node.bl_idname == "CompositorNodeOutputFile":
                 return node
+        return None
 
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict
@@ -93,6 +94,8 @@ class CreateRender(plugin.BlenderCreator):
             if not comp_node:
                 raise RuntimeError("No compositor node found")
 
+            # TODO: Rename product name/variant if the node has a new name so
+            #  that the variatn is tightly coupled with the node's name/label.
             instance.transient_data["instance_node"] = comp_node
             lib.imprint(comp_node, instance.data_to_store())
 
