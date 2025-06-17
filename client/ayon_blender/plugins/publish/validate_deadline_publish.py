@@ -99,12 +99,21 @@ class ValidateDeadlinePublish(
             invalid.append(msg)
 
         workfile_filepath: str = bpy.data.filepath
-        file = os.path.basename(workfile_filepath)
-        filename, ext = os.path.splitext(file)
-        if filename not in output_node.base_path:
+        if not workfile_filepath:
+            cls.log.warning("No workfile scene filepath set. "
+                            "Please save the workfile.")
+            return invalid
+
+        workfile_filename = os.path.basename(workfile_filepath)
+        workfile_filename_no_ext, _ext = os.path.splitext(workfile_filename)
+        cls.log.debug(
+            f"Found compositor output node '{output_node.name}' "
+            f"with base path: {output_node.base_path}")
+        if workfile_filename_no_ext not in output_node.base_path:
             msg = (
-                "Render output folder doesn't match the blender scene name! "
-                "Use Repair action to fix the folder file path."
+                "Render output folder does not include workfile name: "
+                f"{workfile_filename_no_ext}. "
+                "Use Repair action to fix the render base filepath."
             )
             invalid.append(msg)
         return invalid
