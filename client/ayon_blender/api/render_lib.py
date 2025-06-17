@@ -480,7 +480,6 @@ def prepare_rendering(asset_group):
     }
 
     imprint_render_settings(asset_group, render_settings)
-    save_workfile()
 
 
 def update_render_product(name, output_path, render_product, aov_sep, multilayer=False):

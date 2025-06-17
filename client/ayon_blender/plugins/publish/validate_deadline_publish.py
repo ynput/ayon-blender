@@ -44,7 +44,6 @@ class ValidateDeadlinePublish(
     hosts = ["blender"]
     label = "Validate Render Output for Deadline"
     optional = True
-    active = False
     actions = [RepairAction]
 
     def process(self, instance):
