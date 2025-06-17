@@ -246,8 +246,18 @@ def existing_aov_options(
     return aov_list
 
 
-def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, render_layer):
-    filename = f"{render_layer}/{name}_{render_layer}{aov_sep}{rpass_name}.####"
+def _create_aov_slot(
+    name: str,
+    aov_sep: str,
+    slots,
+    rpass_name: str,
+    multi_exr: bool,
+    output_path: Path,
+    render_layer: str,
+) -> tuple[bpy.types.RenderSlot, str]:
+    filename = (
+        f"{render_layer}/{name}_{render_layer}{aov_sep}{rpass_name}.####"
+    )
     slot = slots.new(rpass_name if multi_exr else filename)
     filepath = str(output_path / filename.lstrip("/"))
 
@@ -255,8 +265,7 @@ def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, r
 
 
 def set_node_tree(
-    output_path, name, aov_sep, ext, multilayer, compositing,
-    view_layers
+    output_path, name, aov_sep, ext, multilayer, compositing, view_layers
 ):
     # Set the scene to use the compositor node tree to render
     bpy.context.scene.use_nodes = True
@@ -284,21 +293,27 @@ def set_node_tree(
     # If there's not a Render Layers node, we create it
     if not render_layer_nodes:
         render_layer_nodes = create_node_with_new_view_layers(
-            tree, comp_layer_type,
-            view_layers, render_layer_nodes
+            tree, comp_layer_type, view_layers, render_layer_nodes
         )
     else:
         missing_render_layer_nodes = set()
         orig_view_layers = {view_layer.name for view_layer in view_layers}
-        missing_view_layers_by_nodes = {node.layer for node in render_layer_nodes}
-        missing_view_layers_set = orig_view_layers - missing_view_layers_by_nodes
+        missing_view_layers_by_nodes = {
+            node.layer for node in render_layer_nodes
+        }
+        missing_view_layers_set = (
+            orig_view_layers - missing_view_layers_by_nodes
+        )
         missing_view_layers = [
-            view_layer for view_layer in view_layers
+            view_layer
+            for view_layer in view_layers
             if view_layer.name in missing_view_layers_set
         ]
         missing_render_layer_nodes = create_node_with_new_view_layers(
-            tree, comp_layer_type,
-            missing_view_layers, missing_render_layer_nodes
+            tree,
+            comp_layer_type,
+            missing_view_layers,
+            missing_render_layer_nodes,
         )
         render_layer_nodes.update(missing_render_layer_nodes)
 
@@ -310,14 +325,14 @@ def set_node_tree(
     for render_layer_node in render_layer_nodes:
         render_dict = {
             render_layer_node: [
-            socket
-            for socket in render_layer_node.outputs
-            if socket.enabled and socket.name not in exclude_sockets
-        ]
-    }
+                socket
+                for socket in render_layer_node.outputs
+                if socket.enabled and socket.name not in exclude_sockets
+            ]
+        }
         render_aovs_dict.update(render_dict)
     # Create a new output node
-    output = tree.nodes.new(output_type)
+    output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
 
     image_settings = bpy.context.scene.render.image_settings
     output.format.file_format = image_settings.file_format
@@ -327,27 +342,40 @@ def set_node_tree(
     multi_exr = ext == "exr" and multilayer
     slots = output.layer_slots if multi_exr else output.file_slots
 
-    rn_layer_node = next((node for node in reversed(render_aovs_dict.keys())), None)
+    rn_layer_node = next(
+        (node for node in reversed(render_aovs_dict.keys())), None
+    )
     output_dir = Path(output_path)
     filepath = output_dir / name.lstrip("/")
     render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
 
-    output.base_path = render_product_main_beauty if multi_exr else str(output_path)
+    output.base_path = (
+        render_product_main_beauty if multi_exr else str(output_path)
+    )
 
     slots.clear()
 
     aov_file_products = {}
 
     old_links = {
-        link.from_socket.name: link for link in tree.links
-        if link.to_node == old_output_node}
+        link.from_socket.name: link
+        for link in tree.links
+        if link.to_node == old_output_node
+    }
 
     # Create a new socket for the beauty output
     pass_name = "rgba" if multi_exr else "beauty"
     for render_layer_node in render_aovs_dict.keys():
         render_layer = render_layer_node.layer
         slot, _ = _create_aov_slot(
-            name, aov_sep, slots, pass_name, multi_exr, output_path, render_layer)
+            name,
+            aov_sep,
+            slots,
+            pass_name,
+            multi_exr,
+            output_path,
+            render_layer,
+        )
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
     if compositing:
@@ -358,7 +386,14 @@ def set_node_tree(
             render_layer = rn_layer_node.layer
             aov_file_products[render_layer] = []
             comp_socket, filepath = _create_aov_slot(
-                name, aov_sep, slots, pass_name, multi_exr, output_path, render_layer)
+                name,
+                aov_sep,
+                slots,
+                pass_name,
+                multi_exr,
+                output_path,
+                render_layer,
+            )
             aov_file_products[render_layer].append((pass_name, filepath))
             # If there's a composite node, we connect its input with the new output
             if composite_node:
@@ -375,7 +410,14 @@ def set_node_tree(
                 aov_file_products[render_layer] = []
             for rpass in passes:
                 slot, filepath = _create_aov_slot(
-                    name, aov_sep, slots, rpass.name, multi_exr, output_path, render_layer)
+                    name,
+                    aov_sep,
+                    slots,
+                    rpass.name,
+                    multi_exr,
+                    output_path,
+                    render_layer,
+                )
 
                 aov_file_products[render_layer].append((rpass.name, filepath))
 
@@ -403,7 +445,11 @@ def set_node_tree(
     return {} if multi_exr else aov_file_products
 
 
-def create_node_with_new_view_layers(tree, comp_layer_type, view_layers, render_layer_nodes):
+def create_node_with_new_view_layers(
+        tree: "bpy.types.CompositorNodeTree",
+        comp_layer_type: str,
+        view_layers: list["bpy.types.ViewLayer"],
+        render_layer_nodes) -> set[bpy.types.CompositorNode]:
     for view_layer in view_layers:
         render_layer_node = tree.nodes.new(comp_layer_type)
         render_layer_node.layer = view_layer.name
@@ -455,7 +501,13 @@ def prepare_rendering(name: str, project_settings: Optional[dict] = None):
     bpy.context.scene.render.filepath = f"{tmp_render_path}/"
 
 
-def update_render_product(name, output_path, render_product, aov_sep, multilayer=False):
+def update_render_product(
+    name: str,
+    output_path: str,
+    render_product: dict,
+    aov_sep: str,
+    multilayer: bool = False,
+) -> dict[str, list[tuple[str, str]]]:
     tmp_render_product = {}
     if multilayer:
         rl_name = "_"
@@ -472,7 +524,9 @@ def update_render_product(name, output_path, render_product, aov_sep, multilayer
             tmp_render_product[rl_name] = []
             rn_product = render_product[rl_name]
             for rpass_name, _ in rn_product:
-                filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
+                filename = (
+                    f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
+                )
                 filepath = str(output_path / filename.lstrip("/"))
                 tmp_render_product[rl_name].append((rpass_name, filepath))
 
