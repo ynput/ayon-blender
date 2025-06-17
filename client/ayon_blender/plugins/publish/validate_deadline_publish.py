@@ -22,7 +22,7 @@ class ValidateSceneRenderFilePath(
     order = ValidateContentsOrder
     families = ["render"]
     hosts = ["blender"]
-    label = "Validate Scene Render Output"
+    label = "Validate Scene Render Filepath"
     optional = True
     actions = [RepairAction]
 
@@ -63,7 +63,7 @@ class ValidateDeadlinePublish(
     order = ValidateContentsOrder
     families = ["render"]
     hosts = ["blender"]
-    label = "Validate Render Output for Deadline"
+    label = "Validate Compositor Node File Output Paths"
     optional = True
     actions = [RepairAction]
 
@@ -116,20 +116,23 @@ class ValidateDeadlinePublish(
             instance.data["transientData"]["instance_node"]
         )
 
-        # TODO: Fix the repair logic below to not rely on the 'render_data'
-        render_data = {}  # TODO: Fix
-        aov_sep: str = render_data.get("aov_separator", "_")
+        # Check whether CompositorNodeOutputFile is rendering to multilayer EXR
+        file_format: str = output_node.format.file_format
+        is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
+
         filename = os.path.basename(bpy.data.filepath)
         filename, ext = os.path.splitext(filename)
-        is_multilayer: bool = render_data.get("multilayer_exr", True)
         orig_output_path = output_node.base_path
         if is_multilayer:
-            render_folder = render_data.get("render_folder")
-            output_dir = os.path.dirname(bpy.data.filepath)
-            output_dir = os.path.join(output_dir, render_folder, filename)
-            orig_output_dir = os.path.dirname(orig_output_path)
-            new_output_dir = orig_output_path.replace(orig_output_dir,
-                                                      output_dir)
+            # If the output node is a multilayer EXR then the base path
+            # includes the render filename like `Main_beauty.####.exr`
+            # So we split that off, and assume that the parent folder to
+            # the filename is the workfile filename named folder.
+            render_folder, render_filename = os.path.split(orig_output_path)
+            output_node_dir = os.path.dirname(render_folder)
+            new_output_dir = os.path.join(output_node_dir,
+                                          filename,
+                                          render_filename)
         else:
             output_node_dir = os.path.dirname(orig_output_path)
             new_output_dir = os.path.join(output_node_dir, filename)
