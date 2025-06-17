@@ -98,8 +98,8 @@ class ValidateDeadlinePublish(
             msg = "No output node found in the compositor tree."
             invalid.append(msg)
 
-        filepath = bpy.data.filepath
-        file = os.path.basename(filepath)
+        workfile_filepath: str = bpy.data.filepath
+        file = os.path.basename(workfile_filepath)
         filename, ext = os.path.splitext(file)
         if filename not in output_node.base_path:
             msg = (
