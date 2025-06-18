@@ -135,7 +135,6 @@ def load_collection(
     for obj in data_to.objects:
         if obj is not None:
             asset_container.objects.link(obj)
-            # bpy.context.scene.collection.objects.link(obj)
 
     if not loaded_containers:
         loaded_containers = [asset_container]
