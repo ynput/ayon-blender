@@ -67,10 +67,11 @@ class BlendLinkLoader(plugin.BlenderLoader):
             link=True,
             group_name=group_name
         )
-
         scene = bpy.context.scene
         if loaded_collection.name not in scene.collection.children:
             scene.collection.children.link(loaded_collection)
+            for obj in loaded_collection.objects:
+                bpy.context.scene.collection.objects.link(obj)
 
         options = options or dict()
         if options.get("addOverride", False):

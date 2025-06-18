@@ -111,7 +111,8 @@ def load_collection(
     group_name = None
 ) -> bpy.types.Collection:
     """Load a collection to the scene."""
-    with bpy.data.libraries.load(filepath, link=link, relative=False) as (
+    loaded_containers = []
+    with bpy.data.libraries.load(filepath, link=link) as (
         data_from,
         data_to,
     ):
@@ -127,22 +128,17 @@ def load_collection(
             data_to.collections = [lib_container_name]
             loaded_containers = data_to.collections
 
-        else:
-            # Get the collection with input group name
-            # as the asset container
-            asset_container = get_collection(group_name)
-            data_to.objects = [name for name in data_from.objects]
-            # Link the loaded objects to the collection
-            for obj in data_to.objects:
-                if not asset_container.objects:
-                    if isinstance(obj, str):
-                        # do we need to check on collection too?
-                        obj_ref = bpy.data.objects.get(obj)
-                        asset_container.objects.link(obj_ref)
-                    else:
-                        asset_container.objects.link(obj)
+        elif data_from.objects:
+            data_to.objects = data_from.objects
 
-            loaded_containers = [asset_container]
+    asset_container = get_collection(group_name)
+    for obj in data_to.objects:
+        if obj is not None:
+            asset_container.objects.link(obj)
+            # bpy.context.scene.collection.objects.link(obj)
+
+    if not loaded_containers:
+        loaded_containers = [asset_container]
 
     if len(loaded_containers) != 1:
         for loaded_container in loaded_containers:
