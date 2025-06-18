@@ -126,18 +126,20 @@ def load_collection(
                     f"Collection '{lib_container_name}' not found in: {filepath}"
                 )
             data_to.collections = [lib_container_name]
-            loaded_containers = data_to.collections
 
         elif data_from.objects:
             data_to.objects = data_from.objects
 
     asset_container = get_collection(group_name)
+    for coll in data_to.collections:
+        if coll is not None and coll not in asset_container.children:
+            asset_container.children.link(coll)
+
     for obj in data_to.objects:
-        if obj is not None:
+        if obj is not None and obj not in asset_container.objects:
             asset_container.objects.link(obj)
 
-    if not loaded_containers:
-        loaded_containers = [asset_container]
+    loaded_containers = [asset_container]
 
     if len(loaded_containers) != 1:
         for loaded_container in loaded_containers:

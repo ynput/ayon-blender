@@ -70,6 +70,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         options = options or dict()
         if options.get("addOverride", False):
+            scene = bpy.context.scene
+            scene.collection.children.link(loaded_collection)
             local_copy = add_override(loaded_collection)
             if local_copy:
                 loaded_collection = local_copy
@@ -89,7 +91,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         }
         metadata_update(container_collection, extra_data)
 
-        return (container_collection, loaded_collection)
+        return loaded_collection
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
