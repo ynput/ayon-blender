@@ -148,5 +148,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Get the library by filename."""
         lib_name = container["lib_name"]
         for library in bpy.data.libraries:
-            if lib_name in library.name:
+            if lib_name in library.name_full:
                 return library
