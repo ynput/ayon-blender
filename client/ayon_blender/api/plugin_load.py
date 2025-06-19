@@ -43,8 +43,7 @@ def add_override(
                 scene, context.view_layer, do_fully_editable=True
             )
 
-    if loaded_collection.name in scene.collection.children:
-        scene.collection.children.unlink(loaded_collection)
+    scene.collection.children.unlink(loaded_collection)
 
     if overridden_collections:
         local_collection = get_local_collection(
@@ -114,6 +113,7 @@ def load_collection(
 ) -> bpy.types.Collection:
     """Load a collection to the scene."""
     loaded_containers = []
+    asset_container = get_collection(group_name)
     with bpy.data.libraries.load(filepath, link=link) as (
         data_from,
         data_to,
@@ -132,7 +132,6 @@ def load_collection(
         elif data_from.objects:
             data_to.objects = data_from.objects
 
-    asset_container = get_collection(group_name)
     for coll in data_to.collections:
         if coll is not None and coll.name not in asset_container.children:
             asset_container.children.link(coll)
@@ -156,10 +155,7 @@ def load_collection(
 
 
 def get_collection(group_name):
-    if group_name not in bpy.data.collections:
-        asset_container = bpy.data.collections.new(group_name)
-        bpy.context.scene.collection.children.link(asset_container)
-    else:
-        asset_container = bpy.data.collections[group_name]
+    asset_container = bpy.data.collections.new(group_name)
+    bpy.context.scene.collection.children.link(asset_container)
 
     return asset_container
