@@ -76,7 +76,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         container_collection = containerise(
             name=name,
-            namespace=namespace,
+            namespace=namespace or "",
             nodes=[loaded_collection],
             context=context,
             loader=self.__class__.__name__,
@@ -89,7 +89,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         }
         metadata_update(container_collection, extra_data)
 
-        return loaded_collection
+        return (container_collection, loaded_collection)
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""

@@ -42,16 +42,18 @@ def add_override(
             loaded_collection.override_hierarchy_create(
                 scene, context.view_layer, do_fully_editable=True
             )
-    # Pre 4.0 method:
+
+    if loaded_collection.name in scene.collection.children:
+        scene.collection.children.unlink(loaded_collection)
+
+    if overridden_collections:
+        local_collection = get_local_collection(
+            overridden_collections,
+            loaded_collection,
+        )
     else:
-        pass
+        local_collection = loaded_collection
 
-    scene.collection.children.unlink(loaded_collection)
-
-    local_collection = get_local_collection(
-        overridden_collections,
-        loaded_collection,
-    )
     return local_collection
 
 
