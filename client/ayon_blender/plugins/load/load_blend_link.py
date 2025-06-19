@@ -46,14 +46,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # Load a single Collection from the .blend file
         # TODO: Disallow loading same collection?
-        container_name = get_container_name(
-            name, namespace, context, suffix="CON"
-        )
-        loaded_collection = bpy.data.collections.get(container_name)
-        scene_collection = bpy.context.scene.collection
-        if loaded_collection and container_name in scene_collection.children:
-            self.log.debug(f"Collection {container_name} already loaded.")
-            return
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
 
@@ -62,6 +54,15 @@ class BlendLinkLoader(plugin.BlenderLoader):
             folder_name, product_name, unique_number
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
+        container_name = get_container_name(
+            name, namespace, context, suffix="CON"
+        )
+        loaded_collection = bpy.data.collections.get(container_name)
+        scene_collection = bpy.context.scene.collection
+        if loaded_collection and container_name in scene_collection.children:
+            self.log.debug(f"Collection {container_name} already loaded.")
+            return
+
         loaded_collection = load_collection(
             filepath,
             link=True,
@@ -98,10 +99,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         new_filepath = self.filepath_from_context(context)
         new_filename = os.path.basename(new_filepath)
         # Update library filepath and reload it
-        library = (
-            self._get_library_from_collection(collection)
-            or self._get_library_by_name(container)
-        )
+        library = self._get_library_by_name(container)
         library.name = new_filename
         library.filepath = new_filepath
         library.reload()
@@ -148,5 +146,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Get the library by filename."""
         lib_name = container["lib_name"]
         for library in bpy.data.libraries:
-            if lib_name in library.name_full:
+            if lib_name in library.name:
                 return library
