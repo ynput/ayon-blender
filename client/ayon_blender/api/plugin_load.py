@@ -136,7 +136,7 @@ def load_collection(
             asset_container.children.link(coll)
 
     for obj in data_to.objects:
-        if obj is not None and obj not in asset_container.objects:
+        if obj is not None and obj.name not in asset_container.objects:
             asset_container.objects.link(obj)
 
     loaded_containers = [asset_container]
