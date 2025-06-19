@@ -70,8 +70,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         options = options or dict()
         if options.get("addOverride", False):
-            scene = bpy.context.scene
-            scene.collection.children.link(loaded_collection)
             local_copy = add_override(loaded_collection)
             if local_copy:
                 loaded_collection = local_copy
