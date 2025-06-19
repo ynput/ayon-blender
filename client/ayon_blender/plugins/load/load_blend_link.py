@@ -94,7 +94,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
-        repre = context["representation"]
         collection = container["node"]
         new_filepath = self.filepath_from_context(context)
         new_filename = os.path.basename(new_filepath)
@@ -108,7 +107,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         bpy.context.view_layer.update()
         # Update container metadata
         updated_data = {
-            "representation": str(repre["id"]),
+            "representation": context["representation"]["id"],
             "lib_name": new_filename
         }
         metadata_update(collection, updated_data)
@@ -146,5 +145,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Get the library by filename."""
         lib_name = container["lib_name"]
         for library in bpy.data.libraries:
-            if lib_name in library.name:
+            if lib_name in library.name_full:
                 return library
