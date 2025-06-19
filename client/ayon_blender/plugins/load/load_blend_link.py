@@ -135,11 +135,12 @@ class BlendLinkLoader(plugin.BlenderLoader):
             self, collection: bpy.types.Collection) -> bpy.types.Library:
         """Get the library from the collection."""
         for child in collection.children:
-            if child.library or child.override_library:
+            if child.library:
                 # No override library
                 return child.library
             # With override library
-            return child.override_library.reference.library
+            elif child.override_library and child.override_library.reference:
+                return child.override_library.reference.library
 
         return None
 
