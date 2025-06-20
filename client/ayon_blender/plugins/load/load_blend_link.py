@@ -1,4 +1,5 @@
 import bpy
+import os
 from typing import Dict, List, Optional
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
@@ -12,6 +13,7 @@ from ayon_blender.api.pipeline import (
     ls,
     AVALON_CONTAINERS,
     AVALON_PROPERTY,
+    metadata_update
 )
 from ayon_blender.api.lib import get_container_name
 
@@ -108,26 +110,25 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
-        group_name = container["objectName"]
-        group_collection = bpy.data.collections.get(group_name)
-        filepath = self.filepath_from_context(context)
-        data = dict(group_collection.get(AVALON_PROPERTY))
-        self.exec_remove(container)
-        loaded_collection = load_collection(
-            filepath,
-            link=True,
-            group_name=group_name
-        )
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        avalon_container.children.link(loaded_collection)
+        repre = context["representation"]
+        collection = container["node"]
+        new_filepath = self.filepath_from_context(context)
+        # Update library filepath and reload it
+        new_filename = os.path.basename(new_filepath)
+        library = self._get_or_build_library_by_path(new_filepath)
+        library.name = new_filename
+        library.filepath = new_filepath
+        library.reload()
+
+        # refresh UI
+        bpy.context.view_layer.update()
+        # Update container metadata
         updated_data = {
-            "libpath": filepath,
-            "objectName": group_name,
-            "representation": context["representation"]["id"],
-            "project_name": context["project"]["name"],
+            "representation": str(repre["id"]),
+            "libpath": new_filepath
         }
-        data.update(updated_data)
-        loaded_collection[AVALON_PROPERTY] = data
+        metadata_update(collection, updated_data)
+
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
@@ -176,3 +177,23 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
 
         return len(match_count) > 1
+
+    def _get_or_build_library_by_path(self, libpath: str) -> bpy.types.Library:
+        """Get the library by filepath. If there is no any
+        associated library to the path, the related library is loaded
+        accordingly."""
+        lib_name = os.path.basename(libpath)
+        for library in bpy.data.libraries:
+            if lib_name == library.name_full:
+                return library
+
+        with bpy.data.libraries.load(libpath, link=True) as (data_from, data_to):
+            if data_from.collections:
+                data_to.collections = data_from.collections
+            elif data_from.objects:
+                data_to.objects = data_from.objects
+
+        # Return the newly loaded library
+        for library in bpy.data.libraries:
+            if lib_name == library.name_full:
+                return library
