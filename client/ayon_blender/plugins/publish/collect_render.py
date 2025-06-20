@@ -153,6 +153,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         still contain the `####` frame padding tokens to. So the final path
         would still need to be constructed from the resulting path.
 
+        Even if the path set in the scene does not contain the `#` frame
+        tokens or an extension, this method will ensure that the returned
+        paths do and qualify as a full path with `#` as padding frame tokens.
+
         Returns:
             list[str]: The full output image or sequence paths.
 
@@ -209,6 +213,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         without # tokens, with or without file extension. However, we need
         them consistently formatted for collecting them correctly.
         So we ensure the # token is present and the file extension is added.
+
+        The output path will be a normalized, absolute path with `#` tokens
+        in it that indicated the padded frame number.
+
         """
         # If the path does not have an extension set then we append the
         # extension based on the file format.
