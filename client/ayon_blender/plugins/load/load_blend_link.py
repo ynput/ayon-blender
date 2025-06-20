@@ -108,10 +108,10 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
-        collection = container["node"]
         group_name = container["objectName"]
+        group_collection = bpy.data.collections.get(group_name)
         filepath = self.filepath_from_context(context)
-        data = dict(collection.get(AVALON_PROPERTY))
+        data = dict(group_collection.get(AVALON_PROPERTY))
         self.exec_remove(container)
         loaded_collection = load_collection(
             filepath,
