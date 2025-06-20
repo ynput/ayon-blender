@@ -1,7 +1,5 @@
-from typing import Dict, List, Optional
-import os
 import bpy
-
+from typing import Dict, List, Optional
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
@@ -11,13 +9,11 @@ from ayon_blender.api.plugin_load import (
     load_collection
 )
 from ayon_blender.api.pipeline import (
+    ls,
     AVALON_CONTAINERS,
     AVALON_PROPERTY,
 )
-from ayon_blender.api.lib import (
-    get_container_name,
-    imprint
-)
+from ayon_blender.api.lib import get_container_name
 
 
 class BlendLinkLoader(plugin.BlenderLoader):
@@ -83,6 +79,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         if not avalon_container:
             avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
             bpy.context.scene.collection.children.link(avalon_container)
+
         avalon_container.children.link(loaded_collection)
         data = {
             "schema": "openpype:container-2.0",
@@ -92,12 +89,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
             "libpath": filepath,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
-            "loaded_collection": loaded_collection,
             "project_name": context["project"]["name"],
-            "options": options,
         }
 
         loaded_collection[AVALON_PROPERTY] = data
@@ -116,31 +109,34 @@ class BlendLinkLoader(plugin.BlenderLoader):
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
         collection = container["node"]
-        new_filepath = self.filepath_from_context(context)
-        new_filename = os.path.basename(new_filepath)
-        # Update library filepath and reload it
-        library = self._get_library_by_name(container)
-        library.name = new_filename
-        library.filepath = new_filepath
-        library.reload()
-
-        # refresh UI
-        bpy.context.view_layer.update()
-        # Update container metadata
+        group_name = container["objectName"]
+        filepath = self.filepath_from_context(context)
+        data = dict(collection.get(AVALON_PROPERTY))
+        self.exec_remove(container)
+        loaded_collection = load_collection(
+            filepath,
+            link=True,
+            group_name=group_name
+        )
+        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
+        avalon_container.children.link(loaded_collection)
         updated_data = {
-            "libpath": new_filepath,
+            "libpath": filepath,
+            "objectName": group_name,
             "representation": context["representation"]["id"],
-            "parent": context["representation"]["versionId"],
             "project_name": context["project"]["name"],
         }
-        imprint(collection, updated_data)
+        data.update(updated_data)
+        loaded_collection[AVALON_PROPERTY] = data
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
         collection = container["node"]
         library = self._get_library_from_collection(collection)
         if library:
-            bpy.data.libraries.remove(library)
+            linked_to_coll = self._has_linked_to_existing_collections(library)
+            if not linked_to_coll:
+                bpy.data.libraries.remove(library)
         else:
             # Ensure the collection is linked to the scene's master collection
             scene_collection = bpy.context.scene.collection
@@ -164,10 +160,19 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         return None
 
-    def _get_library_by_name(self, container: Dict) -> bpy.types.Library:
-        """Get the library by filename."""
-        lib_name = os.path.basename(container["libpath"])
-        for library in bpy.data.libraries:
-            print(library.name_full)
-            if lib_name in library.name_full:
-                return library
+    def _has_linked_to_existing_collections(
+            self, library: bpy.types.Library) -> bool:
+        """Check if any collection loaded by link
+        scene loader linked to the same library.
+        """
+        existing_collections = [
+            container["node"] for container in ls()
+            if container["loader"] == str(
+                self.__class__.__name__)
+        ]
+        match_count = list(
+            coll for coll in existing_collections
+            if self._get_library_from_collection(coll) == library
+        )
+
+        return len(match_count) > 1
