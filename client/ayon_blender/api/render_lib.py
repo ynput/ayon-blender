@@ -118,6 +118,31 @@ def set_render_format(ext: str, multilayer: bool):
         image_settings.file_format = "TIFF"
 
 
+def get_file_format_extension(file_format: str) -> str:
+    """Convert Blender file format to file extension."""
+    # TODO: Figure out if Blender has a native way to convert to extensions
+    if file_format == "OPEN_EXR_MULTILAYER":
+        return "exr"
+    elif file_format == "OPEN_EXR":
+        return "exr"
+    elif file_format == "BMP":
+        return "bmp"
+    elif file_format == "IRIS":
+        return "rgb"
+    elif file_format == "PNG":
+        return "png"
+    elif file_format == "JPEG":
+        return "jpeg"
+    elif file_format == "JPEG2000":
+        return "jp2"
+    elif file_format == "TARGA":
+        return "tga"
+    elif file_format == "TIFF":
+        return "tif"
+    else:
+        raise ValueError(f"Unsupported file format: {file_format}")
+
+
 def set_render_passes(settings, renderer, view_layers):
     """Set render passes for the current view layer
 
