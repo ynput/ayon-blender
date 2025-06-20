@@ -87,7 +87,7 @@ class FbxModelLoader(plugin.BlenderLoader):
         objects.reverse()
 
         for obj in objects:
-            if obj not in parent.objects:
+            if obj.name not in parent.objects:
                 parent.objects.link(obj)
             collection.objects.unlink(obj)
 
