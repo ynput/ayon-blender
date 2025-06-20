@@ -196,12 +196,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
                 outputs.append(file_path)
 
-        full_output_paths = []
-        for output_path in outputs:
-
-            full_output_paths.append(output_path)
-
-        return full_output_paths
+        return outputs
 
     def _resolve_full_render_path(
             self,
