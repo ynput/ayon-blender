@@ -5,15 +5,19 @@ import bpy
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
+from ayon_core.pipeline import AVALON_CONTAINER_ID
 from ayon_blender.api.plugin_load import (
     add_override,
     load_collection
 )
 from ayon_blender.api.pipeline import (
-    containerise,
-    metadata_update
+    AVALON_CONTAINERS,
+    AVALON_PROPERTY,
 )
-from ayon_blender.api.lib import get_container_name
+from ayon_blender.api.lib import (
+    get_container_name,
+    imprint
+)
 
 
 class BlendLinkLoader(plugin.BlenderLoader):
@@ -75,22 +79,39 @@ class BlendLinkLoader(plugin.BlenderLoader):
             if local_copy:
                 loaded_collection = local_copy
 
-        container_collection = containerise(
-            name=name,
-            namespace=namespace or "",
-            nodes=[loaded_collection],
-            context=context,
-            loader=self.__class__.__name__,
-        )
+        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
+        if not avalon_container:
+            avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
+            bpy.context.scene.collection.children.link(avalon_container)
+        avalon_container.children.link(loaded_collection)
+        data = {
+            "schema": "openpype:container-2.0",
+            "id": AVALON_CONTAINER_ID,
+            "name": name,
+            "namespace": namespace or '',
+            "loader": str(self.__class__.__name__),
+            "representation": context["representation"]["id"],
+            "libpath": filepath,
+            "parent": context["representation"]["versionId"],
+            "productType": context["product"]["productType"],
+            "objectName": group_name,
+            "loaded_collection": loaded_collection,
+            "project_name": context["project"]["name"],
+            "options": options,
+        }
+
+        loaded_collection[AVALON_PROPERTY] = data
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
-        extra_data =  {
-            "options": options,
-            "lib_name": os.path.basename(filepath)
-        }
-        metadata_update(container_collection, extra_data)
 
-        return (container_collection, loaded_collection)
+        collections = [
+            coll for coll in bpy.data.collections
+            if coll.name.startswith(f"{group_name}:")
+        ]
+
+        self[:] = collections
+
+        return collections
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset."""
@@ -107,10 +128,12 @@ class BlendLinkLoader(plugin.BlenderLoader):
         bpy.context.view_layer.update()
         # Update container metadata
         updated_data = {
+            "libpath": new_filepath,
             "representation": context["representation"]["id"],
-            "lib_name": new_filename
+            "parent": context["representation"]["versionId"],
+            "project_name": context["project"]["name"],
         }
-        metadata_update(collection, updated_data)
+        imprint(collection, updated_data)
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
@@ -143,7 +166,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def _get_library_by_name(self, container: Dict) -> bpy.types.Library:
         """Get the library by filename."""
-        lib_name = container["lib_name"]
+        lib_name = os.path.basename(container["libpath"])
         for library in bpy.data.libraries:
+            print(library.name_full)
             if lib_name in library.name_full:
                 return library
