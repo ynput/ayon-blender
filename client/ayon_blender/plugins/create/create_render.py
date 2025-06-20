@@ -1,53 +1,107 @@
 """Create render."""
 import bpy
+from typing import Optional
 
-from ayon_core.pipeline.context_tools import version_up_current_workfile
-from ayon_blender.api import plugin, lib
-from ayon_blender.api.render_lib import prepare_rendering
-from ayon_blender.api.workio import save_file
+from ayon_core.pipeline.create import CreatedInstance
+from ayon_blender.api import plugin, lib, prepare_rendering
 
 
-class CreateRenderlayer(plugin.BlenderCreator):
-    """Single baked camera."""
+class CreateRender(plugin.BlenderCreator):
+    """Create render instance."""
 
     identifier = "io.openpype.creators.blender.render"
     label = "Render"
-    product_type = "renderlayer"
+    product_type = "render"
     icon = "eye"
+
+    # TODO: Convert legacy instances to new style instances by finding the
+    #  relevant file output node and moving the imprinted data there.
+
+    def _find_existing_compositor_output_node(self) -> Optional["bpy.types.CompositorNodeOutputFile"]:
+        if not bpy.context.scene.use_nodes:
+            return None
+
+        # TODO: If user has a selected compositor node, prefer that one
+        # TODO: What to do if multiples exist?
+        tree = bpy.context.scene.node_tree
+        for node in tree.nodes:
+            if node.bl_idname == "CompositorNodeOutputFile":
+                return node
+        return None
 
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict
     ):
-        try:
-            # Run parent create method
-            collection = super().create(
-                product_name, instance_data, pre_create_data
-            )
+        # This behavior is somewhat similar to `ayon-maya` for rendering.
+        # If no render setup is created yet, we create it. If there is, then
+        # we assume the existing one is what we want to maintain and create
+        # a registry for the existing setup.
+        # TODO: pre-connect any existing passes according to settings.
+        # TODO: Do not override scene render engine (unless explicitly enabled)
+        # TODO: Should we allow multiple render setups in a single scene?
+        node = self._find_existing_compositor_output_node()
+        if not node:
+            # Create render setup
+            variant = instance_data.get("variant", self.default_variant)
 
-            prepare_rendering(collection)
-        except Exception:
-            # Remove the instance if there was an error
-            bpy.data.collections.remove(collection)
-            raise
+            prepare_rendering(name=variant)
+            node = self._find_existing_compositor_output_node()
 
-        # TODO: this is undesiderable, but it's the only way to be sure that
-        # the file is saved before the render starts.
-        # Blender, by design, doesn't set the file as dirty if modifications
-        # happen by script. So, when creating the instance and setting the
-        # render settings, the file is not marked as dirty. This means that
-        # there is the risk of sending to deadline a file without the right
-        # settings. Even the validator to check that the file is saved will
-        # detect the file as saved, even if it isn't. The only solution for
-        # now it is to force the file to be saved.
-        if not bpy.data.filepath:
-            version_up_current_workfile()
-        else:
-            filepath = bpy.data.filepath
-            save_file(filepath, copy=False)
+            # Force enable compositor
+            bpy.context.scene.use_nodes = True
 
-        return collection
+            node.name = variant
+            node.label = variant
+
+        self.set_instance_data(product_name, instance_data)
+        instance = CreatedInstance(
+            self.product_type, product_name, instance_data, self
+        )
+        instance.transient_data["instance_node"] = node
+        self._add_instance_to_context(instance)
+
+        lib.imprint(node, instance_data)
+
+        return node
+
+    def collect_instances(self):
+        super().collect_instances()
+
+        # Convert legacy instances that did not yet imprint on the
+        # compositor node itself
+        for instance in self.create_context.instances:
+            instance: CreatedInstance
+
+            # Ignore instances from other creators
+            if instance.creator_identifier != self.identifier:
+                continue
+
+            # Check if node type is the old object type
+            node = instance.transient_data["instance_node"]
+
+            if not isinstance(node, bpy.types.Collection):
+                # Already new-style node
+                continue
+
+            self.log.info(f"Converting legacy render instance: {node}")
+
+            # TODO: Confirm the 'legacy' instance is actually a Collection
+
+            # Find the related compositor node
+            # TODO: Find the actual relevant compositor node instead of just
+            #  any
+            comp_node = self._find_existing_compositor_output_node()
+            if not comp_node:
+                raise RuntimeError("No compositor node found")
+
+            # TODO: Rename product name/variant if the node has a new name so
+            #  that the variatn is tightly coupled with the node's name/label.
+            instance.transient_data["instance_node"] = comp_node
+            lib.imprint(comp_node, instance.data_to_store())
+
+            # Delete the original object
+            bpy.data.collections.remove(node)
 
     def get_instance_attr_defs(self):
         defs = lib.collect_animation_defs(self.create_context)
-
         return defs
