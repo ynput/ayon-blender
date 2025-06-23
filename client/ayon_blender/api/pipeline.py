@@ -179,7 +179,6 @@ def install():
     register_event_callback("open", on_open)
 
     _register_callbacks()
-    _register_events()
 
     if not IS_HEADLESS:
         ops.register()
@@ -420,27 +419,6 @@ def _register_callbacks():
     log.info("Installed event handler _on_save_pre...")
     log.info("Installed event handler _on_save_post...")
     log.info("Installed event handler _on_load_post...")
-
-
-def _on_task_changed():
-    """Callback for when the task in the context is changed."""
-
-    # TODO (jasper): Blender has no concept of projects or workspace.
-    # It would be nice to override 'bpy.ops.wm.open_mainfile' so it takes the
-    # workdir as starting directory.  But I don't know if that is possible.
-    # Another option would be to create a custom 'File Selector' and add the
-    # `directory` attribute, so it opens in that directory (does it?).
-    # https://docs.blender.org/api/blender2.8/bpy.types.Operator.html#calling-a-file-selector
-    # https://docs.blender.org/api/blender2.8/bpy.types.WindowManager.html#bpy.types.WindowManager.fileselect_add
-    workdir = os.getenv("AYON_WORKDIR")
-    log.debug("New working directory: %s", workdir)
-
-
-def _register_events():
-    """Install callbacks for specific events."""
-
-    register_event_callback("taskChanged", _on_task_changed)
-    log.info("Installed event callback for 'taskChanged'...")
 
 
 def _discover_gui() -> Optional[Callable]:
