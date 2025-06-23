@@ -128,7 +128,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             "libpath": new_filepath
         }
         metadata_update(collection, updated_data)
-
+        self._update_library_path_by_node(collection, new_filepath)
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
@@ -197,3 +197,9 @@ class BlendLinkLoader(plugin.BlenderLoader):
         for library in bpy.data.libraries:
             if lib_name == library.name_full:
                 return library
+
+    def _update_library_path_by_node(self, collection:bpy.types.Collection, libpath:str):
+        for node in collection.children:
+            node.library.name = os.path.basename(libpath)
+            node.library.filepath = libpath
+            node.library.reload()
