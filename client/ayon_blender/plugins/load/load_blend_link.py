@@ -109,17 +109,21 @@ class BlendLinkLoader(plugin.BlenderLoader):
         return collections
 
     def exec_update(self, container: Dict, context: Dict):
-        """Update the loaded asset."""
+        """Update the loaded asset. """
         repre = context["representation"]
         collection = container["node"]
         new_filepath = self.filepath_from_context(context)
         # Update library filepath and reload it
-        new_filename = os.path.basename(new_filepath)
         library = self._get_or_build_library_by_path(new_filepath)
-        library.name = new_filename
-        library.filepath = new_filepath
-        library.reload()
-
+        # The current updating function only supports single asset
+        # versioning only due to the blender API limitation on removing
+        # the old and unused datablock right after reloading the new library
+        # and replace it with the old one.
+        for node in collection.children:
+            if node.library:
+                node.library.name = library.name
+                node.library.filepath = library.filepath
+                node.library.reload()
         # refresh UI
         bpy.context.view_layer.update()
         # Update container metadata
@@ -182,7 +186,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         associated library to the path, the related library is loaded
         accordingly."""
         for library in bpy.data.libraries:
-            if libpath == library.filepath:
+            if libpath == os.path.normpath(library.filepath):
                 return library
 
         with bpy.data.libraries.load(libpath, link=True, relative=False) as (
@@ -196,5 +200,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # Return the newly loaded library
         for library in bpy.data.libraries:
-            if libpath == library.filepath:
+            if libpath == os.path.normpath(library.filepath):
                 return library
