@@ -474,6 +474,31 @@ def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):
         node[AVALON_PROPERTY][key] = value
 
 
+def get_container_name(name: str,
+                       namespace: str,
+                       context: Dict,
+                       suffix: str):
+    """Function to get container name
+
+    Args:
+        name: Name of resulting assembly
+        namespace: Namespace under which to host container
+        context: Asset information
+        suffix: Suffix of container
+
+    Returns:
+        The name of the container assembly
+    """
+    node_name = f"{context['folder']['name']}_{name}"
+    if namespace:
+        node_name = f"{namespace}:{node_name}"
+    if suffix:
+        node_name = f"{node_name}_{suffix}"
+
+    return node_name
+
+
+
 def containerise(name: str,
                  namespace: str,
                  nodes: List,
@@ -498,7 +523,7 @@ def containerise(name: str,
 
     """
 
-    node_name = lib.get_container_name(name, namespace, context, suffix)
+    node_name = get_container_name(name, namespace, context, suffix)
     container = bpy.data.collections.new(name=node_name)
     # Link the children nodes
     for obj in nodes:

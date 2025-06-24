@@ -13,9 +13,9 @@ from ayon_blender.api.pipeline import (
     ls,
     AVALON_CONTAINERS,
     AVALON_PROPERTY,
-    metadata_update
+    metadata_update,
+    get_container_name
 )
-from ayon_blender.api.lib import get_container_name
 
 
 class BlendLinkLoader(plugin.BlenderLoader):
@@ -128,7 +128,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
             "libpath": new_filepath
         }
         metadata_update(collection, updated_data)
-        self._update_library_path_by_node(collection, new_filepath)
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
@@ -182,9 +181,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Get the library by filepath. If there is no any
         associated library to the path, the related library is loaded
         accordingly."""
-        lib_name = os.path.basename(libpath)
         for library in bpy.data.libraries:
-            if lib_name == library.name_full:
+            if libpath == library.filepath:
                 return library
 
         with bpy.data.libraries.load(libpath, link=True, relative=False) as (
@@ -198,12 +196,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # Return the newly loaded library
         for library in bpy.data.libraries:
-            if lib_name == library.name_full:
+            if libpath == library.filepath:
                 return library
-
-    def _update_library_path_by_node(self, collection:bpy.types.Collection, libpath:str):
-        for node in collection.children:
-            if node and node.library:
-                node.library.name = os.path.basename(libpath)
-                node.library.filepath = libpath
-                node.library.reload()

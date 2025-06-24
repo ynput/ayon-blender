@@ -164,30 +164,6 @@ def set_app_templates_path():
         os.environ["BLENDER_USER_SCRIPTS"] = app_templates_path
 
 
-def get_container_name(name: str,
-                       namespace: str,
-                       context: Dict,
-                       suffix: str):
-    """Function to get container name
-
-    Args:
-        name: Name of resulting assembly
-        namespace: Namespace under which to host container
-        context: Asset information
-        suffix: Suffix of container
-
-    Returns:
-        The name of the container assembly
-    """
-    node_name = f"{context['folder']['name']}_{name}"
-    if namespace:
-        node_name = f"{namespace}:{node_name}"
-    if suffix:
-        node_name = f"{node_name}_{suffix}"
-
-    return node_name
-
-
 def imprint(node: bpy.types.bpy_struct_meta_idprop, data: Dict):
     r"""Write `data` to `node` as userDefined attributes
 
