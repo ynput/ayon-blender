@@ -3,10 +3,30 @@ import os
 import re
 from typing import TypedDict
 
-import bpy
 import pyblish.api
+import clique
+
+import bpy
 
 from ayon_blender.api import colorspace, plugin, render_lib
+
+
+def files_as_sequence(files) -> list[str]:
+    """Convert sequence of files to sequence pattern.
+
+    Convert a list of files to a sequence pattern purely used for improved
+    human-readable logging purposes."""
+    # clique.PATTERNS["frames"] but also allow `_` before digits
+    pattern = r"(?P<index>(?P<padding>0*)\d+)\.\D+\d?$"
+    files = [os.path.basename(f) for f in files]
+    collections, remainder = clique.assemble(
+        files,
+        patterns=[pattern],
+        assume_padded_when_ambiguous=True,
+    )
+    names = [str(collection) for collection in collections]
+    names.extend(remainder)
+    return names
 
 
 class RenderColorspaceData(TypedDict):
@@ -78,7 +98,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
             aov_label = aov_identifier or "<beauty>"
             self.log.debug(
-                f"Collected output path for AOV {aov_label}: "
+                f"Expecting outputs for AOV {aov_label}: "
                 f"{output_path}"
             )
 
@@ -88,7 +108,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_end,
                 frame_step
             )
-            self.log.debug(f"Expected frames: {expected_files[aov_identifier]}")
+
+            # Log the expected sequence of frames for the AOV
+            files = files_as_sequence(expected_files[aov_identifier])
+            self.log.debug(f"Expected frames: {files}")
 
         context = instance.context
         instance.data.update({
@@ -221,14 +244,9 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         in it that indicated the padded frame number.
 
         """
-        # If the path does not have an extension set then we append the
-        # extension based on the file format.
-        if not re.match(".*\\.[a-zA-Z0-9]+$", path):
-
-            file_extension = render_lib.get_file_format_extension(
-                file_format
-            )
-            path = f"{path}.{file_extension}"
+        # Ensure the extension is for the file
+        extension = render_lib.get_file_format_extension(file_format)
+        path = bpy.path.ensure_ext(path, f".{extension}")
 
         # If the path does not contain a frame token `#` then we append
         # the default frame token `####` to the end of the path before the
@@ -308,5 +326,5 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
 
-        self.log.info(f"AOV '{aov_identifier}' from filepath: {path}")
+        self.log.info(f"'{aov_identifier}' AOV from filepath: {path}")
         return aov_identifier
