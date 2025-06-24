@@ -161,11 +161,11 @@ def set_render_passes(settings, renderer, view_layers):
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
-            eevee_attrs = [
+            eevee_attrs = {
                 "use_pass_bloom",
                 "use_pass_transparent",
                 "use_pass_volume_direct"
-            ]
+            }
             for pass_name, attr in aov_options.items():
                 target = vl.eevee if attr in eevee_attrs else vl
                 ver_major, ver_minor, _ = lib.get_blender_version()
@@ -176,11 +176,11 @@ def set_render_passes(settings, renderer, view_layers):
         elif renderer == "CYCLES":
             # Cycles exclusive passes
             aov_options = get_aov_options(renderer)
-            cycle_attrs = [
+            cycle_attrs = {
                 "denoising_store_passes", "pass_debug_sample_count",
                 "use_pass_volume_direct", "use_pass_volume_indirect",
                 "use_pass_shadow_catcher"
-            ]
+            }
             for pass_name, attr in aov_options.items():
                 target = vl.cycles if attr in cycle_attrs else vl
                 setattr(target, attr, pass_name in aov_list)
@@ -199,6 +199,7 @@ def set_render_passes(settings, renderer, view_layers):
 
 
 def get_aov_options(renderer: str) -> dict[str, str]:
+    """Return the available AOV options based on the renderer name."""
     aov_options = {
         "combined": "use_pass_combined",
         "z": "use_pass_z",
@@ -214,7 +215,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
         "cryptomatte_object": "use_pass_cryptomatte_object",
         "cryptomatte_material": "use_pass_cryptomatte_material",
         "cryptomatte_asset": "use_pass_cryptomatte_asset",
-        }
+    }
     if renderer == "BLENDER_EEVEE":
         eevee_options = {
             "shadow": "use_pass_shadow",
@@ -531,7 +532,7 @@ def prepare_rendering(name: str, project_settings: Optional[dict] = None):
 
 def update_render_product(
     name: str,
-    output_path: str,
+    output_path: Path,
     render_product: dict,
     aov_sep: str,
     multilayer: bool = False,
