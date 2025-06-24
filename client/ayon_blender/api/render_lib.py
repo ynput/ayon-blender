@@ -49,51 +49,6 @@ def get_compositing(project_settings) -> bool:
     return project_settings["blender"]["RenderSettings"]["compositing"]
 
 
-def get_render_product(
-    output_path: str,
-    name: str,
-    aov_sep: str,
-    view_layers: list["bpy.types.ViewLayer"],
-    multiexr: bool = False,
-) -> dict[str, list[tuple[str, str]]]:
-    """
-    Generate the path to the render product. Blender interprets the `#`
-    as the frame number, when it renders.
-
-    Args:
-        output_path (str): The root render output directory.
-        name (str): The file name to render to.
-        aov_sep (str): The AOV separator token, e.g. `.` or `_`.
-
-    Returns:
-        dict[str, list[tuple[str, str]]]: The full path to the render product
-          without extension.
-
-    """
-    beauty_render_product = {}
-    if multiexr:
-        vl_name = "_"
-        beauty_render_product[vl_name] = []
-        output_dir = Path(output_path)
-        filepath = output_dir / name.lstrip("/")
-        render_product = f"{filepath}{aov_sep}beauty.####"
-        beauty_render_product[vl_name].append(
-            ("beauty", os.path.normpath(render_product))
-        )
-    else:
-        for view_layer in view_layers:
-            vl_name = view_layer.name
-            beauty_render_product[vl_name] = []
-            output_dir = Path(f"{output_path}/{vl_name}")
-            filepath = output_dir / name.lstrip("/")
-            render_product = f"{filepath}_{vl_name}{aov_sep}beauty.####"
-            beauty_render_product[vl_name].append(
-                ("beauty", os.path.normpath(render_product))
-            )
-
-    return beauty_render_product
-
-
 def set_render_format(ext: str, multilayer: bool):
     """Set Blender scene to save render file with the right extension"""
     bpy.context.scene.render.use_file_extension = True
