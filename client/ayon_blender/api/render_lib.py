@@ -116,7 +116,7 @@ def set_render_passes(settings, renderer, view_layers):
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
-            eevee_attrs = {
+            eevee_attrs: set[str] = {
                 "use_pass_bloom",
                 "use_pass_transparent",
                 "use_pass_volume_direct"
@@ -131,7 +131,7 @@ def set_render_passes(settings, renderer, view_layers):
         elif renderer == "CYCLES":
             # Cycles exclusive passes
             aov_options = get_aov_options(renderer)
-            cycle_attrs = {
+            cycle_attrs: set[str] = {
                 "denoising_store_passes", "pass_debug_sample_count",
                 "use_pass_volume_direct", "use_pass_volume_indirect",
                 "use_pass_shadow_catcher"
@@ -140,7 +140,7 @@ def set_render_passes(settings, renderer, view_layers):
                 target = vl.cycles if attr in cycle_attrs else vl
                 setattr(target, attr, pass_name in aov_list)
 
-        aovs_names = [aov.name for aov in vl.aovs]
+        aovs_names: set[str] = {aov.name for aov in vl.aovs}
         for custom_pass in custom_passes:
             custom_pass_name = custom_pass["attribute"]
             if custom_pass_name not in aovs_names:
@@ -261,7 +261,7 @@ def set_node_tree(
     compositor_type = "CompositorNodeComposite"
 
     # Get the Render Layer, Composite and the previous output nodes
-    render_layer_nodes = set()
+    render_layer_nodes: set["bpy.types.CompositorNodeRLayers"] = set()
     composite_node = None
     old_output_node = None
     for node in tree.nodes:
@@ -276,8 +276,8 @@ def set_node_tree(
 
     # If there's not a Render Layers node, we create it
     if not render_layer_nodes:
-        render_layer_nodes = create_node_with_new_view_layers(
-            tree, comp_layer_type, view_layers, render_layer_nodes
+        render_layer_nodes = create_renderlayer_node_with_new_view_layers(
+            tree, view_layers, render_layer_nodes
         )
     else:
         missing_render_layer_nodes = set()
@@ -293,9 +293,8 @@ def set_node_tree(
             for view_layer in view_layers
             if view_layer.name in missing_view_layers_set
         ]
-        missing_render_layer_nodes = create_node_with_new_view_layers(
+        missing_render_layer_nodes = create_renderlayer_node_with_new_view_layers(
             tree,
-            comp_layer_type,
             missing_view_layers,
             missing_render_layer_nodes,
         )
@@ -304,8 +303,10 @@ def set_node_tree(
     # Get the enabled output sockets, that are the active passes for the
     # render.
     # We also exclude some layers.
-    exclude_sockets = {"Image", "Alpha", "Noisy Image"}
-    render_aovs_dict = {}
+    exclude_sockets: set[str] = {"Image", "Alpha", "Noisy Image"}
+    render_aovs_dict: dict[
+        "bpy.types.CompositorNodeRLayers", list["bpy.types.NodeSocket"]
+    ] = {}
     for render_layer_node in render_layer_nodes:
         render_dict = {
             render_layer_node: [
@@ -315,6 +316,7 @@ def set_node_tree(
             ]
         }
         render_aovs_dict.update(render_dict)
+
     # Create a new output node
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
 
@@ -323,7 +325,7 @@ def set_node_tree(
 
     # In case of a multilayer exr, we don't need to use the output node,
     # because the blender render already outputs a multilayer exr.
-    multi_exr = ext == "exr" and multilayer
+    multi_exr: bool = ext == "exr" and multilayer
     slots = output.layer_slots if multi_exr else output.file_slots
 
     rn_layer_node = next(
@@ -429,13 +431,12 @@ def set_node_tree(
     return {} if multi_exr else aov_file_products
 
 
-def create_node_with_new_view_layers(
+def create_renderlayer_node_with_new_view_layers(
         tree: "bpy.types.CompositorNodeTree",
-        comp_layer_type: str,
         view_layers: list["bpy.types.ViewLayer"],
-        render_layer_nodes) -> set[bpy.types.CompositorNode]:
+        render_layer_nodes) -> set[bpy.types.CompositorNodeRLayers]:
     for view_layer in view_layers:
-        render_layer_node = tree.nodes.new(comp_layer_type)
+        render_layer_node = tree.nodes.new("CompositorNodeRLayers")
         render_layer_node.layer = view_layer.name
         render_layer_nodes.add(render_layer_node)
     return render_layer_nodes
