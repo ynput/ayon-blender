@@ -249,8 +249,14 @@ def _create_aov_slot(
 
 
 def set_node_tree(
-    output_path, name, aov_sep, ext, multilayer, compositing, view_layers
-):
+    output_path: Path,
+    name: str,
+    aov_sep: str,
+    ext: str,
+    multilayer: bool,
+    compositing: bool,
+    view_layers: list["bpy.types.ViewLayer"],
+) -> dict:
     # Set the scene to use the compositor node tree to render
     bpy.context.scene.use_nodes = True
 
