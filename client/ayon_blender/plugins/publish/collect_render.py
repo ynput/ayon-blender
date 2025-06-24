@@ -71,7 +71,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 # subname for the product
                 aov_identifier = ""
             else:
-                aov_identifier = self.get_aov_identifier(output_path)
+                aov_identifier = self.get_aov_identifier(
+                    output_path,
+                    instance
+                )
 
             aov_label = aov_identifier or "<beauty>"
             self.log.debug(
@@ -281,13 +284,29 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
         return expected_files
 
-    def get_aov_identifier(self, path: str) -> str:
+    def get_aov_identifier(
+            self, path: str,
+            instance: pyblish.api.Instance
+    ) -> str:
         # TODO: Define sensible way to compute AOV name for the publish product
         #  based on the image outputs the comp node (when NOT multilayer EXR).
         #  This identifier will be the suffix for the product, like:
         #  `renderLightingMain.{aov}` -> `renderLightingMain.beauty`
-
         # Change "/path/to/my_filename.####.exr" to "my_filename"
         aov_identifier = os.path.basename(path).split("#", 1)[0].strip("._")
+
+        # The creator's prepare rendering setup logic will create the filenames
+        # prefixed with `{variant}_`. We don't want to include that as a part
+        # of the AOV identifier because it'd double the variant in the product
+        # name.
+        variant = instance.data.get("variant", "")
+        variant_prefix = f"{variant}_"
+        if aov_identifier.startswith(variant_prefix):
+            self.log.debug(
+                f"Stripping variant '{variant}' prefix from AOV identifier: "
+                f"{aov_identifier}"
+            )
+            aov_identifier = aov_identifier.removeprefix(variant_prefix)
+
         self.log.info(f"AOV '{aov_identifier}' from filepath: {path}")
         return aov_identifier
