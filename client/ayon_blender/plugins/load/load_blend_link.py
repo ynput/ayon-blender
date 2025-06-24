@@ -187,7 +187,10 @@ class BlendLinkLoader(plugin.BlenderLoader):
             if lib_name == library.name_full:
                 return library
 
-        with bpy.data.libraries.load(libpath, link=True) as (data_from, data_to):
+        with bpy.data.libraries.load(libpath, link=True, relative=False) as (
+            data_from,
+            data_to
+        ):
             if data_from.collections:
                 data_to.collections = data_from.collections
             elif data_from.objects:
@@ -200,6 +203,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def _update_library_path_by_node(self, collection:bpy.types.Collection, libpath:str):
         for node in collection.children:
-            node.library.name = os.path.basename(libpath)
-            node.library.filepath = libpath
-            node.library.reload()
+            if node and node.library:
+                node.library.name = os.path.basename(libpath)
+                node.library.filepath = libpath
+                node.library.reload()
