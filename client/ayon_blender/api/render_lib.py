@@ -528,35 +528,3 @@ def prepare_rendering(name: str, project_settings: Optional[dict] = None):
     tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
     bpy.context.scene.render.filepath = f"{tmp_render_path}/"
-
-
-def update_render_product(
-    name: str,
-    output_path: Path,
-    render_product: dict,
-    aov_sep: str,
-    multilayer: bool = False,
-) -> dict[str, list[tuple[str, str]]]:
-    tmp_render_product = {}
-    if multilayer:
-        rl_name = "_"
-        tmp_render_product[rl_name] = []
-        rn_product = render_product[rl_name]
-        for rpass_name, _ in rn_product:
-            filename = f"{name}{aov_sep}{rpass_name}.####"
-            filepath = str(output_path / filename.lstrip("/"))
-            tmp_render_product[rl_name].append((rpass_name, filepath))
-    else:
-        render_layers = bpy.context.scene.view_layers
-        for render_layer in render_layers:
-            rl_name = render_layer.name
-            tmp_render_product[rl_name] = []
-            rn_product = render_product[rl_name]
-            for rpass_name, _ in rn_product:
-                filename = (
-                    f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
-                )
-                filepath = str(output_path / filename.lstrip("/"))
-                tmp_render_product[rl_name].append((rpass_name, filepath))
-
-    return tmp_render_product
