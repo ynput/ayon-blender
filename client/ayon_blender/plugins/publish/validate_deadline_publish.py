@@ -1,6 +1,7 @@
 import os
 
 import bpy
+import pyblish.api
 
 from ayon_core.pipeline.publish import (
     RepairAction,
@@ -8,7 +9,7 @@ from ayon_core.pipeline.publish import (
     PublishValidationError,
     OptionalPyblishPluginMixin
 )
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, render_lib
 
 
 class ValidateSceneRenderFilePath(
@@ -30,21 +31,38 @@ class ValidateSceneRenderFilePath(
         if not self.is_active(instance.data):
             return
 
-        if not bpy.context.scene.render.filepath:
+        expected_render_path = self._get_expected_render_path(instance)
+        if bpy.context.scene.render.filepath.rstrip("/") != expected_render_path:
+            self.log.debug(
+                f"Scene render filepath: {bpy.context.scene.render.filepath} "
+            )
+            self.log.debug(f"Expected render filepath: {expected_render_path}")
             raise PublishValidationError(
                 message=(
-                    "No render filepath set in the scene!"
+                    "Scene Render filepath not set correctly."
                     "Use Repair action to fix the render filepath."
                 ),
                 title="No scene render filepath set"
             )
 
-    @classmethod
-    def repair(cls, instance):
+    @staticmethod
+    def _get_expected_render_path(instance: pyblish.api.Instance) -> str:
+        """Get the expected render path based on the current scene."""
+
+        project_settings = instance.context.data["project_settings"]
+        render_folder = render_lib.get_default_render_folder(
+            project_settings
+        )
+
         tmp_render_path = os.path.join(
-            os.getenv("AYON_WORKDIR"), "renders", "tmp"
+            os.getenv("AYON_WORKDIR"), render_folder, "tmp"
         )
         tmp_render_path = tmp_render_path.replace("\\", "/")
+        return tmp_render_path
+
+    @classmethod
+    def repair(cls, instance):
+        tmp_render_path = cls._get_expected_render_path(instance)
         os.makedirs(tmp_render_path, exist_ok=True)
         bpy.context.scene.render.filepath = f"{tmp_render_path}/"
 
