@@ -256,7 +256,7 @@ def set_node_tree(
     multilayer: bool,
     compositing: bool,
     view_layers: list["bpy.types.ViewLayer"],
-) -> dict:
+):
     # Set the scene to use the compositor node tree to render
     bpy.context.scene.use_nodes = True
 
@@ -322,9 +322,6 @@ def set_node_tree(
     multi_exr: bool = ext == "exr" and multilayer
     slots = output.layer_slots if multi_exr else output.file_slots
 
-    rn_layer_node = next(
-        (node for node in reversed(render_aovs_dict.keys())), None
-    )
     output_dir = Path(output_path)
     filepath = output_dir / variant_name.lstrip("/")
     render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
@@ -369,37 +366,34 @@ def set_node_tree(
         )
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
-    aov_file_products = {}
-    if compositing:
+    last_found_renderlayer_node = next(
+        (node for node in reversed(render_aovs_dict.keys())), None
+    )
+    if compositing and last_found_renderlayer_node:
         # Create a new socket for the composite output
         # with only the one view layer
         pass_name = "composite"
-        if rn_layer_node:
-            render_layer = rn_layer_node.layer
-            aov_file_products[render_layer] = []
-            comp_socket, filepath = _create_aov_slot(
-                variant_name,
-                aov_sep,
-                slots,
-                pass_name,
-                multi_exr,
-                output_path,
-                render_layer,
-            )
-            aov_file_products[render_layer].append((pass_name, filepath))
-            # If there's a composite node, we connect its input with the new output
-            if composite_node:
-                for link in tree.links:
-                    if link.to_node == composite_node:
-                        tree.links.new(link.from_socket, comp_socket)
-                        break
+        render_layer = last_found_renderlayer_node.layer
+        comp_socket, filepath = _create_aov_slot(
+            variant_name,
+            aov_sep,
+            slots,
+            pass_name,
+            multi_exr,
+            output_path,
+            render_layer,
+        )
+        # If there's a composite node, we connect its input with the new output
+        if composite_node:
+            for link in tree.links:
+                if link.to_node == composite_node:
+                    tree.links.new(link.from_socket, comp_socket)
+                    break
 
     # For each active render pass, we add a new socket to the output node
     # and link it
     for render_layer_node, passes in render_aovs_dict.items():
         render_layer = render_layer_node.layer
-        if not aov_file_products.get(render_layer, []):
-            aov_file_products[render_layer] = []
         for rpass in passes:
             slot, filepath = _create_aov_slot(
                 variant_name,
@@ -410,8 +404,6 @@ def set_node_tree(
                 output_path,
                 render_layer,
             )
-
-            aov_file_products[render_layer].append((rpass.name, filepath))
 
             # If the rpass was not connected with the old output node, we connect
             # it with the new one.
@@ -433,8 +425,6 @@ def set_node_tree(
 
     output.name = "AYON File Output"
     output.label = "AYON File Output"
-
-    return {} if multi_exr else aov_file_products
 
 
 def create_renderlayer_node_with_new_view_layers(
