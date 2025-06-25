@@ -283,10 +283,9 @@ def set_node_tree(
     # If there's no a Render Layers nodes, we create it
     if not render_layer_nodes:
         render_layer_nodes = create_renderlayer_node_with_new_view_layers(
-            tree, view_layers, render_layer_nodes
+            tree, view_layers
         )
     else:
-        missing_render_layer_nodes = set()
         orig_view_layers = {view_layer.name for view_layer in view_layers}
         missing_view_layers_by_nodes = {
             node.layer for node in render_layer_nodes
@@ -295,16 +294,16 @@ def set_node_tree(
             orig_view_layers - missing_view_layers_by_nodes
         )
         missing_view_layers = [
-            view_layer
-            for view_layer in view_layers
+            view_layer for view_layer in view_layers
             if view_layer.name in missing_view_layers_set
         ]
-        missing_render_layer_nodes = create_renderlayer_node_with_new_view_layers(
-            tree,
-            missing_view_layers,
-            missing_render_layer_nodes,
-        )
-        render_layer_nodes.update(missing_render_layer_nodes)
+        if missing_view_layers:
+            render_layer_nodes.update(
+                create_renderlayer_node_with_new_view_layers(
+                    tree,
+                    missing_view_layers,
+                )
+            )
 
     # Get the enabled output sockets, that are the active passes for the
     # render.
@@ -424,7 +423,9 @@ def set_node_tree(
 def create_renderlayer_node_with_new_view_layers(
         tree: "bpy.types.CompositorNodeTree",
         view_layers: list["bpy.types.ViewLayer"],
-        render_layer_nodes) -> set[bpy.types.CompositorNodeRLayers]:
+) -> set[bpy.types.CompositorNodeRLayers]:
+    """For each view layer, create a new render layer node."""
+    render_layer_nodes = set()
     for view_layer in view_layers:
         render_layer_node = tree.nodes.new("CompositorNodeRLayers")
         render_layer_node.layer = view_layer.name
