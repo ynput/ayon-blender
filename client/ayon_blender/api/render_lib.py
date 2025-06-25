@@ -305,39 +305,27 @@ def set_node_tree(
                 )
             )
 
-    # Get the enabled output sockets, that are the active passes for the
-    # render.
-    # We also exclude some layers.
-    exclude_sockets: set[str] = {"Image", "Alpha", "Noisy Image"}
-    render_aovs_dict: dict[
-        "bpy.types.CompositorNodeRLayers", list["bpy.types.NodeSocket"]
-    ] = {}
-    for render_layer_node in render_layer_nodes:
-        render_aovs_dict[render_layer_node] = [
-            socket for socket in render_layer_node.outputs
-            if socket.enabled and socket.name not in exclude_sockets
-        ]
-
     # Create a new output node
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
+    output.name = "AYON File Output"
+    output.label = "AYON File Output"
 
+    # Match output format from scene file format
     image_settings = bpy.context.scene.render.image_settings
     output.format.file_format = image_settings.file_format
 
-    # In case of a multilayer exr, we don't need to use the output node,
-    # because the blender render already outputs a multilayer exr.
     multi_exr: bool = ext == "exr" and multilayer
-    slots = output.layer_slots if multi_exr else output.file_slots
 
+    slots = output.layer_slots if multi_exr else output.file_slots
+    slots.clear()
+
+    # Define the base path for the File Output node.
     output_dir = Path(output_path)
     filepath = output_dir / variant_name.lstrip("/")
     render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
-
     output.base_path = (
         render_product_main_beauty if multi_exr else str(output_path)
     )
-
-    slots.clear()
 
     # Get existing 'Composite' and the previous AYON File Output nodes
     composite_node = None
@@ -360,7 +348,7 @@ def set_node_tree(
 
     # Create a new socket for the beauty output
     pass_name = "beauty"
-    for render_layer_node in render_aovs_dict.keys():
+    for render_layer_node in render_layer_nodes:
         render_layer = render_layer_node.layer
         slot = _create_aov_slot(
             slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
@@ -368,7 +356,7 @@ def set_node_tree(
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
     last_found_renderlayer_node = next(
-        (node for node in reversed(render_aovs_dict.keys())), None
+        (node for node in reversed(list(render_layer_nodes))), None
     )
     if compositing and last_found_renderlayer_node:
         # Create a new socket for the composite output
@@ -387,38 +375,44 @@ def set_node_tree(
 
     # For each active render pass, we add a new socket to the output node
     # and link it
-    for render_layer_node, passes in render_aovs_dict.items():
+    exclude_sockets: set[str] = {"Image", "Alpha", "Noisy Image"}
+    for render_layer_node in render_layer_nodes:
+        # Get the enabled output sockets, that are the active passes for the
+        # render.
         render_layer = render_layer_node.layer
-        for rpass in passes:
+        for output_socket in render_layer_node.outputs:
+            if output_socket.name in exclude_sockets:
+                continue
+
+            if not output_socket.enabled:
+                continue
+
             slot = _create_aov_slot(
                 slots,
                 variant_name,
                 aov_sep,
-                rpass.name,
+                output_socket.name,
                 multi_exr,
                 render_layer,
             )
 
-            # If the rpass was not connected with the old output node, we connect
-            # it with the new one.
-            if not old_links.get(rpass.name):
-                tree.links.new(rpass, slot)
+            # If the renderpass was not connected with the old output node,
+            # we connect it with the new one.
+            if not old_links.get(output_socket.name):
+                tree.links.new(output_socket, slot)
 
     for link in list(old_links.values()):
         # Check if the socket is still available in the new output node.
-        socket = output.inputs.get(link.to_socket.name)
+        output_socket = output.inputs.get(link.to_socket.name)
         # If it is, we connect it with the new output node.
-        if socket:
-            tree.links.new(link.from_socket, socket)
+        if output_socket:
+            tree.links.new(link.from_socket, output_socket)
         # Then, we remove the old link.
         tree.links.remove(link)
 
     if old_output_node:
         output.location = old_output_node.location
         tree.nodes.remove(old_output_node)
-
-    output.name = "AYON File Output"
-    output.label = "AYON File Output"
 
 
 def create_renderlayer_node_with_new_view_layers(
