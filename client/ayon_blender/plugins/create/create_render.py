@@ -44,7 +44,7 @@ class CreateRender(plugin.BlenderCreator):
             # Create render setup
             variant = instance_data.get("variant", self.default_variant)
 
-            prepare_rendering(name=variant)
+            prepare_rendering(variant_name=variant)
             node = self._find_existing_compositor_output_node()
 
             # Force enable compositor

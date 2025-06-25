@@ -231,21 +231,29 @@ def existing_aov_options(
 
 
 def _create_aov_slot(
-    name: str,
-    aov_sep: str,
     slots,
-    rpass_name: str,
-    multi_exr: bool,
-    output_path: Path,
+    variant_name: str,
+    aov_sep: str,
+    renderpass_name: str,
+    is_multi_exr: bool,
     render_layer: str,
-) -> tuple[bpy.types.RenderSlot, str]:
-    filename = (
-        f"{render_layer}/{name}_{render_layer}{aov_sep}{rpass_name}.####"
-    )
-    slot = slots.new(rpass_name if multi_exr else filename)
-    filepath = str(output_path / filename.lstrip("/"))
+) -> bpy.types.RenderSlot:
+    """Add a new render output slot to the slots.
 
-    return slot, filepath
+    The slots usually are the file slots of the compositor output node.
+    The filepath is based on the render layer, variant name and render pass.
+
+    If it's multi-exr, the slot will be named after the render pass only.
+
+    Returns:
+        The created slot
+
+    """
+    filename = (
+        f"{render_layer}/"
+        f"{variant_name}_{render_layer}{aov_sep}{renderpass_name}.####"
+    )
+    return slots.new(renderpass_name if is_multi_exr else filename)
 
 
 def set_node_tree(
@@ -355,15 +363,8 @@ def set_node_tree(
     pass_name = "beauty"
     for render_layer_node in render_aovs_dict.keys():
         render_layer = render_layer_node.layer
-        slot, _ = _create_aov_slot(
-            variant_name,
-            aov_sep,
-            slots,
-            pass_name,
-            multi_exr,
-            output_path,
-            render_layer,
-        )
+        slot = _create_aov_slot(slots, variant_name, aov_sep, pass_name,
+                                   multi_exr, render_layer)
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
     last_found_renderlayer_node = next(
@@ -374,34 +375,27 @@ def set_node_tree(
         # with only the one view layer
         pass_name = "composite"
         render_layer = last_found_renderlayer_node.layer
-        comp_socket, filepath = _create_aov_slot(
-            variant_name,
-            aov_sep,
-            slots,
-            pass_name,
-            multi_exr,
-            output_path,
-            render_layer,
+        slot = _create_aov_slot(
+            slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
         )
-        # If there's a composite node, we connect its input with the new output
+        # If there's a composite node, we connect its 'Image' input with the
+        # new slot on the output
         if composite_node:
-            for link in tree.links:
-                if link.to_node == composite_node:
-                    tree.links.new(link.from_socket, comp_socket)
-                    break
+            for link in composite_node.inputs["Image"].links:
+                tree.links.new(link.from_socket, slot)
+                break
 
     # For each active render pass, we add a new socket to the output node
     # and link it
     for render_layer_node, passes in render_aovs_dict.items():
         render_layer = render_layer_node.layer
         for rpass in passes:
-            slot, filepath = _create_aov_slot(
+            slot = _create_aov_slot(
+                slots,
                 variant_name,
                 aov_sep,
-                slots,
                 rpass.name,
                 multi_exr,
-                output_path,
                 render_layer,
             )
 
