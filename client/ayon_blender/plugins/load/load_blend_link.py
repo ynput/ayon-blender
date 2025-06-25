@@ -113,11 +113,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         repre = context["representation"]
         collection = container["node"]
         new_filepath = self.filepath_from_context(context)
-        # Only works for updating single assets so this is not valid
-        # for updating multiple assets with different versions
         for node in collection.children:
             if node.library:
-                node.library.name = os.path.basename(new_filepath)
                 node.library.filepath = new_filepath
                 node.library.reload()
         # refresh UI
