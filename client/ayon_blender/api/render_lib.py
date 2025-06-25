@@ -305,6 +305,25 @@ def set_node_tree(
                 )
             )
 
+    # Get existing 'Composite' and the previous AYON File Output nodes
+    composite_node = None
+    old_output_node = None
+    for node in tree.nodes:
+        if node.bl_idname == compositor_type:
+            composite_node = node
+        elif node.bl_idname == output_type and "AYON" in node.name:
+            old_output_node = node
+        if composite_node and old_output_node:
+            break
+
+    old_links = {}
+    if old_output_node is not None:
+        old_links = {
+            link.from_socket.name: link
+            for link in tree.links
+            if link.to_node == old_output_node
+        }
+
     # Create a new output node
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
     output.name = "AYON File Output"
@@ -326,25 +345,6 @@ def set_node_tree(
     output.base_path = (
         render_product_main_beauty if multi_exr else str(output_path)
     )
-
-    # Get existing 'Composite' and the previous AYON File Output nodes
-    composite_node = None
-    old_output_node = None
-    for node in tree.nodes:
-        if node.bl_idname == compositor_type:
-            composite_node = node
-        elif node.bl_idname == output_type and "AYON" in node.name:
-            old_output_node = node
-        if composite_node and old_output_node:
-            break
-
-    old_links = {}
-    if old_output_node is not None:
-        old_links = {
-            link.from_socket.name: link
-            for link in tree.links
-            if link.to_node == old_output_node
-        }
 
     # Create a new socket for the beauty output
     pass_name = "beauty"
@@ -453,19 +453,21 @@ def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None
         renderer = "BLENDER_EEVEE_NEXT"
     compositing = get_compositing(project_settings)
 
+    # Set scene render settings
     set_render_format(ext, multilayer)
     bpy.context.scene.render.engine = renderer
     view_layers = bpy.context.scene.view_layers
     set_render_passes(project_settings, renderer, view_layers)
 
+    # Generate Compositing nodes
     output_path = Path.joinpath(dirpath, render_folder, file_name)
     set_node_tree(
         output_path, variant_name, aov_sep, ext,
         multilayer, compositing, view_layers
     )
 
-    # Clear the render filepath, so that the output is handled only by the
-    # output node in the compositor.
+    # Clear the scene render filepath, so that the outputs are handled only by
+    # the file output nodes in the compositor.
     tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
     tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
