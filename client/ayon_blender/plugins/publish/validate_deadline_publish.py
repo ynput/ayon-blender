@@ -1,3 +1,4 @@
+import inspect
 import os
 
 import bpy
@@ -33,22 +34,22 @@ class ValidateSceneRenderFilePath(
 
         expected_render_path = self._get_expected_render_path(instance)
         if bpy.context.scene.render.filepath.rstrip("/") != expected_render_path:
-            self.log.debug(
-                f"Scene render filepath: {bpy.context.scene.render.filepath} "
+            self.log.warning(
+                f"Current scene output: {bpy.context.scene.render.filepath} "
             )
-            self.log.debug(f"Expected render filepath: {expected_render_path}")
+            self.log.info(f"Expected scene output: {expected_render_path}")
             raise PublishValidationError(
                 message=(
-                    "Scene Render filepath not set correctly."
+                    "Scene Render filepath not set correctly. "
                     "Use Repair action to fix the render filepath."
                 ),
+                description=self.get_description(),
                 title="No scene render filepath set"
             )
 
     @staticmethod
     def _get_expected_render_path(instance: pyblish.api.Instance) -> str:
         """Get the expected render path based on the current scene."""
-
         project_settings = instance.context.data["project_settings"]
         render_folder = render_lib.get_default_render_folder(
             project_settings
@@ -68,6 +69,19 @@ class ValidateSceneRenderFilePath(
 
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
 
+    @staticmethod
+    def get_description():
+        return inspect.cleandoc("""
+        ### Scene render filepath invalid
+        
+        The scene output filepath is set to incorrectly.
+        
+        We are enforcing the scene output filepath to be set to a `tmp`
+        file inside the renders folder of the work directory. This is because
+        the scene render output is unused by AYON since we only manage the
+        Compositor's Output File node for render outputs. The scene wide render
+        outputs can't be disabled, so we set it to a temporary filepath.
+        """)
 
 class ValidateDeadlinePublish(
     plugin.BlenderInstancePlugin,
