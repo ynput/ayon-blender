@@ -266,21 +266,13 @@ def set_node_tree(
     output_type = "CompositorNodeOutputFile"
     compositor_type = "CompositorNodeComposite"
 
-    # Get the Render Layer, Composite and the previous output nodes
+    # Get the existing render layer nodes
     render_layer_nodes: set["bpy.types.CompositorNodeRLayers"] = set()
-    composite_node = None
-    old_output_node = None
     for node in tree.nodes:
         if node.bl_idname == comp_layer_type:
             render_layer_nodes.add(node)
-        elif node.bl_idname == compositor_type:
-            composite_node = node
-        elif node.bl_idname == output_type and "AYON" in node.name:
-            old_output_node = node
-        if render_layer_nodes and composite_node and old_output_node:
-            break
 
-    # If there's not a Render Layers node, we create it
+    # If there's no a Render Layers nodes, we create it
     if not render_layer_nodes:
         render_layer_nodes = create_renderlayer_node_with_new_view_layers(
             tree, view_layers, render_layer_nodes
@@ -314,14 +306,10 @@ def set_node_tree(
         "bpy.types.CompositorNodeRLayers", list["bpy.types.NodeSocket"]
     ] = {}
     for render_layer_node in render_layer_nodes:
-        render_dict = {
-            render_layer_node: [
-                socket
-                for socket in render_layer_node.outputs
-                if socket.enabled and socket.name not in exclude_sockets
-            ]
-        }
-        render_aovs_dict.update(render_dict)
+        render_aovs_dict[render_layer_node] = [
+            socket for socket in render_layer_node.outputs
+            if socket.enabled and socket.name not in exclude_sockets
+        ]
 
     # Create a new output node
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
@@ -347,13 +335,24 @@ def set_node_tree(
 
     slots.clear()
 
-    aov_file_products = {}
+    # Get existing 'Composite' and the previous AYON File Output nodes
+    composite_node = None
+    old_output_node = None
+    for node in tree.nodes:
+        if node.bl_idname == compositor_type:
+            composite_node = node
+        elif node.bl_idname == output_type and "AYON" in node.name:
+            old_output_node = node
+        if composite_node and old_output_node:
+            break
 
-    old_links = {
-        link.from_socket.name: link
-        for link in tree.links
-        if link.to_node == old_output_node
-    }
+    old_links = {}
+    if old_output_node is not None:
+        old_links = {
+            link.from_socket.name: link
+            for link in tree.links
+            if link.to_node == old_output_node
+        }
 
     # Create a new socket for the beauty output
     pass_name = "beauty"
@@ -370,6 +369,7 @@ def set_node_tree(
         )
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
+    aov_file_products = {}
     if compositing:
         # Create a new socket for the composite output
         # with only the one view layer
