@@ -250,7 +250,7 @@ def _create_aov_slot(
 
 def set_node_tree(
     output_path: Path,
-    name: str,
+    variant_name: str,
     aov_sep: str,
     ext: str,
     multilayer: bool,
@@ -338,7 +338,7 @@ def set_node_tree(
         (node for node in reversed(render_aovs_dict.keys())), None
     )
     output_dir = Path(output_path)
-    filepath = output_dir / name.lstrip("/")
+    filepath = output_dir / variant_name.lstrip("/")
     render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
 
     output.base_path = (
@@ -356,11 +356,11 @@ def set_node_tree(
     }
 
     # Create a new socket for the beauty output
-    pass_name = "rgba" if multi_exr else "beauty"
+    pass_name = "beauty"
     for render_layer_node in render_aovs_dict.keys():
         render_layer = render_layer_node.layer
         slot, _ = _create_aov_slot(
-            name,
+            variant_name,
             aov_sep,
             slots,
             pass_name,
@@ -378,7 +378,7 @@ def set_node_tree(
             render_layer = rn_layer_node.layer
             aov_file_products[render_layer] = []
             comp_socket, filepath = _create_aov_slot(
-                name,
+                variant_name,
                 aov_sep,
                 slots,
                 pass_name,
@@ -402,7 +402,7 @@ def set_node_tree(
                 aov_file_products[render_layer] = []
             for rpass in passes:
                 slot, filepath = _create_aov_slot(
-                    name,
+                    variant_name,
                     aov_sep,
                     slots,
                     rpass.name,
@@ -448,7 +448,7 @@ def create_renderlayer_node_with_new_view_layers(
     return render_layer_nodes
 
 
-def prepare_rendering(name: str, project_settings: Optional[dict] = None):
+def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None):
     """Initialize render setup using render settings from project settings."""
 
     filepath = Path(bpy.data.filepath)
@@ -480,7 +480,7 @@ def prepare_rendering(name: str, project_settings: Optional[dict] = None):
 
     output_path = Path.joinpath(dirpath, render_folder, file_name)
     set_node_tree(
-        output_path, name, aov_sep, ext,
+        output_path, variant_name, aov_sep, ext,
         multilayer, compositing, view_layers
     )
 
@@ -489,4 +489,4 @@ def prepare_rendering(name: str, project_settings: Optional[dict] = None):
     tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
     tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
-    bpy.context.scene.render.filepath = f"{tmp_render_path}/"
+    bpy.context.scene.render.filepath = tmp_render_path
