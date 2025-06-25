@@ -231,13 +231,13 @@ def existing_aov_options(
 
 
 def _create_aov_slot(
-    slots,
+    slots: "bpy.types.RenderSlots",
     variant_name: str,
     aov_sep: str,
     renderpass_name: str,
     is_multi_exr: bool,
     render_layer: str,
-) -> bpy.types.RenderSlot:
+) -> "bpy.types.RenderSlot":
     """Add a new render output slot to the slots.
 
     The slots usually are the file slots of the compositor output node.
