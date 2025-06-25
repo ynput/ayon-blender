@@ -114,6 +114,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         collection = container["node"]
         new_filepath = self.filepath_from_context(context)
         library = self._get_or_build_library_by_path(new_filepath)
+        # currently updating version only applicable to the single asset
+        # it does not support for versioning in multiple assets
         for node in collection.children:
             if node.library:
                 node.library.filepath = library.filepath
@@ -180,10 +182,10 @@ class BlendLinkLoader(plugin.BlenderLoader):
         associated library to the path, the related library is loaded
         accordingly."""
         for library in bpy.data.libraries:
-            if libpath == os.path.normpath(library.filepath):
+            if library.filepath == os.path.normpath(libpath):
                 return library
 
-        with bpy.data.libraries.load(libpath, link=True, relative=False) as (
+        with bpy.data.libraries.load(libpath, link=True) as (
             data_from,
             data_to
         ):
@@ -194,5 +196,5 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # Return the newly loaded library
         for library in bpy.data.libraries:
-            if libpath == os.path.normpath(library.filepath):
+            if library.filepath == os.path.normpath(libpath):
                 return library

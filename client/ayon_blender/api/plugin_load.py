@@ -2,7 +2,6 @@ import logging
 from typing import Generator, TYPE_CHECKING
 
 import bpy
-import os
 from ayon_core.pipeline.load import LoadError
 from ayon_blender.api.pipeline import AVALON_PROPERTY
 
