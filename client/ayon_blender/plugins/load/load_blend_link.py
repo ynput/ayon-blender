@@ -113,9 +113,10 @@ class BlendLinkLoader(plugin.BlenderLoader):
         repre = context["representation"]
         collection = container["node"]
         new_filepath = self.filepath_from_context(context)
+        library = self._get_or_build_library_by_path(new_filepath)
         for node in collection.children:
             if node.library:
-                node.library.filepath = new_filepath
+                node.library.filepath = library.filepath
                 node.library.reload()
         # refresh UI
         bpy.context.view_layer.update()
