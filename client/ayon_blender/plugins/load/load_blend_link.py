@@ -113,9 +113,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         repre = context["representation"]
         collection = container["node"]
         new_filepath = self.filepath_from_context(context)
-        # Work for updating multiple assets in blender 4.5
-        # Otherwise, it only works for updating single assets
-        # in blender 4.4
+        # Only works for updating single assets so this is not valid
+        # for updating multiple assets with different versions
         for node in collection.children:
             if node.library:
                 node.library.name = os.path.basename(new_filepath)
@@ -177,3 +176,25 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
 
         return len(match_count) > 1
+
+    def _get_or_build_library_by_path(self, libpath: str) -> bpy.types.Library:
+        """Get the library by filepath. If there is no any
+        associated library to the path, the related library is loaded
+        accordingly."""
+        for library in bpy.data.libraries:
+            if libpath == os.path.normpath(library.filepath):
+                return library
+
+        with bpy.data.libraries.load(libpath, link=True, relative=False) as (
+            data_from,
+            data_to
+        ):
+            if data_from.collections:
+                data_to.collections = data_from.collections
+            elif data_from.objects:
+                data_to.objects = data_from.objects
+
+        # Return the newly loaded library
+        for library in bpy.data.libraries:
+            if libpath == os.path.normpath(library.filepath):
+                return library
