@@ -362,8 +362,9 @@ def set_node_tree(
     pass_name = "beauty"
     for render_layer_node in render_aovs_dict.keys():
         render_layer = render_layer_node.layer
-        slot = _create_aov_slot(slots, variant_name, aov_sep, pass_name,
-                                   multi_exr, render_layer)
+        slot = _create_aov_slot(
+            slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
+        )
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
     last_found_renderlayer_node = next(
