@@ -154,6 +154,6 @@ DEFAULT_RENDER_SETTINGS = {
     "multilayer_exr": True,
     "renderer": "CYCLES",
     "compositing": True,
-    "aov_list": [],
+    "aov_list": ["combined"],
     "custom_passes": []
 }
