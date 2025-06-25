@@ -394,38 +394,38 @@ def set_node_tree(
                         tree.links.new(link.from_socket, comp_socket)
                         break
 
-        # For each active render pass, we add a new socket to the output node
-        # and link it
-        for render_layer_node, passes in render_aovs_dict.items():
-            render_layer = render_layer_node.layer
-            if not aov_file_products.get(render_layer, []):
-                aov_file_products[render_layer] = []
-            for rpass in passes:
-                slot, filepath = _create_aov_slot(
-                    variant_name,
-                    aov_sep,
-                    slots,
-                    rpass.name,
-                    multi_exr,
-                    output_path,
-                    render_layer,
-                )
+    # For each active render pass, we add a new socket to the output node
+    # and link it
+    for render_layer_node, passes in render_aovs_dict.items():
+        render_layer = render_layer_node.layer
+        if not aov_file_products.get(render_layer, []):
+            aov_file_products[render_layer] = []
+        for rpass in passes:
+            slot, filepath = _create_aov_slot(
+                variant_name,
+                aov_sep,
+                slots,
+                rpass.name,
+                multi_exr,
+                output_path,
+                render_layer,
+            )
 
-                aov_file_products[render_layer].append((rpass.name, filepath))
+            aov_file_products[render_layer].append((rpass.name, filepath))
 
-                # If the rpass was not connected with the old output node, we connect
-                # it with the new one.
-                if not old_links.get(rpass.name):
-                    tree.links.new(rpass, slot)
+            # If the rpass was not connected with the old output node, we connect
+            # it with the new one.
+            if not old_links.get(rpass.name):
+                tree.links.new(rpass, slot)
 
-        for link in list(old_links.values()):
-            # Check if the socket is still available in the new output node.
-            socket = output.inputs.get(link.to_socket.name)
-            # If it is, we connect it with the new output node.
-            if socket:
-                tree.links.new(link.from_socket, socket)
-            # Then, we remove the old link.
-            tree.links.remove(link)
+    for link in list(old_links.values()):
+        # Check if the socket is still available in the new output node.
+        socket = output.inputs.get(link.to_socket.name)
+        # If it is, we connect it with the new output node.
+        if socket:
+            tree.links.new(link.from_socket, socket)
+        # Then, we remove the old link.
+        tree.links.remove(link)
 
     if old_output_node:
         output.location = old_output_node.location
