@@ -51,7 +51,7 @@ class FbxModelLoader(plugin.BlenderLoader):
     def _process(self, libpath, asset_group, group_name, action):
         plugin.deselect_all()
 
-        bpy.ops.import_scene.fbx(filepath=libpath)
+        bpy.ops.import_scene.fbx(filepath=libpath, use_image_search=False)
 
         parent = bpy.context.scene.collection
 
