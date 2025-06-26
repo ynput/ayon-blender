@@ -103,7 +103,7 @@ class FbxModelLoader(plugin.BlenderLoader):
                 anim_data = obj.animation_data
                 if action is not None:
                     anim_data.action = action
-                elif anim_data.action is not None:
+                elif anim_data and anim_data.action:
                     name_action = anim_data.action.name
                     anim_data.action.name = f"{group_name}:{name_action}"
 
