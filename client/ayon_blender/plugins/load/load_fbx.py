@@ -51,7 +51,15 @@ class FbxModelLoader(plugin.BlenderLoader):
     def _process(self, libpath, asset_group, group_name, action):
         plugin.deselect_all()
 
-        bpy.ops.import_scene.fbx(filepath=libpath, use_image_search=False)
+        blender_version = lib.get_blender_version()
+        # bpy.ops.wm.fbx_import would be the new python command for
+        # fbx loader and it would fully replace its old version of
+        # bpy.ops.import_scene.fbx to be the default import command
+        # in 5.0
+        if blender_version >= (4, 5, 0):
+            bpy.ops.wm.fbx_import(filepath=libpath)
+        else:
+            bpy.ops.import_scene.fbx(filepath=libpath)
 
         parent = bpy.context.scene.collection
 
