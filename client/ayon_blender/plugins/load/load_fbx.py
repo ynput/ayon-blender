@@ -59,6 +59,8 @@ class FbxModelLoader(plugin.BlenderLoader):
         if blender_version >= (4, 5, 0):
             bpy.ops.wm.fbx_import(filepath=libpath)
         else:
+            # TODO: make sure it works with the color management
+            # in 4.4 or elder version
             bpy.ops.import_scene.fbx(filepath=libpath)
 
         parent = bpy.context.scene.collection
