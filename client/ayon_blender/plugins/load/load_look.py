@@ -10,9 +10,10 @@ import bpy
 
 from ayon_core.pipeline import get_representation_path
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import (
-    containerise_existing,
-    AVALON_PROPERTY
+from ayon_blender.api.pipeline import containerise_existing
+from ayon_blender.api.constants import (
+    AYON_PROPERTY,
+    VALID_EXTENSIONS,
 )
 
 
@@ -117,7 +118,7 @@ class BlendLookLoader(plugin.BlenderLoader):
             self.__class__.__name__,
         )
 
-        metadata = container.get(AVALON_PROPERTY)
+        metadata = container.get(AYON_PROPERTY)
 
         metadata["libpath"] = libpath
         metadata["lib_container"] = lib_container
@@ -163,11 +164,11 @@ class BlendLookLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 
-        collection_metadata = collection.get(AVALON_PROPERTY)
+        collection_metadata = collection.get(AYON_PROPERTY)
         collection_libpath = collection_metadata["libpath"]
 
         normalized_collection_libpath = (
@@ -211,7 +212,7 @@ class BlendLookLoader(plugin.BlenderLoader):
         if not collection:
             return False
 
-        collection_metadata = collection.get(AVALON_PROPERTY)
+        collection_metadata = collection.get(AYON_PROPERTY)
 
         for obj in collection_metadata['objects']:
             for child in self.get_all_children(obj):
