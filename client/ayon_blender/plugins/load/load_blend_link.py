@@ -116,7 +116,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # it does not support for versioning in multiple assets
         library = (
             self._get_library_from_collection(collection)
-            or self._get_library_by_prev_library(container)
+            or self._get_library_by_prev_libpath(container)
         )
         filepath = self.filepath_from_context(context)
         new_filename = os.path.basename(filepath)
@@ -186,7 +186,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         return len(match_count) > 1
 
-    def _get_library_by_prev_library(self, container: Dict) -> bpy.types.Library:
+    def _get_library_by_prev_libpath(self, container: Dict) -> bpy.types.Library:
         """Get the library by filename."""
         lib_path = container["lib_path"]
         for library in bpy.data.libraries:
