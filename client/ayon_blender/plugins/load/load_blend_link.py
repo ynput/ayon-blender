@@ -114,15 +114,18 @@ class BlendLinkLoader(plugin.BlenderLoader):
         collection = container["node"]
         # currently updating version only applicable to the single asset
         # it does not support for versioning in multiple assets
-        library = self._get_library_from_collection(collection)
+        library = (
+            self._get_library_from_collection(collection)
+            or self._get_library_by_prev_library(container)
+        )
         filepath = self.filepath_from_context(context)
         new_filename = os.path.basename(filepath)
 
-        # Update library filepath and reload it
-        library.name = new_filename
-        library.filepath = self.filepath_from_context(context)
-        library.reload()
-
+        # Update library filepath and reload it if there is library
+        if library:
+            library.name = new_filename
+            library.filepath = filepath
+            library.reload()
 
         # refresh UI
         bpy.context.view_layer.update()
@@ -182,3 +185,10 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
 
         return len(match_count) > 1
+
+    def _get_library_by_prev_library(self, container: Dict) -> bpy.types.Library:
+        """Get the library by filename."""
+        lib_path = container["lib_path"]
+        for library in bpy.data.libraries:
+            if lib_path in library.filepath:
+                return library
