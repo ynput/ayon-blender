@@ -112,22 +112,16 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Update the loaded asset. """
         repre = context["representation"]
         collection = container["node"]
-        new_filepath = self.filepath_from_context(context)
-        library = self._get_or_build_library_by_path(new_filepath)
         # currently updating version only applicable to the single asset
         # it does not support for versioning in multiple assets
-        for node in collection.children:
-            if node.library:
-                node.library.filepath = library.filepath
-                node.library.reload()
-        # refresh UI
-        bpy.context.view_layer.update()
+        library = self._get_library_from_collection(collection)
+
+        # Update library filepath and reload it
+        library.filepath = self.filepath_from_context(context)
+        library.reload()
+
         # Update container metadata
-        updated_data = {
-            "representation": str(repre["id"]),
-            "libpath": new_filepath
-        }
-        metadata_update(collection, updated_data)
+        metadata_update(collection, {"representation": str(repre["id"])})
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
@@ -176,25 +170,3 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
 
         return len(match_count) > 1
-
-    def _get_or_build_library_by_path(self, libpath: str) -> bpy.types.Library:
-        """Get the library by filepath. If there is no any
-        associated library to the path, the related library is loaded
-        accordingly."""
-        for library in bpy.data.libraries:
-            if library.filepath == os.path.normpath(libpath):
-                return library
-
-        with bpy.data.libraries.load(libpath, link=True) as (
-            data_from,
-            data_to
-        ):
-            if data_from.collections:
-                data_to.collections = data_from.collections
-            elif data_from.objects:
-                data_to.objects = data_from.objects
-
-        # Return the newly loaded library
-        for library in bpy.data.libraries:
-            if library.filepath == os.path.normpath(libpath):
-                return library
