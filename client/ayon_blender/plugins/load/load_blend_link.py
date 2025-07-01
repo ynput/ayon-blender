@@ -1,4 +1,5 @@
 import bpy
+import os
 from typing import Dict, List, Optional
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
@@ -114,13 +115,25 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # currently updating version only applicable to the single asset
         # it does not support for versioning in multiple assets
         library = self._get_library_from_collection(collection)
+        filepath = self.filepath_from_context(context)
+        new_filename = os.path.basename(filepath)
 
         # Update library filepath and reload it
+        library.name = new_filename
         library.filepath = self.filepath_from_context(context)
         library.reload()
 
+
+        # refresh UI
+        bpy.context.view_layer.update()
         # Update container metadata
-        metadata_update(collection, {"representation": str(repre["id"])})
+        updated_data = {
+            "representation": str(repre["id"]),
+            "lib_path": filepath
+        }
+
+        # Update container metadata
+        metadata_update(collection, updated_data)
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
