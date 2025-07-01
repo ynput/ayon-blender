@@ -51,9 +51,17 @@ class FbxModelLoader(plugin.BlenderLoader):
     def _process(self, libpath, asset_group, group_name, action):
         plugin.deselect_all()
 
-        collection = bpy.context.view_layer.active_layer_collection.collection
-
-        bpy.ops.import_scene.fbx(filepath=libpath)
+        blender_version = lib.get_blender_version()
+        # bpy.ops.wm.fbx_import would be the new python command for
+        # fbx loader and it would fully replace its old version of
+        # bpy.ops.import_scene.fbx to be the default import command
+        # in 5.0
+        if blender_version >= (4, 5, 0):
+            bpy.ops.wm.fbx_import(filepath=libpath)
+        else:
+            # TODO: make sure it works with the color management
+            # in 4.4 or elder version
+            bpy.ops.import_scene.fbx(filepath=libpath)
 
         parent = bpy.context.scene.collection
 
@@ -87,8 +95,8 @@ class FbxModelLoader(plugin.BlenderLoader):
         objects.reverse()
 
         for obj in objects:
-            parent.objects.link(obj)
-            collection.objects.unlink(obj)
+            if obj.name not in parent.objects:
+                parent.objects.link(obj)
 
         for obj in objects:
             name = obj.name
@@ -105,7 +113,7 @@ class FbxModelLoader(plugin.BlenderLoader):
                 anim_data = obj.animation_data
                 if action is not None:
                     anim_data.action = action
-                elif anim_data.action is not None:
+                elif anim_data and anim_data.action:
                     name_action = anim_data.action.name
                     anim_data.action.name = f"{group_name}:{name_action}"
 
