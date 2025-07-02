@@ -1,6 +1,6 @@
 import bpy
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
@@ -157,7 +157,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         return True
 
     def _get_library_from_collection(
-            self, collection: bpy.types.Collection) -> bpy.types.Library:
+            self, collection: bpy.types.Collection) -> Union[bpy.types.Library, None]:
         """Get the library from the collection."""
         for child in collection.children:
             if child.library:
@@ -186,9 +186,10 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         return len(match_count) > 1
 
-    def _get_library_by_prev_libpath(self, container: Dict) -> bpy.types.Library:
+    def _get_library_by_prev_libpath(
+            self, container: Dict) -> Union[bpy.types.Library, None]:
         """Get the library by filename."""
         lib_path = container["libpath"]
         for library in bpy.data.libraries:
-            if lib_path in library.filepath:
+            if lib_path == library.filepath:
                 return library
