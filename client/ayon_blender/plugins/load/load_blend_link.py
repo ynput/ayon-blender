@@ -188,7 +188,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def _get_library_by_prev_libpath(self, container: Dict) -> bpy.types.Library:
         """Get the library by filename."""
-        lib_path = container["lib_path"]
+        lib_path = container["libpath"]
         for library in bpy.data.libraries:
             if lib_path in library.filepath:
                 return library
