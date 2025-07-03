@@ -1,10 +1,9 @@
 import bpy
-import os
 from typing import Dict, List, Optional, Union
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
-from ayon_core.pipeline import AVALON_CONTAINER_ID
+from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api.plugin_load import (
     add_override,
     load_collection
@@ -81,67 +80,46 @@ class BlendLinkLoader(plugin.BlenderLoader):
         if not avalon_container:
             avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
             bpy.context.scene.collection.children.link(avalon_container)
-
+        library = self._get_library_from_collection(loaded_collection)
         avalon_container.children.link(loaded_collection)
         data = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
             "libpath": filepath,
-            "objectName": group_name,
             "project_name": context["project"]["name"],
+            "loaded_collection": loaded_collection
         }
 
-        loaded_collection[AVALON_PROPERTY] = data
+        library[AVALON_PROPERTY] = data
+        library.name = container_name
         # TODO: Store loader options for later use (e.g. on update)
         # Store the loader options on the container for later use if needed.
-
-        collections = [
-            coll for coll in bpy.data.collections
-            if coll.name.startswith(f"{group_name}:")
-        ]
-
-        self[:] = collections
-
-        return collections
+        return [library]
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset. """
         repre = context["representation"]
-        collection = container["node"]
+        library = container["node"]
         # currently updating version only applicable to the single asset
         # it does not support for versioning in multiple assets
-        library = (
-            self._get_library_from_collection(collection)
-            or self._get_library_by_prev_libpath(container)
-        )
         filepath = self.filepath_from_context(context)
-        new_filename = os.path.basename(filepath)
-
         # Update library filepath and reload it if there is library
-        if library:
-            library.name = new_filename
-            library.filepath = filepath
-            library.reload()
+        library.filepath = filepath
+        library.reload()
 
         # refresh UI
         bpy.context.view_layer.update()
         # Update container metadata
-        updated_data = {
-            "representation": str(repre["id"]),
-            "lib_path": filepath
-        }
-
-        # Update container metadata
-        metadata_update(collection, updated_data)
+        metadata_update(library, {"representation": str(repre["id"])})
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
-        collection = container["node"]
-        library = self._get_library_from_collection(collection)
+        library = container["node"]
+        collection = container["loaded_collection"]
         if library:
             linked_to_coll = self._has_linked_to_existing_collections(library)
             if not linked_to_coll:
@@ -175,7 +153,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         scene loader linked to the same library.
         """
         existing_collections = [
-            container["node"] for container in ls()
+            container["loaded_collection"] for container in ls()
             if container["loader"] == str(
                 self.__class__.__name__)
         ]
@@ -185,11 +163,3 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
 
         return len(match_count) > 1
-
-    def _get_library_by_prev_libpath(
-            self, container: Dict) -> Union[bpy.types.Library, None]:
-        """Get the library by filename."""
-        lib_path = container["libpath"]
-        for library in bpy.data.libraries:
-            if lib_path == library.filepath:
-                return library
