@@ -38,14 +38,12 @@ class CreateUSD(plugin.BlenderCreator):
             bpy.context.scene.collection.objects.link(geo)
             geo.parent = root
 
-            # Parent members with geo and remove them from selection
+            # Parent members with geo.
             for obj in objects:
                 obj.parent = geo
-                obj.select_set(False)
 
-            # Select root
-            root.select_set(True)
-            objects = [root]      
+            # Override the objects list to include only the root object.
+            objects = [root]    
 
         for obj in objects:
             collection.objects.link(obj)
