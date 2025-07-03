@@ -23,7 +23,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):
         members = [instance_node]
         if isinstance(instance_node, bpy.types.Collection):
             members.extend(instance_node.objects)
-            members.extend(instance_node.children)
+            members.extend(instance_node.children_recursive)
 
             # Special case for animation instances, include armatures
             if instance.data["productType"] == "animation":
