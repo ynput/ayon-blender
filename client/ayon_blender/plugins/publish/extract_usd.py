@@ -54,7 +54,10 @@ class ExtractUSD(plugin.BlenderExtractor,
         # Export USD
         with bpy.context.temp_override(**context):
             bpy.ops.wm.usd_export(
+                # Override the `/root` default value. If left as an empty 
+                # string, Blender will use the top-level object as the root prim.
                 filepath=filepath,
+                root_prim_path="",  
                 selected_objects_only=True,
                 export_textures=False,
                 relative_paths=False,
