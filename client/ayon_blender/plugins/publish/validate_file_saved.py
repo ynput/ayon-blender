@@ -63,7 +63,7 @@ class ValidateFileSaved(
 
         # Check if ayon-core version is >=1.4.1, if so this validation is
         # superseded by ValidateCurrentSaveFile in ayon-core.
-        if ayon_core_version > semver.VersionInfo(1, 3, 0):
+        if ayon_core_version > semver.VersionInfo(1, 4, 0):
             self.log.debug(
                 "Skipping workfile saved validation in favor of equivalent"
                 f"validation in ayon-core {ayon_core_version}"
