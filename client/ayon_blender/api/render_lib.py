@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional
 import bpy
 
 from ayon_core.settings import get_project_settings
@@ -7,20 +8,16 @@ from ayon_core.pipeline import get_current_project_name
 from . import lib
 
 
-def get_default_render_folder(settings):
+def get_default_render_folder(project_settings) -> str:
     """Get default render folder from blender settings."""
+    return project_settings["blender"]["RenderSettings"][
+        "default_render_image_folder"
+    ]
 
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["default_render_image_folder"])
 
-
-def get_aov_separator(settings):
+def get_aov_separator(project_settings) -> str:
     """Get aov separator from blender settings."""
-
-    aov_sep = (settings["blender"]
-                       ["RenderSettings"]
-                       ["aov_separator"])
+    aov_sep = project_settings["blender"]["RenderSettings"]["aov_separator"]
 
     if aov_sep == "dash":
         return "-"
@@ -32,76 +29,29 @@ def get_aov_separator(settings):
         raise ValueError(f"Invalid aov separator: {aov_sep}")
 
 
-def get_image_format(settings):
+def get_image_format(project_settings) -> str:
     """Get image format from blender settings."""
-
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["image_format"])
+    return project_settings["blender"]["RenderSettings"]["image_format"]
 
 
-def get_multilayer(settings):
+def get_multilayer(project_settings) -> bool:
     """Get multilayer from blender settings."""
-
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["multilayer_exr"])
+    return project_settings["blender"]["RenderSettings"]["multilayer_exr"]
 
 
-def get_renderer(settings):
+def get_renderer(project_settings) -> str:
     """Get renderer from blender settings."""
-
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["renderer"])
+    return project_settings["blender"]["RenderSettings"]["renderer"]
 
 
-def get_compositing(settings):
-    """Get compositing from blender settings."""
-
-    return (settings["blender"]
-                    ["RenderSettings"]
-                    ["compositing"])
+def get_compositing(project_settings) -> bool:
+    """Get whether 'Composite' render is enabled from blender settings."""
+    return project_settings["blender"]["RenderSettings"]["compositing"]
 
 
-def get_render_product(output_path, name, aov_sep, view_layers, multiexr=False):
-    """
-    Generate the path to the render product. Blender interprets the `#`
-    as the frame number, when it renders.
-
-    Args:
-        file_path (str): The path to the blender scene.
-        render_folder (str): The render folder set in settings.
-        file_name (str): The name of the blender scene.
-        instance (pyblish.api.Instance): The instance to publish.
-        ext (str): The image format to render.
-    """
-    beauty_render_product = {}
-    if multiexr:
-        vl_name = "_"
-        beauty_render_product[vl_name] = []
-        output_dir = Path(output_path)
-        filepath = output_dir / name.lstrip("/")
-        render_product = f"{filepath}{aov_sep}beauty.####"
-        beauty_render_product[vl_name].append(
-            ("beauty", os.path.normpath(render_product)))
-    else:
-        for view_layer in view_layers:
-            vl_name = view_layer.name
-            beauty_render_product[vl_name] = []
-            output_dir = Path(f"{output_path}/{vl_name}")
-            filepath = output_dir / name.lstrip("/")
-            render_product = f"{filepath}_{vl_name}{aov_sep}beauty.####"
-            beauty_render_product[vl_name].append(
-                ("beauty", os.path.normpath(render_product)))
-
-    return beauty_render_product
-
-
-def set_render_format(ext, multilayer):
-    # Set Blender to save the file with the right extension
+def set_render_format(ext: str, multilayer: bool):
+    """Set Blender scene to save render file with the right extension"""
     bpy.context.scene.render.use_file_extension = True
-
     image_settings = bpy.context.scene.render.image_settings
 
     if ext == "exr":
@@ -123,7 +73,40 @@ def set_render_format(ext, multilayer):
         image_settings.file_format = "TIFF"
 
 
+def get_file_format_extension(file_format: str) -> str:
+    """Convert Blender file format to file extension."""
+    # TODO: Figure out if Blender has a native way to convert to extensions
+    if file_format == "OPEN_EXR_MULTILAYER":
+        return "exr"
+    elif file_format == "OPEN_EXR":
+        return "exr"
+    elif file_format == "BMP":
+        return "bmp"
+    elif file_format == "IRIS":
+        return "rgb"
+    elif file_format == "PNG":
+        return "png"
+    elif file_format == "JPEG":
+        return "jpeg"
+    elif file_format == "JPEG2000":
+        return "jp2"
+    elif file_format == "TARGA":
+        return "tga"
+    elif file_format == "TIFF":
+        return "tif"
+    else:
+        raise ValueError(f"Unsupported file format: {file_format}")
+
+
 def set_render_passes(settings, renderer, view_layers):
+    """Set render passes for the current view layer
+
+    Args:
+        settings (dict): The project settings.
+        renderer (str): The renderer to use, either CYCLES or BLENDER_EEVEE.
+        view_layers (list[bpy.types.ViewLayer]): The list of view layers to
+        set the passes for.
+    """
     aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     existing_aov_list = set(existing_aov_options(renderer, view_layers))
     aov_list = aov_list.union(existing_aov_list)
@@ -133,11 +116,11 @@ def set_render_passes(settings, renderer, view_layers):
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
-            eevee_attrs = [
+            eevee_attrs: set[str] = {
                 "use_pass_bloom",
                 "use_pass_transparent",
                 "use_pass_volume_direct"
-            ]
+            }
             for pass_name, attr in aov_options.items():
                 target = vl.eevee if attr in eevee_attrs else vl
                 ver_major, ver_minor, _ = lib.get_blender_version()
@@ -148,29 +131,30 @@ def set_render_passes(settings, renderer, view_layers):
         elif renderer == "CYCLES":
             # Cycles exclusive passes
             aov_options = get_aov_options(renderer)
-            cycle_attrs = [
+            cycle_attrs: set[str] = {
                 "denoising_store_passes", "pass_debug_sample_count",
                 "use_pass_volume_direct", "use_pass_volume_indirect",
                 "use_pass_shadow_catcher"
-            ]
+            }
             for pass_name, attr in aov_options.items():
                 target = vl.cycles if attr in cycle_attrs else vl
                 setattr(target, attr, pass_name in aov_list)
 
-        aovs_names = [aov.name for aov in vl.aovs]
-        for cp in custom_passes:
-            cp_name = cp["attribute"]
-            if cp_name not in aovs_names:
+        aovs_names: set[str] = {aov.name for aov in vl.aovs}
+        for custom_pass in custom_passes:
+            custom_pass_name = custom_pass["attribute"]
+            if custom_pass_name not in aovs_names:
                 aov = vl.aovs.add()
-                aov.name = cp_name
+                aov.name = custom_pass_name
             else:
-                aov = vl.aovs[cp_name]
-            aov.type = cp["value"]
+                aov = vl.aovs[custom_pass_name]
+            aov.type = custom_pass["value"]
 
     return list(aov_list), custom_passes
 
 
-def get_aov_options(renderer):
+def get_aov_options(renderer: str) -> dict[str, str]:
+    """Return the available AOV options based on the renderer name."""
     aov_options = {
         "combined": "use_pass_combined",
         "z": "use_pass_z",
@@ -186,7 +170,7 @@ def get_aov_options(renderer):
         "cryptomatte_object": "use_pass_cryptomatte_object",
         "cryptomatte_material": "use_pass_cryptomatte_material",
         "cryptomatte_asset": "use_pass_cryptomatte_asset",
-        }
+    }
     if renderer == "BLENDER_EEVEE":
         eevee_options = {
             "shadow": "use_pass_shadow",
@@ -219,7 +203,9 @@ def get_aov_options(renderer):
     return aov_options
 
 
-def existing_aov_options(renderer, view_layers):
+def existing_aov_options(
+    renderer: str, view_layers: list["bpy.types.ViewLayer"]
+) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
     for vl in view_layers:
@@ -244,17 +230,40 @@ def existing_aov_options(renderer, view_layers):
     return aov_list
 
 
-def _create_aov_slot(name, aov_sep, slots, rpass_name, multi_exr, output_path, render_layer):
-    filename = f"{render_layer}/{name}_{render_layer}{aov_sep}{rpass_name}.####"
-    slot = slots.new(rpass_name if multi_exr else filename)
-    filepath = str(output_path / filename.lstrip("/"))
+def _create_aov_slot(
+    slots: "bpy.types.RenderSlots",
+    variant_name: str,
+    aov_sep: str,
+    renderpass_name: str,
+    is_multi_exr: bool,
+    render_layer: str,
+) -> "bpy.types.RenderSlot":
+    """Add a new render output slot to the slots.
 
-    return slot, filepath
+    The slots usually are the file slots of the compositor output node.
+    The filepath is based on the render layer, variant name and render pass.
+
+    If it's multi-exr, the slot will be named after the render pass only.
+
+    Returns:
+        The created slot
+
+    """
+    filename = (
+        f"{render_layer}/"
+        f"{variant_name}_{render_layer}{aov_sep}{renderpass_name}.####"
+    )
+    return slots.new(renderpass_name if is_multi_exr else filename)
 
 
 def set_node_tree(
-    output_path, name, aov_sep, ext, multilayer, compositing,
-    view_layers
+    output_path: Path,
+    variant_name: str,
+    aov_sep: str,
+    ext: str,
+    multilayer: bool,
+    compositing: bool,
+    view_layers: list["bpy.types.ViewLayer"],
 ):
     # Set the scene to use the compositor node tree to render
     bpy.context.scene.use_nodes = True
@@ -265,165 +274,162 @@ def set_node_tree(
     output_type = "CompositorNodeOutputFile"
     compositor_type = "CompositorNodeComposite"
 
-    # Get the Render Layer, Composite and the previous output nodes
-    render_layer_nodes = set()
-    composite_node = None
-    old_output_node = None
+    # Get the existing render layer nodes
+    render_layer_nodes: set["bpy.types.CompositorNodeRLayers"] = set()
     for node in tree.nodes:
         if node.bl_idname == comp_layer_type:
             render_layer_nodes.add(node)
-        elif node.bl_idname == compositor_type:
-            composite_node = node
-        elif node.bl_idname == output_type and "AYON" in node.name:
-            old_output_node = node
-        if render_layer_nodes and composite_node and old_output_node:
-            break
 
-    # If there's not a Render Layers node, we create it
+    # If there's no a Render Layers nodes, we create it
     if not render_layer_nodes:
-        render_layer_nodes = create_node_with_new_view_layers(
-            tree, comp_layer_type,
-            view_layers, render_layer_nodes
+        render_layer_nodes = create_renderlayer_node_with_new_view_layers(
+            tree, view_layers
         )
     else:
-        missing_render_layer_nodes = set()
         orig_view_layers = {view_layer.name for view_layer in view_layers}
-        missing_view_layers_by_nodes = {node.layer for node in render_layer_nodes}
-        missing_view_layers_set = orig_view_layers - missing_view_layers_by_nodes
+        missing_view_layers_by_nodes = {
+            node.layer for node in render_layer_nodes
+        }
+        missing_view_layers_set = (
+            orig_view_layers - missing_view_layers_by_nodes
+        )
         missing_view_layers = [
             view_layer for view_layer in view_layers
             if view_layer.name in missing_view_layers_set
         ]
-        missing_render_layer_nodes = create_node_with_new_view_layers(
-            tree, comp_layer_type,
-            missing_view_layers, missing_render_layer_nodes
-        )
-        render_layer_nodes.update(missing_render_layer_nodes)
+        if missing_view_layers:
+            render_layer_nodes.update(
+                create_renderlayer_node_with_new_view_layers(
+                    tree,
+                    missing_view_layers,
+                )
+            )
 
-    # Get the enabled output sockets, that are the active passes for the
-    # render.
-    # We also exclude some layers.
-    exclude_sockets = ["Image", "Alpha", "Noisy Image"]
-    render_aovs_dict = {}
-    for render_layer_node in render_layer_nodes:
-        render_dict = {
-            render_layer_node: [
-            socket
-            for socket in render_layer_node.outputs
-            if socket.enabled and socket.name not in exclude_sockets
-        ]
-    }
-        render_aovs_dict.update(render_dict)
+    # Get existing 'Composite' and the previous AYON File Output nodes
+    composite_node = None
+    old_output_node = None
+    for node in tree.nodes:
+        if node.bl_idname == compositor_type:
+            composite_node = node
+        elif node.bl_idname == output_type and "AYON" in node.name:
+            old_output_node = node
+        if composite_node and old_output_node:
+            break
+
+    old_links = {}
+    if old_output_node is not None:
+        old_links = {
+            link.from_socket.name: link
+            for link in tree.links
+            if link.to_node == old_output_node
+        }
+
     # Create a new output node
-    output = tree.nodes.new(output_type)
+    output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
+    output.name = "AYON File Output"
+    output.label = "AYON File Output"
 
+    # Match output format from scene file format
     image_settings = bpy.context.scene.render.image_settings
     output.format.file_format = image_settings.file_format
 
-    slots = None
+    multi_exr: bool = ext == "exr" and multilayer
 
-    # In case of a multilayer exr, we don't need to use the output node,
-    # because the blender render already outputs a multilayer exr.
-    multi_exr = ext == "exr" and multilayer
     slots = output.layer_slots if multi_exr else output.file_slots
-
-    rn_layer_node = next((node for node in reversed(render_aovs_dict.keys())), None)
-    output_dir = Path(output_path)
-    filepath = output_dir / name.lstrip("/")
-    render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
-
-    output.base_path = render_product_main_beauty if multi_exr else str(output_path)
-
     slots.clear()
 
-    aov_file_products = {}
-
-    old_links = {
-        link.from_socket.name: link for link in tree.links
-        if link.to_node == old_output_node}
+    # Define the base path for the File Output node.
+    output_dir = Path(output_path)
+    filepath = output_dir / variant_name.lstrip("/")
+    render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
+    output.base_path = (
+        render_product_main_beauty if multi_exr else str(output_path)
+    )
 
     # Create a new socket for the beauty output
-    pass_name = "rgba" if multi_exr else "beauty"
-    for render_layer_node in render_aovs_dict.keys():
+    pass_name = "beauty"
+    for render_layer_node in render_layer_nodes:
         render_layer = render_layer_node.layer
-        slot, _ = _create_aov_slot(
-            name, aov_sep, slots, pass_name, multi_exr, output_path, render_layer)
+        slot = _create_aov_slot(
+            slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
+        )
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
-    if compositing:
+    last_found_renderlayer_node = next(
+        (node for node in reversed(list(render_layer_nodes))), None
+    )
+    if compositing and last_found_renderlayer_node:
         # Create a new socket for the composite output
         # with only the one view layer
         pass_name = "composite"
-        if rn_layer_node:
-            render_layer = rn_layer_node.layer
-            aov_file_products[render_layer] = []
-            comp_socket, filepath = _create_aov_slot(
-                name, aov_sep, slots, pass_name, multi_exr, output_path, render_layer)
-            aov_file_products[render_layer].append((pass_name, filepath))
-            # If there's a composite node, we connect its input with the new output
-            if composite_node:
-                for link in tree.links:
-                    if link.to_node == composite_node:
-                        tree.links.new(link.from_socket, comp_socket)
-                        break
+        render_layer = last_found_renderlayer_node.layer
+        slot = _create_aov_slot(
+            slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
+        )
+        # If there's a composite node, we connect its 'Image' input with the
+        # new slot on the output
+        if composite_node:
+            for link in composite_node.inputs["Image"].links:
+                tree.links.new(link.from_socket, slot)
+                break
 
-        # For each active render pass, we add a new socket to the output node
-        # and link it
-        for render_layer_node, passes in render_aovs_dict.items():
-            render_layer = render_layer_node.layer
-            if not aov_file_products.get(render_layer, []):
-                aov_file_products[render_layer] = []
-            for rpass in passes:
-                slot, filepath = _create_aov_slot(
-                    name, aov_sep, slots, rpass.name, multi_exr, output_path, render_layer)
+    # For each active render pass, we add a new socket to the output node
+    # and link it
+    exclude_sockets: set[str] = {"Image", "Alpha", "Noisy Image"}
+    for render_layer_node in render_layer_nodes:
+        # Get the enabled output sockets, that are the active passes for the
+        # render.
+        render_layer = render_layer_node.layer
+        for output_socket in render_layer_node.outputs:
+            if output_socket.name in exclude_sockets:
+                continue
 
-                aov_file_products[render_layer].append((rpass.name, filepath))
+            if not output_socket.enabled:
+                continue
 
-                # If the rpass was not connected with the old output node, we connect
-                # it with the new one.
-                if not old_links.get(rpass.name):
-                    tree.links.new(rpass, slot)
+            slot = _create_aov_slot(
+                slots,
+                variant_name,
+                aov_sep,
+                output_socket.name,
+                multi_exr,
+                render_layer,
+            )
 
-        for link in list(old_links.values()):
-            # Check if the socket is still available in the new output node.
-            socket = output.inputs.get(link.to_socket.name)
-            # If it is, we connect it with the new output node.
-            if socket:
-                tree.links.new(link.from_socket, socket)
-            # Then, we remove the old link.
-            tree.links.remove(link)
+            # If the renderpass was not connected with the old output node,
+            # we connect it with the new one.
+            if not old_links.get(output_socket.name):
+                tree.links.new(output_socket, slot)
+
+    for link in list(old_links.values()):
+        # Check if the socket is still available in the new output node.
+        output_socket = output.inputs.get(link.to_socket.name)
+        # If it is, we connect it with the new output node.
+        if output_socket:
+            tree.links.new(link.from_socket, output_socket)
+        # Then, we remove the old link.
+        tree.links.remove(link)
 
     if old_output_node:
         output.location = old_output_node.location
         tree.nodes.remove(old_output_node)
 
-    output.name = "AYON File Output"
-    output.label = "AYON File Output"
 
-    return {} if multi_exr else aov_file_products
-
-
-def imprint_render_settings(node, data):
-    RENDER_DATA = "render_data"
-    if not node.get(RENDER_DATA):
-        node[RENDER_DATA] = {}
-    for key, value in data.items():
-        if value is None:
-            continue
-        node[RENDER_DATA][key] = value
-
-
-
-def create_node_with_new_view_layers(tree, comp_layer_type, view_layers, render_layer_nodes):
+def create_renderlayer_node_with_new_view_layers(
+        tree: "bpy.types.CompositorNodeTree",
+        view_layers: list["bpy.types.ViewLayer"],
+) -> set[bpy.types.CompositorNodeRLayers]:
+    """For each view layer, create a new render layer node."""
+    render_layer_nodes = set()
     for view_layer in view_layers:
-        render_layer_node = tree.nodes.new(comp_layer_type)
+        render_layer_node = tree.nodes.new("CompositorNodeRLayers")
         render_layer_node.layer = view_layer.name
         render_layer_nodes.add(render_layer_node)
     return render_layer_nodes
 
 
-def prepare_rendering(asset_group):
-    name = asset_group.name
+def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None):
+    """Initialize render setup using render settings from project settings."""
 
     filepath = Path(bpy.data.filepath)
     assert filepath, "Workfile not saved. Please save the file first."
@@ -431,76 +437,38 @@ def prepare_rendering(asset_group):
     dirpath = filepath.parent
     file_name = Path(filepath.name).stem
 
-    project = get_current_project_name()
-    settings = get_project_settings(project)
+    if project_settings is None:
+        project_name: str = get_current_project_name()
+        project_settings = get_project_settings(project_name)
 
-    render_folder = get_default_render_folder(settings)
-    aov_sep = get_aov_separator(settings)
-    ext = get_image_format(settings)
-    multilayer = get_multilayer(settings)
-    renderer = get_renderer(settings)
+    render_folder = get_default_render_folder(project_settings)
+    aov_sep = get_aov_separator(project_settings)
+    ext = get_image_format(project_settings)
+    multilayer = get_multilayer(project_settings)
+    renderer = get_renderer(project_settings)
     ver_major, ver_minor, _ = lib.get_blender_version()
     if renderer == "BLENDER_EEVEE" and (
         ver_major >= 4 and ver_minor >=2
     ):
         renderer = "BLENDER_EEVEE_NEXT"
-    compositing = get_compositing(settings)
+    compositing = get_compositing(project_settings)
 
+    # Set scene render settings
     set_render_format(ext, multilayer)
     bpy.context.scene.render.engine = renderer
     view_layers = bpy.context.scene.view_layers
-    aov_list, custom_passes = set_render_passes(settings, renderer, view_layers)
+    set_render_passes(project_settings, renderer, view_layers)
 
+    # Generate Compositing nodes
     output_path = Path.joinpath(dirpath, render_folder, file_name)
-
-    render_product = get_render_product(
-        output_path, name, aov_sep, view_layers, multiexr=multilayer
-    )
-    aov_file_product = set_node_tree(
-        output_path, name, aov_sep, ext,
+    set_node_tree(
+        output_path, variant_name, aov_sep, ext,
         multilayer, compositing, view_layers
     )
 
-    # Clear the render filepath, so that the output is handled only by the
-    # output node in the compositor.
+    # Clear the scene render filepath, so that the outputs are handled only by
+    # the file output nodes in the compositor.
     tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
     tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
-    bpy.context.scene.render.filepath = f"{tmp_render_path}/"
-    render_settings = {
-        "render_folder": render_folder,
-        "aov_separator": aov_sep,
-        "image_format": ext,
-        "multilayer_exr": multilayer,
-        "aov_list": aov_list,
-        "custom_passes": custom_passes,
-        "render_product": render_product,
-        "aov_file_product": aov_file_product,
-        "review": True,
-    }
-
-    imprint_render_settings(asset_group, render_settings)
-
-
-def update_render_product(name, output_path, render_product, aov_sep, multilayer=False):
-    tmp_render_product = {}
-    if multilayer:
-        rl_name = "_"
-        tmp_render_product[rl_name] = []
-        rn_product = render_product[rl_name]
-        for rpass_name, _ in rn_product:
-            filename = f"{name}{aov_sep}{rpass_name}.####"
-            filepath = str(output_path / filename.lstrip("/"))
-            tmp_render_product[rl_name].append((rpass_name, filepath))
-    else:
-        render_layers = bpy.context.scene.view_layers
-        for render_layer in render_layers:
-            rl_name = render_layer.name
-            tmp_render_product[rl_name] = []
-            rn_product = render_product[rl_name]
-            for rpass_name, _ in rn_product:
-                filename = f"{rl_name}/{name}_{rl_name}{aov_sep}{rpass_name}.####"
-                filepath = str(output_path / filename.lstrip("/"))
-                tmp_render_product[rl_name].append((rpass_name, filepath))
-
-    return tmp_render_product
+    bpy.context.scene.render.filepath = tmp_render_path
