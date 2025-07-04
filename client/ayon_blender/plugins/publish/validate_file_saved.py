@@ -74,5 +74,6 @@ class ValidateFileSaved(
             # File has not been saved at all and has no filename
             raise PublishValidationError(
                 "Current workfile has not been saved yet.\n"
-                "Save the workfile before continuing."
+                "Save the workfile before continuing.",
+                title="Validate File Saved",
             )
