@@ -6,7 +6,7 @@ from typing import Callable, Dict, Iterator, List, Optional
 import bpy
 
 import pyblish.api
-import ayon_api
+from typing import Union
 
 from ayon_core.host import (
     HostBase,
@@ -16,19 +16,22 @@ from ayon_core.host import (
 )
 from ayon_core.pipeline import (
     schema,
-    get_current_project_name,
-    get_current_folder_path,
     register_loader_plugin_path,
     register_creator_plugin_path,
     deregister_loader_plugin_path,
     deregister_creator_plugin_path,
     AVALON_CONTAINER_ID,
     AYON_CONTAINER_ID,
+    get_current_project_name
+)
+from ayon_core.pipeline.context_tools import (
+    get_current_task_entity
 )
 from ayon_core.lib import (
     Logger,
     register_event_callback,
-    emit_event
+    emit_event,
+    filter_profiles
 )
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
@@ -176,7 +179,6 @@ def install():
     register_event_callback("open", on_open)
 
     _register_callbacks()
-    _register_events()
 
     if not IS_HEADLESS:
         ops.register()
@@ -220,76 +222,126 @@ def message_window(title, message):
     _process_app_events()
 
 
-def get_folder_attributes():
-    project_name = get_current_project_name()
-    folder_path = get_current_folder_path()
-    folder_entity = ayon_api.get_folder_by_path(project_name, folder_path)
+def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
+    """Get the task entity's frame range and handles
 
-    return folder_entity["attrib"]
+    Args:
+        task_entity (Optional[dict]): Task Entity.
+            When not provided defaults to current context task.
+
+    Returns:
+        Union[Dict[str, int], None]: Dictionary with
+            frame start, frame end, handle start, handle end.
+    """
+    # Set frame start/end
+    if task_entity is None:
+        task_entity = get_current_task_entity(fields={"attrib"})
+    task_attributes = task_entity["attrib"]
+    frame_start = int(task_attributes["frameStart"])
+    frame_end = int(task_attributes["frameEnd"])
+    handle_start = int(task_attributes["handleStart"])
+    handle_end = int(task_attributes["handleEnd"])
+    frame_start_handle = frame_start - handle_start
+    frame_end_handle = frame_end + handle_end
+
+    return {
+        "frameStart": frame_start,
+        "frameEnd": frame_end,
+        "handleStart": handle_start,
+        "handleEnd": handle_end,
+        "frameStartHandle": frame_start_handle,
+        "frameEndHandle": frame_end_handle,
+    }
 
 
-def set_frame_range(data):
+def set_frame_range(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
-    frameStart = scene.frame_start
-    frameEnd = scene.frame_end
+    frame_start = scene.frame_start
+    frame_end = scene.frame_end
     fps = scene.render.fps / scene.render.fps_base
 
-    if not data:
+    if not entity:
         return
 
-    if data.get("frameStart"):
-        frameStart = data.get("frameStart")
-    if data.get("frameEnd"):
-        frameEnd = data.get("frameEnd")
-    if data.get("fps"):
-        fps = data.get("fps")
+    attrib = entity["attrib"]
+    if attrib.get("frameStart"):
+        frame_start = attrib.get("frameStart")
+    if attrib.get("frameEnd"):
+        frame_end = attrib.get("frameEnd")
+    if attrib.get("fps"):
+        fps = attrib.get("fps")
 
-    scene.frame_start = frameStart
-    scene.frame_end = frameEnd
+    # Should handles be included, defined by settings
+    settings = get_project_settings(get_current_project_name())
+    task_type = entity.get("taskType")
+    include_handles_settings = settings["blender"]["include_handles"]
+    include_handles = include_handles_settings["include_handles_default"]
+    profile = filter_profiles(
+        include_handles_settings["profiles"],
+        key_values={
+            "task_types": task_type,
+            "task_names": entity["name"]
+        }
+    )
+    if profile:
+        include_handles = profile["include_handles"]
+    if include_handles:
+        frame_start -= int(attrib.get("handleStart", 0))
+        frame_end += int(attrib.get("handleEnd", 0))
+
+    scene.frame_start = frame_start
+    scene.frame_end = frame_end
     scene.render.fps = round(fps)
     scene.render.fps_base = round(fps) / fps
 
 
-def set_resolution(data):
+def set_resolution(entity: dict):
     scene = bpy.context.scene
 
     # Default scene settings
     resolution_x = scene.render.resolution_x
     resolution_y = scene.render.resolution_y
 
-    if not data:
+    if not entity:
         return
 
-    if data.get("resolutionWidth"):
-        resolution_x = data.get("resolutionWidth")
-    if data.get("resolutionHeight"):
-        resolution_y = data.get("resolutionHeight")
+    attrib = entity["attrib"]
+    if attrib.get("resolutionWidth"):
+        resolution_x = attrib.get("resolutionWidth")
+    if attrib.get("resolutionHeight"):
+        resolution_y = attrib.get("resolutionHeight")
 
     scene.render.resolution_x = resolution_x
     scene.render.resolution_y = resolution_y
 
 
+def set_unit_scale_from_settings(unit_scale_settings=None):
+    if unit_scale_settings is None:
+        return
+    unit_scale_enabled = unit_scale_settings.get("enabled")
+    if unit_scale_enabled:
+        unit_scale = unit_scale_settings["base_file_unit_scale"]
+        bpy.context.scene.unit_settings.scale_length = unit_scale
+
+
 def on_new():
-    project = os.environ.get("AYON_PROJECT_NAME")
+    project = get_current_project_name()
     settings = get_project_settings(project).get("blender")
 
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_folder_attributes()
+    task_entity = get_current_task_entity()
 
     if set_resolution_startup:
-        set_resolution(data)
+        set_resolution(task_entity)
     if set_frames_startup:
-        set_frame_range(data)
+        set_frame_range(task_entity)
 
     unit_scale_settings = settings.get("unit_scale_settings")
-    unit_scale_enabled = unit_scale_settings.get("enabled")
-    if unit_scale_enabled:
-        unit_scale = unit_scale_settings.get("base_file_unit_scale")
-        bpy.context.scene.unit_settings.scale_length = unit_scale
+    set_unit_scale_from_settings(unit_scale_settings=unit_scale_settings)
 
 
 def on_open():
@@ -299,12 +351,12 @@ def on_open():
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
-    data = get_folder_attributes()
+    task_entity = get_current_task_entity()
 
     if set_resolution_startup:
-        set_resolution(data)
+        set_resolution(task_entity)
     if set_frames_startup:
-        set_frame_range(data)
+        set_frame_range(task_entity)
 
     unit_scale_settings = settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
@@ -367,27 +419,6 @@ def _register_callbacks():
     log.info("Installed event handler _on_save_pre...")
     log.info("Installed event handler _on_save_post...")
     log.info("Installed event handler _on_load_post...")
-
-
-def _on_task_changed():
-    """Callback for when the task in the context is changed."""
-
-    # TODO (jasper): Blender has no concept of projects or workspace.
-    # It would be nice to override 'bpy.ops.wm.open_mainfile' so it takes the
-    # workdir as starting directory.  But I don't know if that is possible.
-    # Another option would be to create a custom 'File Selector' and add the
-    # `directory` attribute, so it opens in that directory (does it?).
-    # https://docs.blender.org/api/blender2.8/bpy.types.Operator.html#calling-a-file-selector
-    # https://docs.blender.org/api/blender2.8/bpy.types.WindowManager.html#bpy.types.WindowManager.fileselect_add
-    workdir = os.getenv("AYON_WORKDIR")
-    log.debug("New working directory: %s", workdir)
-
-
-def _register_events():
-    """Install callbacks for specific events."""
-
-    register_event_callback("taskChanged", _on_task_changed)
-    log.info("Installed event callback for 'taskChanged'...")
 
 
 def _discover_gui() -> Optional[Callable]:
@@ -523,6 +554,7 @@ def containerise_existing(
         "namespace": namespace or '',
         "loader": str(loader),
         "representation": context["representation"]["id"],
+        "project_name": context["project"]["name"],
     }
 
     metadata_update(container, data)
@@ -548,6 +580,7 @@ def parse_container(container: bpy.types.Collection,
 
     # Append transient data
     data["objectName"] = container.name
+    data["node"] = container  # store parsed object for easy access in loader
 
     if validate:
         schema.validate(data)
@@ -562,10 +595,42 @@ def ls() -> Iterator:
     disk, it lists assets already loaded in Blender; once loaded they are
     called containers.
     """
+    container_ids = {
+        AYON_CONTAINER_ID,
+        # Backwards compatibility
+        AVALON_CONTAINER_ID
+    }
 
-    for id_type in {AYON_CONTAINER_ID, AVALON_CONTAINER_ID}:
+    for id_type in container_ids:
         for container in lib.lsattr("id", id_type):
             yield parse_container(container)
+
+    # Compositor nodes are not in `bpy.data` that `lib.lsattr` looks in.
+    node_tree = bpy.context.scene.node_tree
+    if node_tree:
+        for node in node_tree.nodes:
+            if not node.get(AVALON_PROPERTY):
+                continue
+
+            if node.get(AVALON_PROPERTY).get("id") not in container_ids:
+                continue
+
+            yield parse_container(node)
+
+    # Shader nodes are not available in a way that `lib.lsattr` can find.
+    for material in bpy.data.materials:
+        material_node_tree = material.node_tree
+        if not material_node_tree:
+            continue
+
+        for shader_node in material_node_tree.nodes:
+            if not shader_node.get(AVALON_PROPERTY):
+                continue
+
+            if shader_node.get(AVALON_PROPERTY).get("id") not in container_ids:
+                continue
+
+            yield parse_container(shader_node)
 
 
 def publish():

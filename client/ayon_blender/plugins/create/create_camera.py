@@ -40,3 +40,7 @@ class CreateCamera(plugin.BlenderCreator):
             camera_obj.parent = asset_group
 
         return asset_group
+
+    def get_instance_attr_defs(self):
+        defs = lib.collect_animation_defs(self.create_context)
+        return defs

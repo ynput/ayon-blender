@@ -132,10 +132,7 @@ def safe_copy_file(src_path: str, dst_path: str):
         return
 
     dst_dir: str = os.path.dirname(dst_path)
-    try:
-        os.makedirs(dst_dir)
-    except Exception:
-        pass
+    os.makedirs(dst_dir, exist_ok=True)
 
     shutil.copy2(src_path, dst_path)
 
@@ -355,6 +352,8 @@ def copy_addon_package(
     # Copy server content
     for src_file, dst_subpath in files_mapping:
         dst_path: str = os.path.join(addon_output_dir, dst_subpath)
+        dst_dir: str = os.path.dirname(dst_path)
+        os.makedirs(dst_dir, exist_ok=True)
         if isinstance(src_file, io.BytesIO):
             with open(dst_path, "wb") as stream:
                 stream.write(src_file.getvalue())

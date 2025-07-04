@@ -16,7 +16,15 @@ class CollectWorkfile(plugin.BlenderInstancePlugin):
         """Process collector."""
 
         context = instance.context
-        filepath = Path(context.data["currentFile"])
+        filepath = context.data.get("currentFile")
+        if not filepath:
+            self.log.warning("Deactivating workfile instance because no "
+                             "current filepath is found. Please save your "
+                             "workfile.")
+            instance.data["publish"] = False
+            return
+
+        filepath = Path(filepath)
         ext = filepath.suffix
 
         instance.data.update(
