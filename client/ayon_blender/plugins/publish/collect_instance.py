@@ -17,7 +17,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):
     inside the Collection (it does not recurse into nested collections).
 
     For an Object (e.g. instance asset group) this includes all its children
-    hierarchy.
+    hierarchy and the Object itself.
 
     These members are then set on the instance as a list of objects.
     """
