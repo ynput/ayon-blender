@@ -311,24 +311,42 @@ def get_selected_collections():
     return [id for id in ids if isinstance(id, bpy.types.Collection)]
 
 
-def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
+def get_selection(
+        include_collections: bool = False,
+        selected_hierarchies: bool = False
+    )-> List[Union[bpy.types.Object, bpy.types.Collection]]:
     """
     Returns a list of selected objects in the current Blender scene.
 
     Args:
         include_collections (bool, optional): Whether to include selected
         collections in the result. Defaults to False.
+        selected_hierarchies (bool): Whether to include all children
+        of selected objects.
 
     Returns:
-        List[bpy.types.Object]: A list of selected objects.
+        List[Union[bpy.types.Object,
+        bpy.types.Collection]]: Selected objects and optionally collections.
     """
-    selection = [obj for obj in bpy.context.scene.objects if obj.select_get()]
+    selection = set(obj for obj in bpy.context.scene.objects if obj.select_get())
 
     if include_collections:
-        selection.extend(get_selected_collections())
+        selection.update(get_selected_collections())
 
-    return selection
+    if selected_hierarchies:
+        def collect_hierarchy(obj, collected):
+            for child in obj.children:
+                if child not in collected:
+                    collected.add(child)
+                    collect_hierarchy(child, collected)
 
+        hierarchy_set = set()
+        for obj in selection:
+            collect_hierarchy(obj, hierarchy_set)
+
+        selection.update(hierarchy_set)
+
+    return list(selection)
 
 @contextlib.contextmanager
 def maintained_selection():
