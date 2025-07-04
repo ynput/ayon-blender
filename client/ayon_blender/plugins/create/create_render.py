@@ -124,8 +124,6 @@ class CreateRender(plugin.BlenderCreator):
             if not comp_node:
                 raise RuntimeError("No compositor node found")
 
-            # TODO: Rename product name/variant if the node has a new name so
-            #  that the variatn is tightly coupled with the node's name/label.
             instance.transient_data["instance_node"] = comp_node
             lib.imprint(comp_node, instance.data_to_store())
 
