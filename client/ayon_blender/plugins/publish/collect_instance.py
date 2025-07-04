@@ -34,6 +34,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):
         members: set[str] = {instance_node}
         self.log.debug(f"Found instance node: {instance_node}")
         if isinstance(instance_node, bpy.types.Collection):
+            # Add all child objects (hierarchy)
             # Note that for a `bpy.types.Collection` the `children` and
             # `children_recursive` only include child collections, not objects.
             # To get the linked objects (and their children) we first collect
@@ -42,6 +43,9 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):
             members.update(objects)
             for obj in objects:
                 members.update(obj.children_recursive)
+
+            # Add child collections
+            members.update(instance_node.children)
 
             # Special case for animation instances, include armatures
             if instance.data["productType"] == "animation":
