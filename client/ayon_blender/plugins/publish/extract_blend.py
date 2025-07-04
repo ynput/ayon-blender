@@ -12,6 +12,23 @@ from ayon_blender.api.lib import (
 )
 
 
+@contextlib.contextmanager
+def link_to_collection(collection, objects):
+    """Link objects to a collection during context"""
+    unlink_after = []
+    try:
+        for obj in objects:
+            if not isinstance(obj, bpy.types.Object):
+                continue
+            if collection not in obj.users_collection:
+                unlink_after.append(obj)
+                collection.objects.link(obj)
+        yield
+    finally:
+        for obj in unlink_after:
+            collection.objects.unlink(obj)
+
+
 class ExtractBlend(
     plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin
 ):
@@ -67,6 +84,13 @@ class ExtractBlend(
 
         containers = list(ls())
         with contextlib.ExitStack() as stack:
+            # If the instance node is a Collection, we want to enforce the
+            # full child hierarchies to be included in the written collection.
+            instance_node = instance.data["transientData"]["instance_node"]
+            if isinstance(instance_node, bpy.types.Collection):
+                stack.enter_context(link_to_collection(
+                    instance_node, list(instance)))
+
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_namespace(containers))
             bpy.data.libraries.write(
