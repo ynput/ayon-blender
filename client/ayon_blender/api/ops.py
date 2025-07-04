@@ -16,7 +16,16 @@ import bpy
 import bpy.utils.previews
 
 from ayon_core import style
-from ayon_core.pipeline import get_current_folder_path, get_current_task_name
+from ayon_core.settings import get_project_settings
+from ayon_core.pipeline import (
+    get_current_folder_path,
+    get_current_task_name,
+    get_current_project_name
+)
+from ayon_core.pipeline.context_tools import (
+    get_current_task_entity,
+    version_up_current_workfile
+)
 from ayon_core.tools.utils import host_tools
 
 from .workio import OpenFileCacher
@@ -38,22 +47,30 @@ def execute_function_in_main_thread(f):
     return wrapper
 
 
-class BlenderApplication(QtWidgets.QApplication):
+class BlenderApplication:
     _instance = None
     blender_windows = {}
-
-    def __init__(self, *args, **kwargs):
-        super(BlenderApplication, self).__init__(*args, **kwargs)
-        self.setQuitOnLastWindowClosed(False)
-
-        self.setStyleSheet(style.load_stylesheet())
-        self.lastWindowClosed.connect(self.__class__.reset)
 
     @classmethod
     def get_app(cls):
         if cls._instance is None:
-            cls._instance = cls(sys.argv)
+            # If any other addon or plug-in may have initialed a Qt application
+            # before AYON then we should take the existing instance instead.
+            application = QtWidgets.QApplication.instance()
+            if application is None:
+                application = QtWidgets.QApplication(sys.argv)
+
+            # Ensure it is configured to our needs
+            cls._prepare_qapplication(application)
+            cls._instance = application
+
         return cls._instance
+
+    @classmethod
+    def _prepare_qapplication(cls, application: QtWidgets.QApplication):
+        application.setQuitOnLastWindowClosed(False)
+        application.setStyleSheet(style.load_stylesheet())
+        application.lastWindowClosed.connect(cls.reset)
 
     @classmethod
     def reset(cls):
@@ -175,7 +192,7 @@ def _process_app_events() -> Optional[float]:
 
         # Refresh Manager
         if GlobalClass.app:
-            manager = GlobalClass.app.get_window("WM_OT_avalon_manager")
+            manager = BlenderApplication.get_window("WM_OT_avalon_manager")
             if manager:
                 manager.refresh()
 
@@ -184,7 +201,7 @@ def _process_app_events() -> Optional[float]:
             return TIMER_INTERVAL
 
         app = GlobalClass.app
-        if app._instance:
+        if app:
             app.processEvents()
             return TIMER_INTERVAL
     return TIMER_INTERVAL
@@ -193,19 +210,18 @@ def _process_app_events() -> Optional[float]:
 class LaunchQtApp(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
-    _app: QtWidgets.QApplication
     _window = Union[QtWidgets.QDialog, ModuleType]
     _tool_name: str = None
     _init_args: Optional[List] = list()
     _init_kwargs: Optional[Dict] = dict()
     bl_idname: str = None
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.bl_idname is None:
             raise NotImplementedError("Attribute `bl_idname` must be set!")
         print(f"Initialising {self.bl_idname}...")
-        self._app = BlenderApplication.get_app()
-        GlobalClass.app = self._app
+        GlobalClass.app = BlenderApplication.get_app()
 
         if not bpy.app.timers.is_registered(_process_app_events):
             bpy.app.timers.register(
@@ -230,16 +246,16 @@ class LaunchQtApp(bpy.types.Operator):
                 raise AttributeError("`self._window` is not set.")
 
         else:
-            window = self._app.get_window(self.bl_idname)
+            window = BlenderApplication.get_window(self.bl_idname)
             if window is None:
                 window = host_tools.get_tool_by_name(self._tool_name)
-                self._app.store_window(self.bl_idname, window)
+                BlenderApplication.store_window(self.bl_idname, window)
             self._window = window
 
         if not isinstance(self._window, (QtWidgets.QWidget, ModuleType)):
             raise AttributeError(
                 "`window` should be a `QWidget or module`. Got: {}".format(
-                    str(type(window))
+                    str(type(self._window))
                 )
             )
 
@@ -270,7 +286,7 @@ class LaunchQtApp(bpy.types.Operator):
                 window = self._window.window
 
             if window:
-                self._app.store_window(self.bl_idname, window)
+                BlenderApplication.store_window(self.bl_idname, window)
 
         else:
             origin_flags = self._window.windowFlags()
@@ -355,8 +371,8 @@ class SetFrameRange(bpy.types.Operator):
     bl_label = "Set Frame Range"
 
     def execute(self, context):
-        data = pipeline.get_folder_attributes()
-        pipeline.set_frame_range(data)
+        task_entity = get_current_task_entity()
+        pipeline.set_frame_range(task_entity)
         return {"FINISHED"}
 
 
@@ -365,8 +381,32 @@ class SetResolution(bpy.types.Operator):
     bl_label = "Set Resolution"
 
     def execute(self, context):
-        data = pipeline.get_folder_attributes()
-        pipeline.set_resolution(data)
+        task_entity = get_current_task_entity()
+        pipeline.set_resolution(task_entity)
+        return {"FINISHED"}
+
+
+class SetUnitScale(bpy.types.Operator):
+    bl_idname = "wm.ayon_set_unit_scale"
+    bl_label = "Set Unit Scale"
+
+    def execute(self, context):
+        project = get_current_project_name()
+        settings = get_project_settings(project).get("blender")
+        unit_scale_settings = settings.get("unit_scale_settings")
+        pipeline.set_unit_scale_from_settings(
+            unit_scale_settings=unit_scale_settings)
+        return {"FINISHED"}
+
+
+class VersionUpWorkfile(LaunchQtApp):
+    """Perform Incremental Save Workfile."""
+
+    bl_idname = "wm.avalon_version_up_workfile"
+    bl_label = "Version Up Workfile"
+
+    def execute(self, context):
+        version_up_current_workfile()
         return {"FINISHED"}
 
 
@@ -396,6 +436,24 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
             LaunchWorkFiles.bl_idname, text=context_label
         )
         context_label_item.enabled = False
+        project_name = get_current_project_name()
+        project_settings = get_project_settings(project_name)
+        if project_settings["core"]["tools"]["ayon_menu"].get(
+            "version_up_current_workfile"):
+                layout.separator()
+                layout.operator(
+                    VersionUpWorkfile.bl_idname,
+                    text="Version Up Workfile"
+                )
+                wm = bpy.context.window_manager
+                keyconfigs = wm.keyconfigs
+                keymap = keyconfigs.addon.keymaps.new(name='Window', space_type='EMPTY')
+                keymap.keymap_items.new(
+                    VersionUpWorkfile.bl_idname, 'S',
+                    'PRESS', ctrl=True, alt=True
+                )
+                bpy.context.window_manager.keyconfigs.addon.keymaps.update()
+
         layout.separator()
         layout.operator(LaunchCreator.bl_idname, text="Create...")
         layout.operator(LaunchLoader.bl_idname, text="Load...")
@@ -409,9 +467,9 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         layout.separator()
         layout.operator(SetFrameRange.bl_idname, text="Set Frame Range")
         layout.operator(SetResolution.bl_idname, text="Set Resolution")
+        layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
-
 
 def draw_avalon_menu(self, context):
     """Draw the Avalon menu in the top bar."""
@@ -428,6 +486,8 @@ classes = [
     LaunchWorkFiles,
     SetFrameRange,
     SetResolution,
+    SetUnitScale,
+    VersionUpWorkfile,
     TOPBAR_MT_avalon,
 ]
 

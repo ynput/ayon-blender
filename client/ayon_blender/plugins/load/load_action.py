@@ -242,6 +242,7 @@ class BlendActionLoader(plugin.BlenderLoader):
         collection_metadata["objects"] = objects_list
         collection_metadata["libpath"] = str(libpath)
         collection_metadata["representation"] = repre_entity["id"]
+        collection_metadata["project_name"] = context["project"]["name"]
 
         bpy.ops.object.select_all(action='DESELECT')
 

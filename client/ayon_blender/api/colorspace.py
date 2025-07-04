@@ -1,7 +1,5 @@
 import attr
 
-import bpy
-
 
 @attr.s
 class LayerMetadata(object):
@@ -22,18 +20,20 @@ class RenderProduct(object):
 
 
 class ARenderProduct(object):
-    def __init__(self):
+    def __init__(self, frame_start, frame_end):
         """Constructor."""
         # Initialize
-        self.layer_data = self._get_layer_data()
+        self.layer_data = self._get_layer_data(frame_start, frame_end)
         self.layer_data.products = self.get_render_products()
 
-    def _get_layer_data(self):
-        scene = bpy.context.scene
-
+    def _get_layer_data(
+        self,
+        frame_start: int,
+        frame_end: int
+    ) -> LayerMetadata:
         return LayerMetadata(
-            frameStart=int(scene.frame_start),
-            frameEnd=int(scene.frame_end),
+            frameStart=int(frame_start),
+            frameEnd=int(frame_end),
         )
 
     def get_render_products(self):

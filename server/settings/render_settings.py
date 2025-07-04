@@ -107,7 +107,8 @@ class CustomPassesModel(BaseSettingsModel):
 
 class RenderSettingsModel(BaseSettingsModel):
     default_render_image_folder: str = SettingsField(
-        title="Default Render Image Folder"
+        title="Default Render Image Folder",
+        description="Configure staging / work folder for rendered images. Not for final published images.",
     )
     aov_separator: str = SettingsField(
         "underscore",
@@ -117,32 +118,33 @@ class RenderSettingsModel(BaseSettingsModel):
     image_format: str = SettingsField(
         "exr",
         title="Image Format",
+        description="Configure image output format when creating Render publish instance",
         enum_resolver=image_format_enum
     )
     multilayer_exr: bool = SettingsField(
-        title="Multilayer (EXR)"
+        title="Multilayer (EXR)",
+        description="Does have effect only when EXR format selected.",
     )
     renderer: str = SettingsField(
         "CYCLES",
         title="Renderer",
+        description="Configure render engine used for render farm submission.",
         enum_resolver=renderers_enum
     )
     compositing: bool = SettingsField(
-        title="Enable Compositing"
+        title="Enable Compositing",
+        description="When enabled AYON will output composite AOV beside regular rgba beauty output.",
     )
     aov_list: list[str] = SettingsField(
         default_factory=list,
         enum_resolver=aov_list_enum,
-        title="AOVs to create"
+        title="AOVs to create",
+        description="Choose from available Blender AOVs for automatic creation when rendering.",
     )
     custom_passes: list[CustomPassesModel] = SettingsField(
         default_factory=list,
         title="Custom Passes",
-        description=(
-            "Add custom AOVs. They are added to the view layer and in the "
-            "Compositing Nodetree,\nbut they need to be added manually to "
-            "the Shader Nodetree."
-        )
+        description="Configure additional AOVs for output besides the standard Blender ones.",
     )
 
 
