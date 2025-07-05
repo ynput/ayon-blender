@@ -132,7 +132,6 @@ class BlendLoader(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
-        print("HELLO WORLD")
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
