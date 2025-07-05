@@ -13,8 +13,6 @@ class CreateBlendScene(plugin.BlenderCreator):
     product_type = "blendScene"
     icon = "cubes"
 
-    maintain_selection = False
-
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict
     ):
