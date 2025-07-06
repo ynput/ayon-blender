@@ -3,7 +3,6 @@
 import bpy
 
 from ayon_blender.api import plugin, lib
-from ayon_core.lib import BoolDef
 
 
 class CreateBlendScene(plugin.BlenderCreator):
@@ -25,11 +24,7 @@ class CreateBlendScene(plugin.BlenderCreator):
                                        pre_create_data)
 
         if pre_create_data.get("use_selection"):
-            selection = lib.get_selection(
-                include_collections=True,
-                selected_hierarchies=pre_create_data.get(
-                    "selected_hierarchies")
-            )
+            selection = lib.get_selection(include_collections=True)
             for data in selection:
                 if isinstance(data, bpy.types.Collection):
                     instance_node.children.link(data)
@@ -45,12 +40,3 @@ class CreateBlendScene(plugin.BlenderCreator):
             bpy.data.collections.remove(node)
 
             self._remove_instance_from_context(instance)
-
-    def get_pre_create_attr_defs(self):
-        defs = super().get_pre_create_attr_defs()
-        defs.extend([
-            BoolDef("selected_hierarchies",
-                    label="Select Hierarchies",
-                    default=False)
-        ])
-        return defs

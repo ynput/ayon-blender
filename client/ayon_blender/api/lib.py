@@ -311,10 +311,7 @@ def get_selected_collections():
     return [id for id in ids if isinstance(id, bpy.types.Collection)]
 
 
-def get_selection(
-        include_collections: bool = False,
-        selected_hierarchies: bool = False
-    )-> List[Union[bpy.types.Object, bpy.types.Collection]]:
+def get_selection(include_collections: bool = False)-> List[Union[bpy.types.Object, bpy.types.Collection]]:
     """
     Returns a list of selected objects in the current Blender scene.
 
@@ -332,21 +329,21 @@ def get_selection(
 
     if include_collections:
         selection.update(get_selected_collections())
-
-    if selected_hierarchies:
-        def collect_hierarchy(obj, collected):
-            for child in obj.children:
-                if child not in collected:
-                    collected.add(child)
-                    collect_hierarchy(child, collected)
-
-        hierarchy_set = set()
-        for obj in selection:
-            collect_hierarchy(obj, hierarchy_set)
-
-        selection.update(hierarchy_set)
+    selection.update(get_object_children_recursive(selection))
 
     return list(selection)
+
+
+def get_object_children_recursive(objects: set[bpy.types.Object]) -> set[bpy.types.Object]:
+    """Return all object children of any objects in the inputs.
+
+    Any input that is not a `bpy.types.Object` is skipped."""
+    children = set()
+    for obj in objects:
+        if isinstance(obj, bpy.types.Object):
+            children.update(obj.children_recursive)
+    return children
+
 
 @contextlib.contextmanager
 def maintained_selection():
