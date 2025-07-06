@@ -311,15 +311,18 @@ def get_selected_collections():
     return [id for id in ids if isinstance(id, bpy.types.Collection)]
 
 
-def get_selection(include_collections: bool = False)-> List[Union[bpy.types.Object, bpy.types.Collection]]:
+def get_selection(
+        include_collections: bool = False,
+        include_object_children_recursive: bool = True
+    )-> List[Union[bpy.types.Object, bpy.types.Collection]]:
     """
     Returns a list of selected objects in the current Blender scene.
 
     Args:
         include_collections (bool, optional): Whether to include selected
         collections in the result. Defaults to False.
-        selected_hierarchies (bool): Whether to include all children
-        of selected objects.
+        include_object_children_recursive (bool, optional): Whether to include all
+        hierarchies of selected objects.
 
     Returns:
         List[Union[bpy.types.Object,
@@ -329,7 +332,8 @@ def get_selection(include_collections: bool = False)-> List[Union[bpy.types.Obje
 
     if include_collections:
         selection.update(get_selected_collections())
-    selection.update(get_object_children_recursive(selection))
+    if include_object_children_recursive:
+        selection.update(get_object_children_recursive(selection))
 
     return list(selection)
 
