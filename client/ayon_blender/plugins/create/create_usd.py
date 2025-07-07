@@ -1,5 +1,7 @@
 """Create a USD Export."""
 
+import bpy
+from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin, lib
 
 
@@ -21,10 +23,7 @@ class CreateUSD(plugin.BlenderCreator):
         )
 
         if pre_create_data.get("use_selection"):
-            objects = lib.get_selection()
+            objects = lib.get_selection(include_object_children_recursive=True)
             for obj in objects:
                 collection.objects.link(obj)
-                if obj.type == 'EMPTY':
-                    objects.extend(obj.children)
-
         return collection
