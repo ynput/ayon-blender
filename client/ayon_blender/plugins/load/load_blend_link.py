@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Union
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
-from ayon_core.pipeline import AVALON_CONTAINER_ID
+from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api.plugin_load import (
     add_override,
     load_collection
@@ -95,8 +95,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         avalon_container.children.link(loaded_collection)
         data = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
@@ -225,7 +225,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         os.makedirs(arbitrary_directory, exist_ok=True)
         filename = os.path.basename(filepath)
         dst_filepath = os.path.join(arbitrary_directory, filename)
-        shutil.copy(filepath, dst_filepath)
+        if not os.path.exists(dst_filepath):
+            shutil.copy(filepath, dst_filepath)
 
         return dst_filepath
 
@@ -249,7 +250,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             current_libpath = library.filepath
             lib_directory = os.path.dirname(current_libpath)
             updated_libpath = os.path.join(lib_directory, filename)
-            shutil.copy(filepath, updated_libpath)
+            if not os.path.exists(updated_libpath):
+                shutil.copy(filepath, updated_libpath)
             library.filepath = updated_libpath
             library.reload()
-            os.remove(current_libpath)
