@@ -67,7 +67,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                 self.log.warning(
                     "Convert orientation was enabled for USD export but is not "
                     "supported in Blender < \"4.2.1\". Please update to at least Blender "
-                    "4.2.1 to support it"
+                    "4.2.1 to support it."
                 )
 
         # Export USD
