@@ -1,7 +1,4 @@
 """Create a USD Export."""
-
-import bpy
-from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin, lib
 
 
