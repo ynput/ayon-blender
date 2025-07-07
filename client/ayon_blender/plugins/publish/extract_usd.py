@@ -56,8 +56,19 @@ class ExtractUSD(plugin.BlenderExtractor,
         
         attribute_values = self.get_attr_values_from_data(instance.data)
         convert_orientation = attribute_values.get("convert_orientation")
-        forward_axis = attribute_values.get("forward_axis")
-        up_axis = attribute_values.get("up_axis")
+        orientation_args = {
+            "convert_orientation": convert_orientation,
+            "export_global_forward_selection": attribute_values.get("forward_axis"),
+            "export_global_up_selection": attribute_values.get("up_axis"),
+        }
+        if lib.get_blender_version() < (4, 2, 1):
+            orientation_args = {}
+            if convert_orientation:
+                self.log.warning(
+                    "Convert orientation was enabled for USD export but is not "
+                    "supported in Blender < \"4.2.1\". Please update to at least Blender "
+                    "4.2.1 to support it"
+                )
 
         # Export USD
         with bpy.context.temp_override(**context):
@@ -78,11 +89,8 @@ class ExtractUSD(plugin.BlenderExtractor,
                 export_materials=True,
                 use_instancing=True,
                 # Convert Orientation
-                convert_orientation=convert_orientation,
-                export_global_forward_selection=forward_axis,
-                export_global_up_selection=up_axis,
+                **orientation_args
             )
-            self.log.debug(f"{convert_orientation}, {forward_axis}, {up_axis}")
 
         plugin.deselect_all()
 
