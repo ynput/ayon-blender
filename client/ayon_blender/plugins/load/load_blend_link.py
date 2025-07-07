@@ -1,6 +1,5 @@
 import bpy
 import os
-import hashlib
 import shutil
 from typing import Dict, List, Optional, Union
 from ayon_core.lib import BoolDef
@@ -217,10 +216,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         Returns:
             str: destination path
         """
-        group_name = group_name.encode("utf-8")
-        unique_id = hashlib.sha512(group_name).hexdigest()
         arbitrary_directory = os.path.join(
-            os.getenv("AYON_WORKDIR"), ".linked_folder", unique_id
+            os.getenv("AYON_WORKDIR"), ".linked_folder", group_name
         )
         os.makedirs(arbitrary_directory, exist_ok=True)
         filename = os.path.basename(filepath)
