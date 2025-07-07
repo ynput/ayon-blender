@@ -311,39 +311,6 @@ def get_selected_collections():
     return [id for id in ids if isinstance(id, bpy.types.Collection)]
 
 
-def get_top_objects_selections()-> List[bpy.types.Object]:
-    """Get the top hierarchies of the selections
-
-    Args:
-        selections (List[Union[bpy.types.Object]]): selected objects
-
-    Returns:
-        List[bpy.types.Object]: top objects
-    """
-    selections = get_selection()
-    top_parents = {
-        obj: get_top_parent(obj) for obj in selections
-    }
-    top_object = sorted(
-        selections, key=lambda o: (o == top_parents[o], o.name), reverse=True
-    )
-    return top_object
-
-
-def get_top_parent(obj: bpy.types.Object) -> bpy.types.Object:
-    """Get top parent with iteration
-
-    Args:
-        obj (bpy.types.Object): Object
-
-    Returns:
-        bpy.types.Object: Top object
-    """
-    while obj.parent:
-        obj = obj.parent
-    return obj
-
-
 def get_selection(
         include_collections: bool = False,
         include_object_children_recursive: bool = True

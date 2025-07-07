@@ -22,9 +22,8 @@ class CreateModel(plugin.BlenderCreator):
 
         # Add selected objects to instance
         if pre_create_data.get("use_selection"):
-
-            for obj in lib.get_top_objects_selections():
-                obj.parent = asset_group
-                break
+            selections = lib.get_selection()
+            top_root = lib.get_highest_root(selections)
+            top_root.parent = asset_group
 
         return asset_group
