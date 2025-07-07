@@ -133,10 +133,16 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         # Update library filepath and reload it if there is library
         if library:
-            self.update_library_filepath(
-                library, filepath,
-                container.get("arbitrary_location_for_library", False)
-            )
+            filename = os.path.basename(filepath)
+            library.name = filename
+            if not container.get("arbitrary_location_for_library", False):
+                library.filepath = filepath
+                library.reload()
+            else:
+                updated_libpath = self.use_arbitrary_location_for_library(
+                    filepath, container["objectName"])
+                library.filepath = updated_libpath
+                library.reload()
 
         # refresh UI
         bpy.context.view_layer.update()
@@ -226,28 +232,3 @@ class BlendLinkLoader(plugin.BlenderLoader):
             shutil.copy(filepath, dst_filepath)
 
         return dst_filepath
-
-    def update_library_filepath(
-            self, library: bpy.types.Library, filepath: str,
-            use_arbitrary: bool = False
-        ):
-        """Update library filepath when updating container
-
-        Args:
-            library (bpy.types.Library): library
-            filepath (str): filepath
-            use_arbitrary (bool, optional): use arbitrary location. Defaults to False.
-        """
-        filename = os.path.basename(filepath)
-        library.name = filename
-        if not use_arbitrary:
-            library.filepath = filepath
-            library.reload()
-        else:
-            current_libpath = library.filepath
-            lib_directory = os.path.dirname(current_libpath)
-            updated_libpath = os.path.join(lib_directory, filename)
-            if not os.path.exists(updated_libpath):
-                shutil.copy(filepath, updated_libpath)
-            library.filepath = updated_libpath
-            library.reload()
