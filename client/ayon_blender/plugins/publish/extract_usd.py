@@ -56,13 +56,13 @@ class ExtractUSD(plugin.BlenderExtractor,
         
         attribute_values = self.get_attr_values_from_data(instance.data)
         convert_orientation = attribute_values.get("convert_orientation")
-        orientation_args = {
+        kwargs = {
             "convert_orientation": convert_orientation,
             "export_global_forward_selection": attribute_values.get("forward_axis"),
             "export_global_up_selection": attribute_values.get("up_axis"),
         }
         if lib.get_blender_version() < (4, 2, 1):
-            orientation_args = {}
+            kwargs = {}
             if convert_orientation:
                 self.log.warning(
                     "Convert orientation was enabled for USD export but is not "
@@ -89,7 +89,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                 export_materials=True,
                 use_instancing=True,
                 # Convert Orientation
-                **orientation_args
+                **kwargs
             )
 
         plugin.deselect_all()
