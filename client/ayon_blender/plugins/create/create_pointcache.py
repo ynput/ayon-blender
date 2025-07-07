@@ -20,12 +20,9 @@ class CreatePointcache(plugin.BlenderCreator):
         )
 
         if pre_create_data.get("use_selection"):
-            objects = lib.get_selection(
-                include_object_children_recursive=True
-            )
+            objects = lib.get_selection()
             for obj in objects:
                 collection.objects.link(obj)
-
         return collection
 
     def get_instance_attr_defs(self):

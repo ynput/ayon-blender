@@ -55,7 +55,8 @@ class FbxCameraLoader(plugin.BlenderLoader):
             obj.parent = asset_group
 
         for obj in objects:
-            parent.objects.link(obj)
+            if obj not in parent.objects:
+                parent.objects.link(obj)
             collection.objects.unlink(obj)
 
         for obj in objects:

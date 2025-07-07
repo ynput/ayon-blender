@@ -24,8 +24,9 @@ class CreateModel(plugin.BlenderCreator):
 
         # Add selected objects to instance
         if pre_create_data.get("use_selection"):
-            bpy.context.view_layer.objects.active = asset_group
-            for obj in lib.get_selection():
+
+            for obj in lib.get_top_objects_selections():
                 obj.parent = asset_group
+                break
 
         return asset_group
