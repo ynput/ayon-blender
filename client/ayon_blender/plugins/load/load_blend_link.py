@@ -1,5 +1,7 @@
 import bpy
 import os
+import hashlib
+import shutil
 from typing import Dict, List, Optional, Union
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
@@ -34,6 +36,13 @@ class BlendLinkLoader(plugin.BlenderLoader):
             label="Add Override",
             default=False,
             tooltip="Add a library override for the loaded asset.",
+        ),
+        BoolDef(
+            "use_arbitrary_loc_for_library",
+            label="Use Arbitrary Location for Library",
+            default=False,
+            tooltip="Store the library in arbitrary location"
+                    "Use with caution when blend file is big.",
         )
     ]
 
@@ -64,7 +73,9 @@ class BlendLinkLoader(plugin.BlenderLoader):
         if loaded_collection and container_name in scene_collection.children:
             self.log.debug(f"Collection {container_name} already loaded.")
             return
-
+        use_arbitrary_loc = options.get("use_arbitrary_loc_for_library")
+        if use_arbitrary_loc:
+            filepath = self.use_arbitrary_location_for_library(filepath, group_name)
         loaded_collection = load_collection(
             filepath,
             link=True,
@@ -93,6 +104,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             "libpath": filepath,
             "objectName": group_name,
             "project_name": context["project"]["name"],
+            "arbitrary_location_for_library": use_arbitrary_loc
         }
 
         loaded_collection[AVALON_PROPERTY] = data
@@ -119,13 +131,13 @@ class BlendLinkLoader(plugin.BlenderLoader):
             or self._get_library_by_prev_libpath(container)
         )
         filepath = self.filepath_from_context(context)
-        new_filename = os.path.basename(filepath)
 
         # Update library filepath and reload it if there is library
         if library:
-            library.name = new_filename
-            library.filepath = filepath
-            library.reload()
+            self.update_library_filepath(
+                library, filepath,
+                container.get("arbitrary_location_for_library", False)
+            )
 
         # refresh UI
         bpy.context.view_layer.update()
@@ -193,3 +205,51 @@ class BlendLinkLoader(plugin.BlenderLoader):
         for library in bpy.data.libraries:
             if lib_path == library.filepath:
                 return library
+
+    def use_arbitrary_location_for_library(self, filepath: str, group_name: str) -> str:
+        """Use arbitrary location for library to store the linked libraries
+        Not recommend for extremely giant .blend files.
+
+        Args:
+            filepath (str): filepath
+            group_name (str): group name
+
+        Returns:
+            str: destination path
+        """
+        group_name = group_name.encode("utf-8")
+        unique_id = hashlib.sha512(group_name).hexdigest()
+        arbitrary_directory = os.path.join(
+            os.getenv("AYON_WORKDIR"), ".linked_folder", unique_id
+        )
+        os.makedirs(arbitrary_directory, exist_ok=True)
+        filename = os.path.basename(filepath)
+        dst_filepath = os.path.join(arbitrary_directory, filename)
+        shutil.copy(filepath, dst_filepath)
+
+        return dst_filepath
+
+    def update_library_filepath(
+            self, library: bpy.types.Library, filepath: str,
+            use_arbitrary: bool = False
+        ):
+        """Update library filepath when updating container
+
+        Args:
+            library (bpy.types.Library): library
+            filepath (str): filepath
+            use_arbitrary (bool, optional): use arbitrary location. Defaults to False.
+        """
+        filename = os.path.basename(filepath)
+        library.name = filename
+        if not use_arbitrary:
+            library.filepath = filepath
+            library.reload()
+        else:
+            current_libpath = library.filepath
+            lib_directory = os.path.dirname(current_libpath)
+            updated_libpath = os.path.join(lib_directory, filename)
+            shutil.copy(filepath, updated_libpath)
+            library.filepath = updated_libpath
+            library.reload()
+            os.remove(current_libpath)
