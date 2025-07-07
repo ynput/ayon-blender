@@ -78,7 +78,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         loaded_collection = load_collection(
             filepath,
             link=True,
-            group_name=group_name
+            group_name=group_name,
         )
 
         options = options or dict()
@@ -246,6 +246,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         else:
             current_libpath = library.filepath
             lib_directory = os.path.dirname(current_libpath)
+            os.makedirs(os.path.dirname(lib_directory), exist_ok=True)
             updated_libpath = os.path.join(lib_directory, filename)
             if not os.path.exists(updated_libpath):
                 shutil.copy(filepath, updated_libpath)

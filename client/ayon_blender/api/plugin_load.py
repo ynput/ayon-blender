@@ -114,7 +114,7 @@ def load_collection(
     """Load a collection to the scene."""
     loaded_containers = []
     asset_container = get_collection(group_name)
-    with bpy.data.libraries.load(filepath, link=link) as (
+    with bpy.data.libraries.load(filepath, link=link, relative=False) as (
         data_from,
         data_to,
     ):
