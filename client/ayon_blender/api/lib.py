@@ -313,7 +313,7 @@ def get_selected_collections():
 
 def get_selection(
         include_collections: bool = False,
-        include_object_children_recursive: bool = True
+        include_object_children_recursive: bool = False
     )-> List[Union[bpy.types.Object, bpy.types.Collection]]:
     """
     Returns a list of selected objects in the current Blender scene.
