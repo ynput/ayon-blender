@@ -26,9 +26,8 @@ class CreateCamera(plugin.BlenderCreator):
 
         bpy.context.view_layer.objects.active = asset_group
         if pre_create_data.get("use_selection"):
-            selections = lib.get_selection()
-            top_root = lib.get_highest_root(selections)
-            top_root.parent = asset_group
+            for obj in lib.get_selection():
+                obj.parent = asset_group
         else:
             plugin.deselect_all()
             camera = bpy.data.cameras.new(product_name)
