@@ -30,10 +30,6 @@ class ValidateFileSavedModel(BaseSettingsModel):
     enabled: bool = SettingsField(title="ValidateFileSaved")
     optional: bool = SettingsField(title="Optional")
     active: bool = SettingsField(title="Active")
-    exclude_families: list[str] = SettingsField(
-        default_factory=list,
-        title="Exclude product types"
-    )
 
 
 class ExtractBlendModel(BaseSettingsModel):
@@ -191,8 +187,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
     "ValidateFileSaved": {
         "enabled": True,
         "optional": False,
-        "active": True,
-        "exclude_families": []
+        "active": True
     },
     "ValidateRenderCameraIsSet": {
         "enabled": True,
