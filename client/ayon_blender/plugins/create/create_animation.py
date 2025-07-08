@@ -20,7 +20,9 @@ class CreateAnimation(plugin.BlenderCreator):
         )
 
         if pre_create_data.get("use_selection"):
-            selected = lib.get_selection()
+            selected = lib.get_selection(
+                include_object_children_recursive=True
+            )
             for obj in selected:
                 collection.objects.link(obj)
         elif pre_create_data.get("asset_group"):

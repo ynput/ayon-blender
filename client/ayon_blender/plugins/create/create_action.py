@@ -27,7 +27,9 @@ class CreateAction(plugin.BlenderCreator):
         )
 
         if pre_create_data.get("use_selection"):
-            for obj in lib.get_selection():
+            for obj in lib.get_selection(
+                include_object_children_recursive=True
+            ):
                 if (obj.animation_data is not None
                         and obj.animation_data.action is not None):
 
