@@ -54,6 +54,7 @@ class LoadImageCompositor(plugin.BlenderLoader):
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
+            "project_name": context["project"]["name"],
         }
         lib.imprint(img_comp_node, data)
 
@@ -87,7 +88,8 @@ class LoadImageCompositor(plugin.BlenderLoader):
 
         # Update representation id
         lib.imprint(img_comp_node, {
-            "representation": context["representation"]["id"]
+            "representation": context["representation"]["id"],
+            "project_name": context["project"]["name"],
         })
 
     def set_source_and_colorspace(
@@ -135,8 +137,10 @@ class LoadImageCompositor(plugin.BlenderLoader):
                 image_comp_node.frame_offset = 0
 
         # Set colorspace if representation has colorspace data
-        if representation.get("colorspaceData"):
-            colorspace: str = representation["colorspaceData"]["colorspace"]
+        colorspace_data = representation.get("data", {}).get(
+            "colorspaceData", {})
+        if colorspace_data:
+            colorspace: str = colorspace_data["colorspace"]
             if colorspace:
                 image.colorspace_settings.name = colorspace
 

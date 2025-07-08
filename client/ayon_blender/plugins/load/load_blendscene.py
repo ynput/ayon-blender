@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+from __future__ import annotations
+from typing import Optional
 from pathlib import Path
 
 import bpy
@@ -36,18 +37,23 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
     def _process_data(self, libpath, group_name, product_type):
         # Append all the data from the .blend file
+        names_by_attr: dict[str, list[str]] = {}
         with bpy.data.libraries.load(
             libpath, link=False, relative=False
         ) as (data_from, data_to):
             for attr in dir(data_to):
-                setattr(data_to, attr, getattr(data_from, attr))
-
-        members = []
+                values = getattr(data_from, attr)
+                # store copy of list of names because the main list will
+                # be replaced with the data from the library after the context
+                names_by_attr[attr] = list(values)
+                setattr(data_to, attr, values)
 
         # Rename the object to add the asset name
+        members = []
         for attr in dir(data_to):
-            for data in getattr(data_to, attr):
-                data.name = f"{group_name}:{data.name}"
+            from_names: list[str] = names_by_attr[attr]
+            for from_name, data in zip(from_names, getattr(data_to, attr)):
+                data.name = f"{group_name}:{from_name}"
                 members.append(data)
 
         container = self._get_asset_container(
@@ -72,8 +78,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
-        options: Optional[Dict] = None
-    ) -> Optional[List]:
+        options: Optional[dict] = None
+    ) -> Optional[list]:
         """
         Arguments:
             name: Use pre-defined name
@@ -121,6 +127,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
             "productType": context["product"]["productType"],
             "objectName": group_name,
             "members": members,
+            "project_name": context["project"]["name"],
         }
 
         container[AVALON_PROPERTY] = data
@@ -133,7 +140,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
         self[:] = objects
         return objects
 
-    def exec_update(self, container: Dict, context: Dict):
+    def exec_update(self, container: dict, context: dict):
         """
         Update the loaded asset.
         """
@@ -205,11 +212,12 @@ class BlendSceneLoader(plugin.BlenderLoader):
             "representation": repre_entity["id"],
             "parent": repre_entity["versionId"],
             "members": members,
+            "project_name": context["project"]["name"],
         }
 
         imprint(asset_group, new_data)
 
-    def exec_remove(self, container: Dict) -> bool:
+    def exec_remove(self, container: dict) -> bool:
         """
         Remove an existing container from a Blender scene.
         """

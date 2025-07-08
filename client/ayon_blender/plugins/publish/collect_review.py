@@ -41,26 +41,24 @@ class CollectReview(plugin.BlenderInstancePlugin):
             if isinstance(obj, bpy.types.Object) and obj.type in types
         ]
 
-        if not instance.data.get("remove"):
-            # Store focal length in `burninDataMembers`
-            burninData = instance.data.setdefault("burninDataMembers", {})
-            burninData["focalLength"] = focal_length
+        # Store focal length in `burninDataMembers`
+        burninData = instance.data.setdefault("burninDataMembers", {})
+        burninData["focalLength"] = focal_length
 
-            instance.data.update({
-                "review_camera": camera,
-                "fps": instance.context.data["fps"],
-                "isolate": isolate_objects,
-            })
+        instance.data.update({
+            "review_camera": camera,
+            "fps": instance.context.data["fps"],
+            "isolate": isolate_objects,
+        })
 
-            self.log.debug(f"instance data: {instance.data}")
+        self.log.debug(f"instance data: {instance.data}")
 
-            # TODO : Collect audio
-            audio_tracks = []
-            instance.data["audio"] = []
-            for track in audio_tracks:
-                instance.data["audio"].append(
-                    {
-                        "offset": track.offset.get(),
-                        "filename": track.filename.get(),
-                    }
-                )
+        # TODO : Collect audio
+        # audio_tracks = []
+        # instance.data["audio"] = [
+        #     {
+        #         "offset": track.offset.get(),
+        #         "filename": track.filename.get(),
+        #     }
+        #     for track in audio_tracks
+        # ]

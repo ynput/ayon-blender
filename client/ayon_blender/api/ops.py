@@ -23,7 +23,8 @@ from ayon_core.pipeline import (
     get_current_project_name
 )
 from ayon_core.pipeline.context_tools import (
-    get_current_task_entity
+    get_current_task_entity,
+    version_up_current_workfile
 )
 from ayon_core.tools.utils import host_tools
 
@@ -215,7 +216,8 @@ class LaunchQtApp(bpy.types.Operator):
     _init_kwargs: Optional[Dict] = dict()
     bl_idname: str = None
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.bl_idname is None:
             raise NotImplementedError("Attribute `bl_idname` must be set!")
         print(f"Initialising {self.bl_idname}...")
@@ -397,6 +399,17 @@ class SetUnitScale(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class VersionUpWorkfile(LaunchQtApp):
+    """Perform Incremental Save Workfile."""
+
+    bl_idname = "wm.avalon_version_up_workfile"
+    bl_label = "Version Up Workfile"
+
+    def execute(self, context):
+        version_up_current_workfile()
+        return {"FINISHED"}
+
+
 class TOPBAR_MT_avalon(bpy.types.Menu):
     """Avalon menu."""
 
@@ -423,6 +436,24 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
             LaunchWorkFiles.bl_idname, text=context_label
         )
         context_label_item.enabled = False
+        project_name = get_current_project_name()
+        project_settings = get_project_settings(project_name)
+        if project_settings["core"]["tools"]["ayon_menu"].get(
+            "version_up_current_workfile"):
+                layout.separator()
+                layout.operator(
+                    VersionUpWorkfile.bl_idname,
+                    text="Version Up Workfile"
+                )
+                wm = bpy.context.window_manager
+                keyconfigs = wm.keyconfigs
+                keymap = keyconfigs.addon.keymaps.new(name='Window', space_type='EMPTY')
+                keymap.keymap_items.new(
+                    VersionUpWorkfile.bl_idname, 'S',
+                    'PRESS', ctrl=True, alt=True
+                )
+                bpy.context.window_manager.keyconfigs.addon.keymaps.update()
+
         layout.separator()
         layout.operator(LaunchCreator.bl_idname, text="Create...")
         layout.operator(LaunchLoader.bl_idname, text="Load...")
@@ -440,7 +471,6 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
-
 def draw_avalon_menu(self, context):
     """Draw the Avalon menu in the top bar."""
 
@@ -457,6 +487,7 @@ classes = [
     SetFrameRange,
     SetResolution,
     SetUnitScale,
+    VersionUpWorkfile,
     TOPBAR_MT_avalon,
 ]
 

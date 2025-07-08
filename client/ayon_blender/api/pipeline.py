@@ -179,7 +179,6 @@ def install():
     register_event_callback("open", on_open)
 
     _register_callbacks()
-    _register_events()
 
     if not IS_HEADLESS:
         ops.register()
@@ -422,27 +421,6 @@ def _register_callbacks():
     log.info("Installed event handler _on_load_post...")
 
 
-def _on_task_changed():
-    """Callback for when the task in the context is changed."""
-
-    # TODO (jasper): Blender has no concept of projects or workspace.
-    # It would be nice to override 'bpy.ops.wm.open_mainfile' so it takes the
-    # workdir as starting directory.  But I don't know if that is possible.
-    # Another option would be to create a custom 'File Selector' and add the
-    # `directory` attribute, so it opens in that directory (does it?).
-    # https://docs.blender.org/api/blender2.8/bpy.types.Operator.html#calling-a-file-selector
-    # https://docs.blender.org/api/blender2.8/bpy.types.WindowManager.html#bpy.types.WindowManager.fileselect_add
-    workdir = os.getenv("AYON_WORKDIR")
-    log.debug("New working directory: %s", workdir)
-
-
-def _register_events():
-    """Install callbacks for specific events."""
-
-    register_event_callback("taskChanged", _on_task_changed)
-    log.info("Installed event callback for 'taskChanged'...")
-
-
 def _discover_gui() -> Optional[Callable]:
     """Return the most desirable of the currently registered GUIs"""
 
@@ -576,6 +554,7 @@ def containerise_existing(
         "namespace": namespace or '',
         "loader": str(loader),
         "representation": context["representation"]["id"],
+        "project_name": context["project"]["name"],
     }
 
     metadata_update(container, data)
@@ -637,6 +616,21 @@ def ls() -> Iterator:
                 continue
 
             yield parse_container(node)
+
+    # Shader nodes are not available in a way that `lib.lsattr` can find.
+    for material in bpy.data.materials:
+        material_node_tree = material.node_tree
+        if not material_node_tree:
+            continue
+
+        for shader_node in material_node_tree.nodes:
+            if not shader_node.get(AVALON_PROPERTY):
+                continue
+
+            if shader_node.get(AVALON_PROPERTY).get("id") not in container_ids:
+                continue
+
+            yield parse_container(shader_node)
 
 
 def publish():
