@@ -47,7 +47,6 @@ from .constants import (
     AVALON_PROPERTY,
     AYON_PROPERTY,
     IS_HEADLESS
-
 )
 
 from .workio import (
