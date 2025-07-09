@@ -16,10 +16,7 @@ if TYPE_CHECKING:
 
 from . import pipeline
 
-from .constants import (
-    AYON_PROPERTY,
-    AVALON_PROPERTY
-)
+from .constants import AYON_PROPERTY
 
 log = Logger.get_logger(__name__)
 
@@ -256,16 +253,7 @@ def lsattrs(attrs: Dict) -> List:
         ):
             continue
         for node in getattr(bpy.data, coll):
-            ayon_prop = node.get(AYON_PROPERTY)
-            if not ayon_prop:
-                avalon_prop = node.get(AVALON_PROPERTY)
-                if not avalon_prop:
-                    continue
-                else:
-                    node[AYON_PROPERTY] = avalon_prop
-                    ayon_prop = avalon_prop
-                    del node[AVALON_PROPERTY]
-
+            ayon_prop = pipeline.get_ayon_property(node)
             for attr, value in attrs.items():
                 if (ayon_prop.get(attr)
                         and (value is None or ayon_prop.get(attr) == value)):

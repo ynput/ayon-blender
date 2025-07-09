@@ -16,7 +16,7 @@ from ayon_blender.api.constants import (
 )
 from ayon_blender.api.pipeline import (
     convert_avalon_containers,
-    get_ayon_property_by_avalon_property
+    get_ayon_property
 )
 
 
@@ -34,7 +34,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
     def _get_asset_container(collections):
         for coll in collections:
             parents = [c for c in collections if c.user_of_id(coll)]
-            coll_ayon_prop = get_ayon_property_by_avalon_property(coll)
+            coll_ayon_prop = get_ayon_property(coll)
             if coll_ayon_prop and not parents:
                 return coll
 

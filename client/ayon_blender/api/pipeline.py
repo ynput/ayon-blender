@@ -444,11 +444,16 @@ def _discover_gui() -> Optional[Callable]:
     return None
 
 
-def get_ayon_property_by_avalon_property(node):
+def get_ayon_property(node):
     property = node.get(AYON_PROPERTY)
     if not property:
+        # Backwards compatibility: Update legacy
+        # avalon property if found on the node
         property = node.get(AVALON_PROPERTY)
         if property:
+            log.debug(
+                "Replacing Avalon property to Ayon property"
+            )
             node[AYON_PROPERTY] = property
             del node[AVALON_PROPERTY]
     return property
@@ -679,19 +684,7 @@ def ls() -> Iterator:
             continue
 
         for shader_node in material_node_tree.nodes:
-            ayon_shader_node = shader_node.get(
-                AYON_PROPERTY)
-            if not ayon_shader_node:
-                avalon_shader_node = shader_node.get(
-                    AVALON_PROPERTY)
-                if not avalon_shader_node:
-                    continue
-                ayon_shader_node[AYON_PROPERTY] = (
-                    avalon_shader_node
-                )
-                ayon_shader_node = avalon_shader_node
-                del ayon_shader_node[AVALON_PROPERTY]
-
+            ayon_shader_node = get_ayon_property(shader_node)
             if ayon_shader_node.get("id") not in container_ids:
                 continue
 
