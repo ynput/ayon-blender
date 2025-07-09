@@ -63,12 +63,12 @@ class BlendLinkLoader(plugin.BlenderLoader):
         if loaded_collection and container_name in scene_collection.children:
 
             message = (
-                f"Collection {group_name} already loaded, "
-                f"instance to {group_name} is created instead of "
+                f"Collection {container_name} already loaded, "
+                f"instance to {container_name} is created instead of "
                 "linking new collection"
             )
-            show_message("Collection {group_name} already loaded", message)
-            instance = bpy.data.objects.new(name=f"{group_name}", object_data=None)
+            show_message(f"Collection {container_name} already loaded", message)
+            instance = bpy.data.objects.new(name=container_name, object_data=None)
             instance.instance_type = 'COLLECTION'
             instance.instance_collection = loaded_collection
             # Link the instance to the active scene
