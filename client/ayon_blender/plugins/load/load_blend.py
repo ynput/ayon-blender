@@ -160,7 +160,7 @@ class BlendLoader(plugin.BlenderLoader):
         ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
         if not ayon_container:
             ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
-        bpy.context.scene.collection.children.link(ayon_container)
+            bpy.context.scene.collection.children.link(ayon_container)
 
         container, members = self._process_data(libpath, group_name)
 
