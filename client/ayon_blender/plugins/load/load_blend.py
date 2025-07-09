@@ -12,10 +12,13 @@ from ayon_core.pipeline import (
 from ayon_core.pipeline.create import CreateContext
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import imprint
-from ayon_blender.api.pipeline import convert_avalon_containers
+from ayon_blender.api.pipeline import (
+    convert_avalon_containers,
+    get_ayon_property_by_avalon_property
+)
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,
-    AYON_PROPERTY,
+    AYON_PROPERTY
 )
 
 
@@ -34,7 +37,9 @@ class BlendLoader(plugin.BlenderLoader):
         empties = [obj for obj in objects if obj.type == 'EMPTY']
 
         for empty in empties:
-            if empty.get(AYON_PROPERTY) and empty.parent is None:
+            # datablock is not allowed to
+            empty_ayon_property = get_ayon_property_by_avalon_property(empty)
+            if empty_ayon_property and empty.parent is None:
                 return empty
 
         return None
