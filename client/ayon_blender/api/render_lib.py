@@ -367,13 +367,13 @@ def create_render_node_tree(
     output.format.file_format = image_settings.file_format
     multi_exr: bool = ext == "exr" and multilayer
 
-    slots = output.layer_slots if multi_exr else output.file_slots
-    slots.clear()
-
     # Define the base path for the File Output node.
     output.base_path = get_base_render_output_path(
         variant_name, project_settings=project_settings
     )
+
+    slots = output.layer_slots if multi_exr else output.file_slots
+    slots.clear()
 
     # Create a new socket for the beauty output
     pass_name = "beauty"
