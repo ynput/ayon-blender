@@ -434,9 +434,7 @@ def prepare_rendering(
     if selected_renderlayer_nodes:
         render_layer_nodes = selected_renderlayer_nodes
     else:
-        render_layer_nodes = get_or_create_render_layer_nodes(
-            node_tree, view_layers
-        )
+        render_layer_nodes = get_or_create_render_layer_nodes(view_layers)
 
     # Generate Compositing nodes
     output_node = create_render_node_tree(
@@ -456,35 +454,39 @@ def prepare_rendering(
 
 
 def get_or_create_render_layer_nodes(
-    tree: "bpy.types.CompositorNodeTree",
     view_layers: list["bpy.types.ViewLayer"],
 ) -> set[bpy.types.CompositorNodeRLayers]:
     """Get existing render layer nodes or create new ones."""
-    view_layers: set[str] = {view_layer.name for view_layer in view_layers}
+    tree = bpy.context.scene.node_tree
+    view_layer_names: set[str] = {
+        view_layer.name for view_layer in view_layers
+    }
 
     # Find existing render layer nodes for each view layer
-    render_layer_nodes = set()
-    found_view_layers = set()
+    render_layer_nodes: set[bpy.types.CompositorNodeRLayers] = set()
+    found_view_layer_names: set[str] = set()
     for node in tree.nodes:
         if node.bl_idname != "CompositorNodeRLayers":
             continue
 
         # Skip if already found a render layer node for this view layer.
-        if node.layer in found_view_layers:
+        if node.layer in found_view_layer_names:
             continue
 
         # Skip if the view layer is not meant to be included.
-        if node.layer not in view_layers:
+        if node.layer not in view_layer_names:
             continue
 
-        found_view_layers.add(node.layer)
+        found_view_layer_names.add(node.layer)
         render_layer_nodes.add(node)
 
     # Generate the missing render layer nodes
-    missing_view_layers = view_layers - found_view_layers
-    for view_layer in missing_view_layers:
+    missing_view_layer_names: set[str] = {
+        view_layer_names - found_view_layer_names
+    }
+    for view_layer_name in missing_view_layer_names:
         render_layer_node = tree.nodes.new("CompositorNodeRLayers")
-        render_layer_node.layer = view_layer.name
+        render_layer_node.layer = view_layer_name
         render_layer_nodes.add(render_layer_node)
 
     return render_layer_nodes
