@@ -254,6 +254,9 @@ def lsattrs(attrs: Dict) -> List:
             continue
         for node in getattr(bpy.data, coll):
             ayon_prop = pipeline.get_ayon_property(node)
+            if not ayon_prop:
+                continue
+
             for attr, value in attrs.items():
                 if (ayon_prop.get(attr)
                         and (value is None or ayon_prop.get(attr) == value)):

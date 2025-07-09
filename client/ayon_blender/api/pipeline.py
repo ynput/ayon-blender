@@ -685,6 +685,9 @@ def ls() -> Iterator:
 
         for shader_node in material_node_tree.nodes:
             ayon_shader_node = get_ayon_property(shader_node)
+            if not ayon_shader_node:
+                continue
+
             if ayon_shader_node.get("id") not in container_ids:
                 continue
 
