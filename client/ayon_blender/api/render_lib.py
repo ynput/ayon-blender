@@ -481,9 +481,9 @@ def get_or_create_render_layer_nodes(
         render_layer_nodes.add(node)
 
     # Generate the missing render layer nodes
-    missing_view_layer_names: set[str] = {
+    missing_view_layer_names: set[str] = (
         view_layer_names - found_view_layer_names
-    }
+    )
     for view_layer_name in missing_view_layer_names:
         render_layer_node = tree.nodes.new("CompositorNodeRLayers")
         render_layer_node.layer = view_layer_name
