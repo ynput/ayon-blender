@@ -6,7 +6,7 @@ from typing import Optional
 
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline.create import CreatedInstance
-from ayon_blender.api import plugin, lib, prepare_rendering
+from ayon_blender.api import plugin, lib, render_lib
 
 
 def clean_name(name: str) -> str:
@@ -61,15 +61,24 @@ class CreateRender(plugin.BlenderCreator):
             # TODO: Prepare rendering setup should always generate a new
             #  setup, and return the relevant compositor node instead of
             #  guessing afterwards
-            prepare_rendering(variant_name=variant)
-            node = self._find_compositor_node_from_create_render_setup()
+            node = render_lib.prepare_rendering(variant_name=variant)
         else:
             # Create a Compositor node
             tree = bpy.context.scene.node_tree
             node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
                 "CompositorNodeOutputFile"
             )
-            # TODO: Set some default output filepath?
+            project_settings = (
+                self.create_context.get_current_project_settings()
+            )
+            node.format.file_format = "OPEN_EXR_MULTILAYER"
+            node.base_path = render_lib.get_base_render_output_path(
+                variant_name=variant,
+                # For now enforce multi-exr here since we are not connecting
+                # any inputs and it at least ensures a full path is set.
+                multi_exr=True,
+                project_settings=project_settings,
+            )
 
         node.name = variant
         node.label = variant

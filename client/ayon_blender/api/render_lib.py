@@ -256,22 +256,65 @@ def _create_aov_slot(
     return slots.new(renderpass_name if is_multi_exr else filename)
 
 
-def set_node_tree(
-    output_path: Path,
+def get_base_render_output_path(
     variant_name: str,
-    aov_sep: str,
-    ext: str,
-    multilayer: bool,
-    compositing: bool,
+    multi_exr: Optional[bool] = None,
+    project_settings: Optional[dict] = None
+) -> str:
+    """Return the base render output path for the given variant name.
+
+    The output path is based on the AYON project settings and the current
+    Blender scene workfile path.
+
+    If the render settings are not set to multi-EXR then only the base path
+    is returned, otherwise the full path to the render output file is returned.
+
+    """
+    workfile_filepath = Path(bpy.data.filepath)
+    assert workfile_filepath, "Workfile not saved. Please save the file first."
+
+    render_folder = get_default_render_folder(project_settings)
+    aov_sep = get_aov_separator(project_settings)
+    if multi_exr is None:
+        multi_exr = get_multilayer(project_settings)
+
+    workfile_dir = workfile_filepath.parent
+    workfile_filename = Path(workfile_filepath.name).stem
+    base_folder = Path.joinpath(workfile_dir, render_folder, workfile_filename)
+    if not multi_exr:
+        # If not multi-exr, we only supply the root folder to render to.
+        return str(base_folder)
+
+    filename = f"{variant_name}{aov_sep}beauty.####"
+    filepath = base_folder / filename
+    return str(filepath)
+
+
+def create_render_node_tree(
+    variant_name: str,
     view_layers: list["bpy.types.ViewLayer"],
-):
+    project_settings: dict,
+) -> "bpy.types.CompositorNodeOutputFile":
+    """Create a Compositor node tree for rendering based on project settings.
+
+    Arguments:
+        variant_name (str): The name of the variant to use in the output file
+            names.
+        view_layers (list[bpy.types.ViewLayer]): The list of view layers to
+            create render layer nodes for.
+        project_settings (dict): The project settings dictionary.
+    """
     # Set the scene to use the compositor node tree to render
     bpy.context.scene.use_nodes = True
+
+    aov_sep = get_aov_separator(project_settings)
+    ext = get_image_format(project_settings)
+    multilayer = get_multilayer(project_settings)
+    compositing = get_compositing(project_settings)
 
     tree = bpy.context.scene.node_tree
 
     comp_layer_type = "CompositorNodeRLayers"
-    output_type = "CompositorNodeOutputFile"
     compositor_type = "CompositorNodeComposite"
 
     # Get the existing render layer nodes
@@ -280,7 +323,7 @@ def set_node_tree(
         if node.bl_idname == comp_layer_type:
             render_layer_nodes.add(node)
 
-    # If there's no a Render Layers nodes, we create it
+    # If there are no Render Layers nodes, we create it
     if not render_layer_nodes:
         render_layer_nodes = create_renderlayer_node_with_new_view_layers(
             tree, view_layers
@@ -305,45 +348,31 @@ def set_node_tree(
                 )
             )
 
-    # Get existing 'Composite' and the previous AYON File Output nodes
+    # Find existing 'Composite' node
     composite_node = None
-    old_output_node = None
     for node in tree.nodes:
         if node.bl_idname == compositor_type:
             composite_node = node
-        elif node.bl_idname == output_type and "AYON" in node.name:
-            old_output_node = node
-        if composite_node and old_output_node:
             break
 
-    old_links = {}
-    if old_output_node is not None:
-        old_links = {
-            link.from_socket.name: link
-            for link in tree.links
-            if link.to_node == old_output_node
-        }
-
     # Create a new output node
-    output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(output_type)
-    output.name = "AYON File Output"
-    output.label = "AYON File Output"
+    output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
+        "CompositorNodeOutputFile"
+    )
+    output.name = variant_name
+    output.label = variant_name
 
-    # Match output format from scene file format
+    # By default, match output format from scene file format
     image_settings = bpy.context.scene.render.image_settings
     output.format.file_format = image_settings.file_format
-
     multi_exr: bool = ext == "exr" and multilayer
 
     slots = output.layer_slots if multi_exr else output.file_slots
     slots.clear()
 
     # Define the base path for the File Output node.
-    output_dir = Path(output_path)
-    filepath = output_dir / variant_name.lstrip("/")
-    render_product_main_beauty = f"{filepath}{aov_sep}beauty.####"
-    output.base_path = (
-        render_product_main_beauty if multi_exr else str(output_path)
+    output.base_path = get_base_render_output_path(
+        variant_name, project_settings=project_settings
     )
 
     # Create a new socket for the beauty output
@@ -396,23 +425,9 @@ def set_node_tree(
                 render_layer,
             )
 
-            # If the renderpass was not connected with the old output node,
-            # we connect it with the new one.
-            if not old_links.get(output_socket.name):
-                tree.links.new(output_socket, slot)
+            tree.links.new(output_socket, slot)
 
-    for link in list(old_links.values()):
-        # Check if the socket is still available in the new output node.
-        output_socket = output.inputs.get(link.to_socket.name)
-        # If it is, we connect it with the new output node.
-        if output_socket:
-            tree.links.new(link.from_socket, output_socket)
-        # Then, we remove the old link.
-        tree.links.remove(link)
-
-    if old_output_node:
-        output.location = old_output_node.location
-        tree.nodes.remove(old_output_node)
+    return output
 
 
 def create_renderlayer_node_with_new_view_layers(
@@ -428,21 +443,16 @@ def create_renderlayer_node_with_new_view_layers(
     return render_layer_nodes
 
 
-def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None):
+def prepare_rendering(
+    variant_name: str, project_settings: Optional[dict] = None
+) -> "bpy.types.CompositorNodeOutputFile":
     """Initialize render setup using render settings from project settings."""
-
-    filepath = Path(bpy.data.filepath)
-    assert filepath, "Workfile not saved. Please save the file first."
-
-    dirpath = filepath.parent
-    file_name = Path(filepath.name).stem
+    assert bpy.data.filepath, "Workfile not saved. Please save the file first."
 
     if project_settings is None:
         project_name: str = get_current_project_name()
         project_settings = get_project_settings(project_name)
 
-    render_folder = get_default_render_folder(project_settings)
-    aov_sep = get_aov_separator(project_settings)
     ext = get_image_format(project_settings)
     multilayer = get_multilayer(project_settings)
     renderer = get_renderer(project_settings)
@@ -451,7 +461,6 @@ def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None
         ver_major >= 4 and ver_minor >=2
     ):
         renderer = "BLENDER_EEVEE_NEXT"
-    compositing = get_compositing(project_settings)
 
     # Set scene render settings
     set_render_format(ext, multilayer)
@@ -460,10 +469,10 @@ def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None
     set_render_passes(project_settings, renderer, view_layers)
 
     # Generate Compositing nodes
-    output_path = Path.joinpath(dirpath, render_folder, file_name)
-    set_node_tree(
-        output_path, variant_name, aov_sep, ext,
-        multilayer, compositing, view_layers
+    output_node = create_render_node_tree(
+        variant_name,
+        view_layers,
+        project_settings
     )
 
     # Clear the scene render filepath, so that the outputs are handled only by
@@ -472,3 +481,5 @@ def prepare_rendering(variant_name: str, project_settings: Optional[dict] = None
     tmp_render_path = tmp_render_path.replace("\\", "/")
     os.makedirs(tmp_render_path, exist_ok=True)
     bpy.context.scene.render.filepath = tmp_render_path
+
+    return output_node
