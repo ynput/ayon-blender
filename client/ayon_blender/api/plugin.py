@@ -202,9 +202,8 @@ class BlenderCreator(Creator):
         if not shared_data.get('blender_cached_instances'):
             cache = {}
             cache_legacy = {}
-
-            ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
             convert_avalon_instances()
+            ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
             ayon_instance_objs = (
                 ayon_instances.objects if ayon_instances else []
             )
