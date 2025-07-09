@@ -1,21 +1,18 @@
 import bpy
 import os
-import shutil
 from typing import Dict, List, Optional, Union
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
-from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api.plugin_load import (
     add_override,
     load_collection
 )
 from ayon_blender.api.pipeline import (
-    ls,
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
     metadata_update,
-    get_container_name
+    get_container_name,
+    containerise,
+    show_message
 )
 
 
@@ -35,13 +32,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
             label="Add Override",
             default=False,
             tooltip="Add a library override for the loaded asset.",
-        ),
-        BoolDef(
-            "use_arbitrary_loc_for_library",
-            label="Use Arbitrary Location for Library",
-            default=False,
-            tooltip="Store the library in arbitrary location"
-                    "Use with caution when blend file is big.",
         )
     ]
 
@@ -69,12 +59,22 @@ class BlendLinkLoader(plugin.BlenderLoader):
         )
         loaded_collection = bpy.data.collections.get(container_name)
         scene_collection = bpy.context.scene.collection
-        if loaded_collection and container_name in scene_collection.children:
-            self.log.debug(f"Collection {container_name} already loaded.")
+
+        if loaded_collection and group_name in scene_collection.children:
+
+            message = (
+                f"Collection {group_name} already loaded, "
+                f"instance to {group_name} is created instead of "
+                "linking new collection"
+            )
+            show_message("Collection {group_name} already loaded", message)
+            instance = bpy.data.objects.new(name=f"{group_name}", object_data=None)
+            instance.instance_type = 'COLLECTION'
+            instance.instance_collection = loaded_collection
+            # Link the instance to the active scene
+            bpy.context.scene.collection.objects.link(instance)
             return
-        use_arbitrary_loc = options.get("use_arbitrary_loc_for_library")
-        if use_arbitrary_loc:
-            filepath = self.use_arbitrary_location_for_library(filepath, group_name)
+
         loaded_collection = load_collection(
             filepath,
             link=True,
@@ -87,82 +87,41 @@ class BlendLinkLoader(plugin.BlenderLoader):
             if local_copy:
                 loaded_collection = local_copy
 
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        if not avalon_container:
-            avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
-            bpy.context.scene.collection.children.link(avalon_container)
+        container_collection = containerise(
+            name=name,
+            namespace=namespace,
+            nodes=[loaded_collection],
+            context=context,
+            loader=self.__class__.__name__,
+        )
 
-        avalon_container.children.link(loaded_collection)
-        data = {
-            "schema": "ayon:container-3.0",
-            "id": AYON_CONTAINER_ID,
-            "name": name,
-            "namespace": namespace or '',
-            "loader": str(self.__class__.__name__),
-            "representation": context["representation"]["id"],
-            "libpath": filepath,
-            "objectName": group_name,
-            "project_name": context["project"]["name"],
-            "arbitrary_location_for_library": use_arbitrary_loc
-        }
-
-        loaded_collection[AVALON_PROPERTY] = data
-        # TODO: Store loader options for later use (e.g. on update)
-        # Store the loader options on the container for later use if needed.
-
-        collections = [
-            coll for coll in bpy.data.collections
-            if coll.name.startswith(f"{group_name}:")
-        ]
-
-        self[:] = collections
-
-        return collections
+        return (container_collection, loaded_collection)
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset. """
         repre = context["representation"]
         collection = container["node"]
-        # currently updating version only applicable to the single asset
-        # it does not support for versioning in multiple assets
-        library = (
-            self._get_library_from_collection(collection)
-            or self._get_library_by_prev_libpath(container)
-        )
+        library = self._get_library_from_collection(collection)
         filepath = self.filepath_from_context(context)
-
-        # Update library filepath and reload it if there is library
         if library:
             filename = os.path.basename(filepath)
             library.name = filename
-            if not container.get("arbitrary_location_for_library", False):
-                library.filepath = filepath
-                library.reload()
-            else:
-                updated_libpath = self.use_arbitrary_location_for_library(
-                    filepath, container["objectName"])
-                library.filepath = updated_libpath
-                library.reload()
-
+            library.filepath = filepath
+            library.reload()
         # refresh UI
         bpy.context.view_layer.update()
-        # Update container metadata
-        updated_data = {
-            "representation": str(repre["id"]),
-            "lib_path": filepath
-        }
 
         # Update container metadata
-        metadata_update(collection, updated_data)
+        metadata_update(
+            collection, {"representation": str(repre["id"])}
+        )
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
         collection = container["node"]
         library = self._get_library_from_collection(collection)
         if library:
-            linked_to_coll = self._has_linked_to_existing_collections(library)
-            if not linked_to_coll:
-                bpy.data.libraries.remove(library)
+            bpy.data.libraries.remove(library)
         else:
             # Ensure the collection is linked to the scene's master collection
             scene_collection = bpy.context.scene.collection
@@ -185,50 +144,3 @@ class BlendLinkLoader(plugin.BlenderLoader):
                 return child.override_library.reference.library
 
         return None
-
-    def _has_linked_to_existing_collections(
-            self, library: bpy.types.Library) -> bool:
-        """Check if any collection loaded by link
-        scene loader linked to the same library.
-        """
-        existing_collections = [
-            container["node"] for container in ls()
-            if container["loader"] == str(
-                self.__class__.__name__)
-        ]
-        match_count = list(
-            coll for coll in existing_collections
-            if self._get_library_from_collection(coll) == library
-        )
-
-        return len(match_count) > 1
-
-    def _get_library_by_prev_libpath(
-            self, container: Dict) -> Union[bpy.types.Library, None]:
-        """Get the library by filename."""
-        lib_path = container["libpath"]
-        for library in bpy.data.libraries:
-            if lib_path == library.filepath:
-                return library
-
-    def use_arbitrary_location_for_library(self, filepath: str, group_name: str) -> str:
-        """Use arbitrary location for library to store the linked libraries
-        Not recommend for extremely giant .blend files.
-
-        Args:
-            filepath (str): filepath
-            group_name (str): group name
-
-        Returns:
-            str: destination path
-        """
-        arbitrary_directory = os.path.join(
-            os.getenv("AYON_WORKDIR"), ".linked_folder", group_name
-        )
-        os.makedirs(arbitrary_directory, exist_ok=True)
-        filename = os.path.basename(filepath)
-        dst_filepath = os.path.join(arbitrary_directory, filename)
-        if not os.path.exists(dst_filepath):
-            shutil.copy(filepath, dst_filepath)
-
-        return dst_filepath
