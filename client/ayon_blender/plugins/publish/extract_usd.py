@@ -112,7 +112,9 @@ class ExtractUSD(plugin.BlenderExtractor,
             return []
         
         # Attributes logic
-        publish_attributes = cls.get_attr_values_from_data(cls, instance.data)
+        publish_attributes = cls.get_attr_values_from_data_for_plugin(
+            cls, instance
+        )
 
         visible = publish_attributes.get("convert_orientation", cls.convert_orientation)
 
@@ -160,7 +162,9 @@ class ExtractUSD(plugin.BlenderExtractor,
             if not cls.instance_matches_plugin_families(instance):
                 continue
             value_changes = instance_change["changes"]
-            plugin_attribute_changes = cls.get_attr_values_from_data(cls, value_changes)
+            plugin_attribute_changes = cls.get_attr_values_from_data_for_plugin(
+                cls, value_changes
+            )
 
             if not any(key in plugin_attribute_changes for key in keys):
                 continue
