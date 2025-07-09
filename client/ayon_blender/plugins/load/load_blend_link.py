@@ -60,7 +60,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         loaded_collection = bpy.data.collections.get(container_name)
         scene_collection = bpy.context.scene.collection
 
-        if loaded_collection and group_name in scene_collection.children:
+        if loaded_collection and container_name in scene_collection.children:
 
             message = (
                 f"Collection {group_name} already loaded, "
