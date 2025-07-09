@@ -60,15 +60,15 @@ class BlendLinkLoader(plugin.BlenderLoader):
         loaded_collection = bpy.data.collections.get(container_name)
         scene_collection = bpy.context.scene.collection
 
-        if loaded_collection and container_name in scene_collection.children:
+        if loaded_collection and group_name in scene_collection.children:
 
             message = (
-                f"Collection {container_name} already loaded, "
-                f"instance to {container_name} is created instead of "
+                f"Collection {group_name} already loaded, "
+                f"instance to {group_name} is created instead of "
                 "linking new collection"
             )
-            show_message(f"Collection {container_name} already loaded", message)
-            instance = bpy.data.objects.new(name=container_name, object_data=None)
+            show_message(f"Collection {group_name} already loaded", message)
+            instance = bpy.data.objects.new(name=group_name, object_data=None)
             instance.instance_type = 'COLLECTION'
             instance.instance_collection = loaded_collection
             # Link the instance to the active scene
@@ -78,7 +78,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         loaded_collection = load_collection(
             filepath,
             link=True,
-            group_name=group_name,
+            group_name=group_name
         )
 
         options = options or dict()
@@ -95,19 +95,18 @@ class BlendLinkLoader(plugin.BlenderLoader):
             loader=self.__class__.__name__,
         )
 
-        return (container_collection, loaded_collection)
+        return container_collection
 
     def exec_update(self, container: Dict, context: Dict):
         """Update the loaded asset. """
         repre = context["representation"]
         collection = container["node"]
-        library = self._get_library_from_collection(collection)
+        library = self._get_library_from_collection(collection.children[0])
         filepath = self.filepath_from_context(context)
-        if library:
-            filename = os.path.basename(filepath)
-            library.name = filename
-            library.filepath = filepath
-            library.reload()
+        filename = os.path.basename(filepath)
+        library.name = filename
+        library.filepath = filepath
+        library.reload()
         # refresh UI
         bpy.context.view_layer.update()
 
@@ -118,8 +117,9 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
+
         collection = container["node"]
-        library = self._get_library_from_collection(collection)
+        library = self._get_library_from_collection(collection.children[0])
         if library:
             bpy.data.libraries.remove(library)
         else:
