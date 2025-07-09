@@ -4,12 +4,11 @@ import inspect
 from ayon_core.pipeline.publish import (
     ValidateContentsOrder,
     OptionalPyblishPluginMixin,
-    PublishValidationError
+    PublishValidationError,
+    RepairAction,
 )
-from ayon_blender.api.action import (
-    SelectInvalidAction,
-    RepairAction
-)
+from ayon_blender.api.action import SelectInvalidAction
+
 from ayon_blender.api import plugin
 
 
@@ -23,6 +22,7 @@ class ValidateNoAnimation(
     hosts = ["blender"]
     families = ["blendScene", "model", "rig"]
     label = "No Animation"
+    optional = True
     actions = [SelectInvalidAction, RepairAction]
 
     @classmethod
