@@ -30,10 +30,6 @@ class ValidateFileSavedModel(BaseSettingsModel):
     enabled: bool = SettingsField(title="ValidateFileSaved")
     optional: bool = SettingsField(title="Optional")
     active: bool = SettingsField(title="Active")
-    exclude_families: list[str] = SettingsField(
-        default_factory=list,
-        title="Exclude product types"
-    )
 
 
 class ExtractBlendModel(BaseSettingsModel):
@@ -72,6 +68,11 @@ class PublishPluginsModel(BaseSettingsModel):
         title="Validate Absolute Data Block Paths",
         description="Checks if external data having absolute file path.",
         section="General Validators"
+    )
+    ValidateNoAnimation: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
+        title="Validate No Animation",
+        description="Checks if objects have no animation data.",
     )
     ValidateCameraZeroKeyframe: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
@@ -183,6 +184,11 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "optional": True,
         "active": True
     },
+    "ValidateNoAnimation": {
+        "enabled": True,
+        "optional": True,
+        "active": True
+    },
     "ValidateCameraZeroKeyframe": {
         "enabled": False,
         "optional": True,
@@ -191,8 +197,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
     "ValidateFileSaved": {
         "enabled": True,
         "optional": False,
-        "active": True,
-        "exclude_families": []
+        "active": True
     },
     "ValidateRenderCameraIsSet": {
         "enabled": True,
