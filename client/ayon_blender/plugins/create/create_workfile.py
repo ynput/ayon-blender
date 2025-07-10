@@ -2,21 +2,22 @@ import bpy
 
 from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
-from ayon_blender.api.pipeline import (
-    AVALON_PROPERTY,
-    AVALON_CONTAINERS
+from ayon_blender.api.pipeline import convert_avalon_containers
+from ayon_blender.api.constants import (
+    AYON_PROPERTY,
+    AYON_CONTAINERS
 )
 
 
 class CreateWorkfile(BlenderCreator, AutoCreator):
     """Workfile auto-creator.
 
-    The workfile instance stores its data on the `AVALON_CONTAINERS` collection
+    The workfile instance stores its data on the `AYON_CONTAINERS` collection
     as custom attributes, because unlike other instances it doesn't have an
     instance node of its own.
 
     """
-    identifier = "io.openpype.creators.blender.workfile"
+    identifier = "io.ayon.creators.blender.workfile"
     label = "Workfile"
     product_type = "workfile"
     icon = "fa5.file"
@@ -85,18 +86,19 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["task"] = task_name
             workfile_instance["productName"] = product_name
 
-        instance_node = bpy.data.collections.get(AVALON_CONTAINERS)
+        convert_avalon_containers()
+        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
         if not instance_node:
-            instance_node = bpy.data.collections.new(name=AVALON_CONTAINERS)
+            instance_node = bpy.data.collections.new(name=AYON_CONTAINERS)
         workfile_instance.transient_data["instance_node"] = instance_node
 
     def collect_instances(self):
 
-        instance_node = bpy.data.collections.get(AVALON_CONTAINERS)
+        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
         if not instance_node:
             return
 
-        property = instance_node.get(AVALON_PROPERTY)
+        property = instance_node.get(AYON_PROPERTY)
         if not property:
             return
 
@@ -113,6 +115,6 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
     def remove_instances(self, instances):
         for instance in instances:
             node = instance.transient_data["instance_node"]
-            del node[AVALON_PROPERTY]
+            del node[AYON_PROPERTY]
 
             self._remove_instance_from_context(instance)

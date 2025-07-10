@@ -69,6 +69,11 @@ class PublishPluginsModel(BaseSettingsModel):
         description="Checks if external data having absolute file path.",
         section="General Validators"
     )
+    ValidateNoAnimation: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
+        title="Validate No Animation",
+        description="Checks if objects have no animation data.",
+    )
     ValidateCameraZeroKeyframe: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Camera Zero Keyframe",
@@ -175,6 +180,11 @@ class PublishPluginsModel(BaseSettingsModel):
 
 DEFAULT_BLENDER_PUBLISH_SETTINGS = {
     "ValidateAbsoluteDataBlockPaths": {
+        "enabled": True,
+        "optional": True,
+        "active": True
+    },
+    "ValidateNoAnimation": {
         "enabled": True,
         "optional": True,
         "active": True

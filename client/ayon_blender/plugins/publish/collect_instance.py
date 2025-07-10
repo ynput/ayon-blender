@@ -4,7 +4,7 @@ import pyblish.api
 
 from ayon_core.pipeline.publish import KnownPublishError
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import AVALON_PROPERTY
+from ayon_blender.api.constants import AYON_PROPERTY
 
 
 class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):
@@ -28,7 +28,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin):
             # Special case for animation instances, include armatures
             if instance.data["productType"] == "animation":
                 for obj in instance_node.objects:
-                    if obj.type == 'EMPTY' and obj.get(AVALON_PROPERTY):
+                    if obj.type == 'EMPTY' and obj.get(AYON_PROPERTY):
                         members.extend(
                             child for child in obj.children
                             if child.type == 'ARMATURE'
