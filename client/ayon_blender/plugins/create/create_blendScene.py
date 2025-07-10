@@ -8,12 +8,10 @@ from ayon_blender.api import plugin, lib
 class CreateBlendScene(plugin.BlenderCreator):
     """Generic group of assets."""
 
-    identifier = "io.openpype.creators.blender.blendscene"
+    identifier = "io.ayon.creators.blender.blendscene"
     label = "Blender Scene"
     product_type = "blendScene"
     icon = "cubes"
-
-    maintain_selection = False
 
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict

@@ -1,17 +1,22 @@
-from typing import Dict, List, Optional
+from __future__ import annotations
+from typing import Optional
 from pathlib import Path
 
 import bpy
 
 from ayon_core.pipeline import (
     get_representation_path,
-    AVALON_CONTAINER_ID,
+    AYON_CONTAINER_ID,
 )
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import imprint
+from ayon_blender.api.constants import (
+    AYON_CONTAINERS,
+    AYON_PROPERTY,
+)
 from ayon_blender.api.pipeline import (
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
+    convert_avalon_containers,
+    get_ayon_property
 )
 
 
@@ -29,25 +34,31 @@ class BlendSceneLoader(plugin.BlenderLoader):
     def _get_asset_container(collections):
         for coll in collections:
             parents = [c for c in collections if c.user_of_id(coll)]
-            if coll.get(AVALON_PROPERTY) and not parents:
+            coll_ayon_prop = get_ayon_property(coll)
+            if coll_ayon_prop and not parents:
                 return coll
 
         return None
 
     def _process_data(self, libpath, group_name, product_type):
         # Append all the data from the .blend file
+        names_by_attr: dict[str, list[str]] = {}
         with bpy.data.libraries.load(
             libpath, link=False, relative=False
         ) as (data_from, data_to):
             for attr in dir(data_to):
-                setattr(data_to, attr, getattr(data_from, attr))
-
-        members = []
+                values = getattr(data_from, attr)
+                # store copy of list of names because the main list will
+                # be replaced with the data from the library after the context
+                names_by_attr[attr] = list(values)
+                setattr(data_to, attr, values)
 
         # Rename the object to add the asset name
+        members = []
         for attr in dir(data_to):
-            for data in getattr(data_to, attr):
-                data.name = f"{group_name}:{data.name}"
+            from_names: list[str] = names_by_attr[attr]
+            for from_name, data in zip(from_names, getattr(data_to, attr)):
+                data.name = f"{group_name}:{from_name}"
                 members.append(data)
 
         container = self._get_asset_container(
@@ -72,8 +83,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
-        options: Optional[Dict] = None
-    ) -> Optional[List]:
+        options: Optional[dict] = None
+    ) -> Optional[list]:
         """
         Arguments:
             name: Use pre-defined name
@@ -97,20 +108,21 @@ class BlendSceneLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        if not avalon_container:
-            avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
-            bpy.context.scene.collection.children.link(avalon_container)
+        convert_avalon_containers()
+        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        if not ayon_container:
+            ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+            bpy.context.scene.collection.children.link(ayon_container)
 
         container, members = self._process_data(
             libpath, group_name, product_type
         )
 
-        avalon_container.children.link(container)
+        ayon_container.children.link(container)
 
         data = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
@@ -124,7 +136,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
             "project_name": context["project"]["name"],
         }
 
-        container[AVALON_PROPERTY] = data
+        container[AYON_PROPERTY] = data
 
         objects = [
             obj for obj in bpy.data.objects
@@ -134,7 +146,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
         self[:] = objects
         return objects
 
-    def exec_update(self, container: Dict, context: Dict):
+    def exec_update(self, container: dict, context: dict):
         """
         Update the loaded asset.
         """
@@ -152,9 +164,10 @@ class BlendSceneLoader(plugin.BlenderLoader):
         # Also gets the transform for each object to reapply after the update.
         collection_parents = {}
         member_transforms = {}
-        members = asset_group.get(AVALON_PROPERTY).get("members", [])
+        members = asset_group.get(AYON_PROPERTY).get("members", [])
         loaded_collections = {c for c in bpy.data.collections if c in members}
-        loaded_collections.add(bpy.data.collections.get(AVALON_CONTAINERS))
+        convert_avalon_containers()
+        loaded_collections.add(bpy.data.collections.get(AYON_CONTAINERS))
         for member in members:
             if isinstance(member, bpy.types.Object):
                 member_parents = set(member.users_collection)
@@ -169,7 +182,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
             if member_parents:
                 collection_parents[member.name] = list(member_parents)
 
-        old_data = dict(asset_group.get(AVALON_PROPERTY))
+        old_data = dict(asset_group.get(AYON_PROPERTY))
 
         self.exec_remove(container)
 
@@ -192,14 +205,15 @@ class BlendSceneLoader(plugin.BlenderLoader):
             ):
                 member.matrix_basis = member_transforms[member.name]
 
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        avalon_container.children.link(asset_group)
+        convert_avalon_containers()
+        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        ayon_container.children.link(asset_group)
 
         # Restore the old data, but reset members, as they don't exist anymore
         # This avoids a crash, because the memory addresses of those members
         # are not valid anymore
         old_data["members"] = []
-        asset_group[AVALON_PROPERTY] = old_data
+        asset_group[AYON_PROPERTY] = old_data
 
         new_data = {
             "libpath": libpath,
@@ -211,14 +225,14 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
         imprint(asset_group, new_data)
 
-    def exec_remove(self, container: Dict) -> bool:
+    def exec_remove(self, container: dict) -> bool:
         """
         Remove an existing container from a Blender scene.
         """
         group_name = container["objectName"]
         asset_group = bpy.data.collections.get(group_name)
 
-        members = set(asset_group.get(AVALON_PROPERTY).get("members", []))
+        members = set(asset_group.get(AYON_PROPERTY).get("members", []))
 
         if members:
             for attr_name in dir(bpy.data):
