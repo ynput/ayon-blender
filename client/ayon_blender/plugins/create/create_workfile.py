@@ -1,23 +1,23 @@
 import bpy
-import ayon_api
 
 from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
-from ayon_blender.api.pipeline import (
-    AVALON_PROPERTY,
-    AVALON_CONTAINERS
+from ayon_blender.api.pipeline import convert_avalon_containers
+from ayon_blender.api.constants import (
+    AYON_PROPERTY,
+    AYON_CONTAINERS
 )
 
 
 class CreateWorkfile(BlenderCreator, AutoCreator):
     """Workfile auto-creator.
 
-    The workfile instance stores its data on the `AVALON_CONTAINERS` collection
+    The workfile instance stores its data on the `AYON_CONTAINERS` collection
     as custom attributes, because unlike other instances it doesn't have an
     instance node of its own.
 
     """
-    identifier = "io.openpype.creators.blender.workfile"
+    identifier = "io.ayon.creators.blender.workfile"
     label = "Workfile"
     product_type = "workfile"
     icon = "fa5.file"
@@ -32,22 +32,15 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             None,
         )
 
-        project_name = self.project_name
-        folder_path = self.create_context.get_current_folder_path()
-        task_name = self.create_context.get_current_task_name()
+        project_entity = self.create_context.get_current_project_entity()
+        project_name = project_entity["name"]
+        folder_entity = self.create_context.get_current_folder_entity()
+        folder_path = folder_entity["path"]
+        task_entity = self.create_context.get_current_task_entity()
+        task_name = task_entity["name"]
         host_name = self.create_context.host_name
 
-        existing_folder_path = None
-        if workfile_instance is not None:
-            existing_folder_path = workfile_instance.get("folderPath")
-
         if not workfile_instance:
-            folder_entity = ayon_api.get_folder_by_path(
-                project_name, folder_path
-            )
-            task_entity = ayon_api.get_task_by_name(
-                project_name, folder_entity["id"], task_name
-            )
             product_name = self.get_product_name(
                 project_name,
                 folder_entity,
@@ -77,16 +70,10 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             self._add_instance_to_context(workfile_instance)
 
         elif (
-            existing_folder_path != folder_path
+            workfile_instance["folderPath"]  != folder_path
             or workfile_instance["task"] != task_name
         ):
             # Update instance context if it's different
-            folder_entity = ayon_api.get_folder_by_path(
-                project_name, folder_path
-            )
-            task_entity = ayon_api.get_task_by_name(
-                project_name, folder_entity["id"], task_name
-            )
             product_name = self.get_product_name(
                 project_name,
                 folder_entity,
@@ -99,18 +86,19 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["task"] = task_name
             workfile_instance["productName"] = product_name
 
-        instance_node = bpy.data.collections.get(AVALON_CONTAINERS)
+        convert_avalon_containers()
+        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
         if not instance_node:
-            instance_node = bpy.data.collections.new(name=AVALON_CONTAINERS)
+            instance_node = bpy.data.collections.new(name=AYON_CONTAINERS)
         workfile_instance.transient_data["instance_node"] = instance_node
 
     def collect_instances(self):
 
-        instance_node = bpy.data.collections.get(AVALON_CONTAINERS)
+        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
         if not instance_node:
             return
 
-        property = instance_node.get(AVALON_PROPERTY)
+        property = instance_node.get(AYON_PROPERTY)
         if not property:
             return
 
@@ -127,6 +115,6 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
     def remove_instances(self, instances):
         for instance in instances:
             node = instance.transient_data["instance_node"]
-            del node[AVALON_PROPERTY]
+            del node[AYON_PROPERTY]
 
             self._remove_instance_from_context(instance)

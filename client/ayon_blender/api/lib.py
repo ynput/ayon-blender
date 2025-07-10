@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 from . import pipeline
 
+from .constants import AYON_PROPERTY
+
 log = Logger.get_logger(__name__)
 
 
@@ -148,8 +150,11 @@ def set_app_templates_path():
     # We look among the scripts paths for one of the paths that contains
     # the app templates. The path must contain the subfolder
     # `startup/bl_app_templates_user`.
-    paths = os.environ.get("AYON_BLENDER_USER_SCRIPTS").split(os.pathsep)
+    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS")
+    if not user_scripts:
+        return
 
+    paths = user_scripts.split(os.pathsep)
     app_templates_path = None
     for path in paths:
         if os.path.isdir(
@@ -180,7 +185,7 @@ def imprint(node: bpy.types.bpy_struct_meta_idprop, data: Dict):
         ...   "computedValue": lambda: compute()
         ... })
         ...
-        >>> cube['avalon']['computedValue']
+        >>> cube['ayon']['computedValue']
         6
     """
 
@@ -248,12 +253,13 @@ def lsattrs(attrs: Dict) -> List:
         ):
             continue
         for node in getattr(bpy.data, coll):
+            ayon_prop = pipeline.get_ayon_property(node)
+            if not ayon_prop:
+                continue
+
             for attr, value in attrs.items():
-                avalon_prop = node.get(pipeline.AVALON_PROPERTY)
-                if not avalon_prop:
-                    continue
-                if (avalon_prop.get(attr)
-                        and (value is None or avalon_prop.get(attr) == value)):
+                if (ayon_prop.get(attr)
+                        and (value is None or ayon_prop.get(attr) == value)):
                     matches.add(node)
     return list(matches)
 
@@ -261,7 +267,7 @@ def lsattrs(attrs: Dict) -> List:
 def read(node: bpy.types.bpy_struct_meta_idprop):
     """Return user-defined attributes from `node`"""
 
-    data = dict(node.get(pipeline.AVALON_PROPERTY, {}))
+    data = dict(node.get(AYON_PROPERTY, {}))
 
     # Ignore hidden/internal data
     data = {
@@ -577,3 +583,62 @@ def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
                                    if modifier.type == modifier_type]
                 modifiers_dict[ob.name] = cache_modifiers
     return modifiers_dict
+
+
+def get_blender_version():
+    """Get Blender Version
+    """
+    major, minor, subversion = bpy.app.version
+    return major, minor, subversion
+
+
+@contextlib.contextmanager
+def strip_container_data(containers):
+    """Remove container data during context
+    """
+    container_data = {}
+    for container in containers:
+        node = container["node"]
+        container_data[node] = dict(
+            node.get(AYON_PROPERTY)
+        )
+        del node[AYON_PROPERTY]
+    try:
+        yield
+
+    finally:
+        for key, item in container_data.items():
+            key[AYON_PROPERTY] = item
+
+
+@contextlib.contextmanager
+def strip_namespace(containers):
+    """Strip namespace during context
+    """
+    nodes = [
+        container["node"] for container in containers
+    ]
+    original_namespaces = {}
+    for node in nodes:
+        if isinstance(node, bpy.types.Collection):
+            children = node.children_recursive
+        elif isinstance(node, bpy.types.Object):
+            children = node.children
+        elif isinstance(node, bpy.types.Node):
+            children = [node]
+        else:
+            raise TypeError(f"Unsupported type: {node} ({type(node)})")
+
+        for child in children:
+            original_name = child.name
+            if ":" not in original_name:
+                continue
+            namespace, name = original_name.rsplit(':', 1)
+            child.name = name
+            original_namespaces[child] = namespace
+
+    try:
+        yield
+    finally:
+        for node, original_namespace in original_namespaces.items():
+            node.name = f"{original_namespace}:{name}"

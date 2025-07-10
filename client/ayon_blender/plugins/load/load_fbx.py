@@ -8,13 +8,15 @@ import bpy
 
 from ayon_core.pipeline import (
     get_representation_path,
-    AVALON_CONTAINER_ID,
+    AYON_CONTAINER_ID,
 )
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import (
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
+from ayon_blender.api.constants import (
+    AYON_CONTAINERS,
+    AYON_PROPERTY,
+    VALID_EXTENSIONS,
 )
+from ayon_blender.api.pipeline import convert_avalon_containers
 
 
 class FbxModelLoader(plugin.BlenderLoader):
@@ -51,9 +53,17 @@ class FbxModelLoader(plugin.BlenderLoader):
     def _process(self, libpath, asset_group, group_name, action):
         plugin.deselect_all()
 
-        collection = bpy.context.view_layer.active_layer_collection.collection
-
-        bpy.ops.import_scene.fbx(filepath=libpath)
+        blender_version = lib.get_blender_version()
+        # bpy.ops.wm.fbx_import would be the new python command for
+        # fbx loader and it would fully replace its old version of
+        # bpy.ops.import_scene.fbx to be the default import command
+        # in 5.0
+        if blender_version >= (4, 5, 0):
+            bpy.ops.wm.fbx_import(filepath=libpath)
+        else:
+            # TODO: make sure it works with the color management
+            # in 4.4 or elder version
+            bpy.ops.import_scene.fbx(filepath=libpath)
 
         parent = bpy.context.scene.collection
 
@@ -87,8 +97,8 @@ class FbxModelLoader(plugin.BlenderLoader):
         objects.reverse()
 
         for obj in objects:
-            parent.objects.link(obj)
-            collection.objects.unlink(obj)
+            if obj.name not in parent.objects:
+                parent.objects.link(obj)
 
         for obj in objects:
             name = obj.name
@@ -105,15 +115,15 @@ class FbxModelLoader(plugin.BlenderLoader):
                 anim_data = obj.animation_data
                 if action is not None:
                     anim_data.action = action
-                elif anim_data.action is not None:
+                elif anim_data and anim_data.action:
                     name_action = anim_data.action.name
                     anim_data.action.name = f"{group_name}:{name_action}"
 
-            if not obj.get(AVALON_PROPERTY):
-                obj[AVALON_PROPERTY] = dict()
+            if not obj.get(AYON_PROPERTY):
+                obj[AYON_PROPERTY] = dict()
 
-            avalon_info = obj[AVALON_PROPERTY]
-            avalon_info.update({"container_name": group_name})
+            ayon_info = obj[AYON_PROPERTY]
+            ayon_info.update({"container_name": group_name})
 
         plugin.deselect_all()
 
@@ -141,13 +151,14 @@ class FbxModelLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-        if not avalon_container:
-            avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
-            bpy.context.scene.collection.children.link(avalon_container)
+        convert_avalon_containers()
+        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+        if not ayon_container:
+            ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+            bpy.context.scene.collection.children.link(ayon_container)
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
-        avalon_container.objects.link(asset_group)
+        ayon_container.objects.link(asset_group)
 
         objects = self._process(libpath, asset_group, group_name, None)
 
@@ -160,9 +171,9 @@ class FbxModelLoader(plugin.BlenderLoader):
 
         bpy.context.scene.collection.objects.link(asset_group)
 
-        asset_group[AVALON_PROPERTY] = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+        asset_group[AYON_PROPERTY] = {
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
@@ -171,7 +182,8 @@ class FbxModelLoader(plugin.BlenderLoader):
             "asset_name": asset_name,
             "parent": context["representation"]["versionId"],
             "productType": context["product"]["productType"],
-            "objectName": group_name
+            "objectName": group_name,
+            "project_name": context["project"]["name"],
         }
 
         self[:] = objects
@@ -210,11 +222,11 @@ class FbxModelLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 
-        metadata = asset_group.get(AVALON_PROPERTY)
+        metadata = asset_group.get(AYON_PROPERTY)
         group_libpath = metadata["libpath"]
 
         normalized_group_libpath = (
@@ -252,12 +264,13 @@ class FbxModelLoader(plugin.BlenderLoader):
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
+        metadata["project_name"] = context["project"]["name"]
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene.
 
         Arguments:
-            container (openpype:container-1.0): Container to remove,
+            container (ayon:container-1.0): Container to remove,
                 from `host.ls()`.
 
         Returns:

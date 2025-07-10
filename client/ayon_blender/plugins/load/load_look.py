@@ -10,9 +10,10 @@ import bpy
 
 from ayon_core.pipeline import get_representation_path
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import (
-    containerise_existing,
-    AVALON_PROPERTY
+from ayon_blender.api.pipeline import containerise_existing
+from ayon_blender.api.constants import (
+    AYON_PROPERTY,
+    VALID_EXTENSIONS,
 )
 
 
@@ -117,7 +118,7 @@ class BlendLookLoader(plugin.BlenderLoader):
             self.__class__.__name__,
         )
 
-        metadata = container.get(AVALON_PROPERTY)
+        metadata = container.get(AYON_PROPERTY)
 
         metadata["libpath"] = libpath
         metadata["lib_container"] = lib_container
@@ -132,6 +133,7 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         metadata["parent"] = context["representation"]["versionId"]
         metadata["product_type"] = context["product"]["productType"]
+        metadata["project_name"] = context["project"]["name"]
 
         nodes = list(container.objects)
         nodes.append(container)
@@ -162,11 +164,11 @@ class BlendLookLoader(plugin.BlenderLoader):
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
-        assert extension in plugin.VALID_EXTENSIONS, (
+        assert extension in VALID_EXTENSIONS, (
             f"Unsupported file: {libpath}"
         )
 
-        collection_metadata = collection.get(AVALON_PROPERTY)
+        collection_metadata = collection.get(AYON_PROPERTY)
         collection_libpath = collection_metadata["libpath"]
 
         normalized_collection_libpath = (
@@ -203,13 +205,14 @@ class BlendLookLoader(plugin.BlenderLoader):
         collection_metadata["materials"] = materials
         collection_metadata["libpath"] = str(libpath)
         collection_metadata["representation"] = repre_entity["id"]
+        collection_metadata["project_name"] = context["project"]["name"]
 
     def remove(self, container: Dict) -> bool:
         collection = bpy.data.collections.get(container["objectName"])
         if not collection:
             return False
 
-        collection_metadata = collection.get(AVALON_PROPERTY)
+        collection_metadata = collection.get(AYON_PROPERTY)
 
         for obj in collection_metadata['objects']:
             for child in self.get_all_children(obj):

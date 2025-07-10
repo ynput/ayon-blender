@@ -25,7 +25,8 @@ class ImageIOFileRulesModel(BaseSettingsModel):
 
 class BlenderImageIOModel(BaseSettingsModel):
     activate_host_color_management: bool = SettingsField(
-        True, title="Enable Color Management"
+        True, title="Enable Color Management",
+        description="When enabled, Blender follows global color management using OCIO files set in ayon-core.",
     )
     file_rules: ImageIOFileRulesModel = SettingsField(
         default_factory=ImageIOFileRulesModel,

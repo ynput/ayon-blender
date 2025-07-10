@@ -1,9 +1,15 @@
 import os
+import contextlib
 
 import bpy
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
+from ayon_blender.api.pipeline import ls
+from ayon_blender.api.lib import (
+    strip_container_data,
+    strip_namespace
+)
 
 
 class ExtractBlend(
@@ -59,7 +65,13 @@ class ExtractBlend(
                     if node.image and node.image.packed_file is None:
                         node.image.pack()
 
-        bpy.data.libraries.write(filepath, data_blocks, compress=self.compress)
+        containers = list(ls())
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(strip_container_data(containers))
+            stack.enter_context(strip_namespace(containers))
+            bpy.data.libraries.write(
+                filepath, data_blocks, compress=self.compress
+            )
 
         if "representations" not in instance.data:
             instance.data["representations"] = []

@@ -8,7 +8,7 @@ from ayon_blender.api import lib, plugin
 class CreateAction(plugin.BlenderCreator):
     """Action output for character rigs."""
 
-    identifier = "io.openpype.creators.blender.action"
+    identifier = "io.ayon.creators.blender.action"
     label = "Action"
     product_type = "action"
     icon = "male"

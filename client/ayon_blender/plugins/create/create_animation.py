@@ -6,7 +6,7 @@ from ayon_blender.api import plugin, lib
 class CreateAnimation(plugin.BlenderCreator):
     """Animation output for character rigs."""
 
-    identifier = "io.openpype.creators.blender.animation"
+    identifier = "io.ayon.creators.blender.animation"
     label = "Animation"
     product_type = "animation"
     icon = "male"

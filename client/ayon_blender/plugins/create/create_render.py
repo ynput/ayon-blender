@@ -1,7 +1,6 @@
 """Create render."""
 import bpy
 
-from ayon_core.lib import version_up
 from ayon_core.pipeline.context_tools import version_up_current_workfile
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.render_lib import prepare_rendering
@@ -11,9 +10,9 @@ from ayon_blender.api.workio import save_file
 class CreateRenderlayer(plugin.BlenderCreator):
     """Single baked camera."""
 
-    identifier = "io.openpype.creators.blender.render"
+    identifier = "io.ayon.creators.blender.render"
     label = "Render"
-    product_type = "render"
+    product_type = "renderlayer"
     icon = "eye"
 
     def create(
@@ -43,7 +42,7 @@ class CreateRenderlayer(plugin.BlenderCreator):
         if not bpy.data.filepath:
             version_up_current_workfile()
         else:
-            filepath = version_up(bpy.data.filepath)
+            filepath = bpy.data.filepath
             save_file(filepath, copy=False)
 
         return collection
