@@ -9,7 +9,7 @@ from ayon_api import get_representations
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import AVALON_PROPERTY
+from ayon_blender.api.pipeline import AYON_PROPERTY
 
 
 class ExtractLayout(
@@ -52,7 +52,7 @@ class ExtractLayout(
                 continue
 
             asset_group_name = asset.name
-            asset.name = asset.get(AVALON_PROPERTY).get("asset_name")
+            asset.name = asset.get(AYON_PROPERTY).get("asset_name")
 
             # Remove : from the armature name for the export
             armature_name = obj.name
@@ -141,7 +141,7 @@ class ExtractLayout(
         version_ids = set()
         filtered_assets = []
         for asset in asset_group.children:
-            metadata = asset.get(AVALON_PROPERTY)
+            metadata = asset.get(AYON_PROPERTY)
             if not metadata:
                 # Avoid raising error directly if there's just invalid data
                 # inside the instance; better to log it to the artist
