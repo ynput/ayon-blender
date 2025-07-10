@@ -11,25 +11,26 @@ from ayon_core.pipeline import (
     Creator,
     CreatedInstance,
     LoaderPlugin,
-    AVALON_INSTANCE_ID,
     AYON_INSTANCE_ID,
+    AVALON_INSTANCE_ID,
 )
 from ayon_core.pipeline.publish import Extractor
 from ayon_core.lib import BoolDef
 
 from .pipeline import (
-    AVALON_CONTAINERS,
-    AVALON_INSTANCES,
-    AVALON_PROPERTY,
+    get_ayon_property,
+    convert_avalon_instances,
+)
+from .constants import (
+    AYON_CONTAINERS,
+    AYON_INSTANCES,
+    AYON_PROPERTY,
 )
 from .ops import (
     MainThreadItem,
     execute_in_main_thread
 )
 from .lib import imprint
-
-VALID_EXTENSIONS = [".blend", ".json", ".abc", ".fbx",
-                    ".usd", ".usdc", ".usda"]
 
 
 def prepare_scene_name(
@@ -53,18 +54,18 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
-    if not avalon_container:
+    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+    if not ayon_container:
         return "01"
     # Check the names of both object and collection containers
-    obj_asset_groups = avalon_container.objects
+    obj_asset_groups = ayon_container.objects
     obj_group_names = {
         c.name for c in obj_asset_groups
-        if c.type == 'EMPTY' and c.get(AVALON_PROPERTY)}
-    coll_asset_groups = avalon_container.children
+        if c.type == 'EMPTY' and c.get(AYON_PROPERTY)}
+    coll_asset_groups = ayon_container.children
     coll_group_names = {
         c.name for c in coll_asset_groups
-        if c.get(AVALON_PROPERTY)}
+        if c.get(AYON_PROPERTY)}
     container_names = obj_group_names.union(coll_group_names)
     count = 1
     name = f"{folder_name}_{count:0>2}_{product_name}"
@@ -201,10 +202,10 @@ class BlenderCreator(Creator):
         if not shared_data.get('blender_cached_instances'):
             cache = {}
             cache_legacy = {}
-
-            avalon_instances = bpy.data.collections.get(AVALON_INSTANCES)
-            avalon_instance_objs = (
-                avalon_instances.objects if avalon_instances else []
+            convert_avalon_instances()
+            ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
+            ayon_instance_objs = (
+                ayon_instances.objects if ayon_instances else []
             )
 
             # Consider any node tree objects as well
@@ -213,32 +214,34 @@ class BlenderCreator(Creator):
                 node_tree_objects = bpy.context.scene.node_tree.nodes
 
             for obj_or_col in itertools.chain(
-                    avalon_instance_objs,
+                    ayon_instance_objs,
                     bpy.data.collections,
                     node_tree_objects
             ):
-                avalon_prop = obj_or_col.get(AVALON_PROPERTY, {})
-                if not avalon_prop:
+                ayon_prop = get_ayon_property(obj_or_col)
+                if not ayon_prop:
                     continue
 
-                if avalon_prop.get('id') not in {
+                if ayon_prop.get('id') not in {
                     AYON_INSTANCE_ID, AVALON_INSTANCE_ID
                 }:
                     continue
 
-                creator_id = avalon_prop.get('creator_identifier')
+                creator_id = ayon_prop.get("creator_identifier")
+                if "openpype" in creator_id:
+                    creator_id = creator_id.replace("openpype", "ayon")
+                    ayon_prop["creator_identifier"] = creator_id
+
                 if creator_id:
                     # Creator instance
                     cache.setdefault(creator_id, []).append(obj_or_col)
                 else:
-                    family = avalon_prop.get('family')
-                    if family:
-                        # Legacy creator instance
-                        cache_legacy.setdefault(family, []).append(obj_or_col)
+                    # Legacy creator instance
+                    family = ayon_prop.get('family')
+                    cache_legacy.setdefault(family, []).append(obj_or_col)
 
             shared_data["blender_cached_instances"] = cache
             shared_data["blender_cached_legacy_instances"] = cache_legacy
-
         return shared_data
 
     def create(
@@ -254,9 +257,9 @@ class BlenderCreator(Creator):
                 Those may affect how creator works.
         """
         # Get Instance Container or create it if it does not exist
-        instances = bpy.data.collections.get(AVALON_INSTANCES)
+        instances = bpy.data.collections.get(AYON_INSTANCES)
         if not instances:
-            instances = bpy.data.collections.new(name=AVALON_INSTANCES)
+            instances = bpy.data.collections.new(name=AYON_INSTANCES)
             bpy.context.scene.collection.children.link(instances)
 
         # Create asset group
@@ -301,7 +304,7 @@ class BlenderCreator(Creator):
 
         # Process only instances that were created by this creator
         for instance_node in cached_instances.get(self.identifier, []):
-            property = instance_node.get(AVALON_PROPERTY)
+            property = instance_node.get(AYON_PROPERTY)
             # Create instance object from existing data
             instance = CreatedInstance.from_existing(
                 instance_data=property.to_dict(),
@@ -335,7 +338,7 @@ class BlenderCreator(Creator):
             # Rename the instance node in the scene if product
             #   or folder changed.
             # Do not rename the instance if the family is workfile, as the
-            # workfile instance is included in the AVALON_CONTAINER collection.
+            # workfile instance is included in the AYON_CONTAINER collection.
             if (
                 "productName" in changes.changed_keys
                 or "folderPath" in changes.changed_keys

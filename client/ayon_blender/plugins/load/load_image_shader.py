@@ -6,7 +6,7 @@ import bpy
 from ayon_core.tools.utils import host_tools
 from ayon_core.lib import EnumDef
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import AVALON_CONTAINER_ID
+from ayon_core.pipeline import AYON_CONTAINER_ID
 
 
 class LoadImageShaderEditor(plugin.BlenderLoader):
@@ -122,8 +122,8 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         self.set_colorspace(context, image_texture_node)
 
         data = {
-            "schema": "openpype:container-2.0",
-            "id": AVALON_CONTAINER_ID,
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
             "name": name,
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),

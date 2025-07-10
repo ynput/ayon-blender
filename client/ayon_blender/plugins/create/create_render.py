@@ -34,7 +34,7 @@ def clean_name(name: str) -> str:
 class CreateRender(plugin.BlenderCreator):
     """Create render instance."""
 
-    identifier = "io.openpype.creators.blender.render"
+    identifier = "io.ayon.creators.blender.render"
     label = "Render"
     product_type = "render"
     icon = "eye"

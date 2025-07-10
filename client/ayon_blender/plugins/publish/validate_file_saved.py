@@ -26,7 +26,7 @@ class SaveWorkfileAction(pyblish.api.Action):
     icon = "save"
 
     def process(self, context, plugin):
-        bpy.ops.wm.avalon_workfiles()
+        bpy.ops.wm.ayon_workfiles()
 
 
 class ValidateFileSaved(

@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 import bpy
 
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import AVALON_PROPERTY
+from ayon_blender.api.pipeline import AYON_PROPERTY
 
 
 class BlendAnimationLoader(plugin.BlenderLoader):
@@ -46,12 +46,12 @@ class BlendAnimationLoader(plugin.BlenderLoader):
 
         assert container, "No asset group found"
 
-        target_namespace = container.get(AVALON_PROPERTY).get('namespace', namespace)
+        target_namespace = container.get(AYON_PROPERTY).get('namespace', namespace)
 
         action = data_to.actions[0].make_local().copy()
 
         for obj in bpy.data.objects:
-            if obj.get(AVALON_PROPERTY) and obj.get(AVALON_PROPERTY).get(
+            if obj.get(AYON_PROPERTY) and obj.get(AYON_PROPERTY).get(
                     'namespace', namespace) == target_namespace:
                 if obj.children[0]:
                     if not obj.children[0].animation_data:
