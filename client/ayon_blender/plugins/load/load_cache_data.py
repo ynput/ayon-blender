@@ -4,7 +4,7 @@ import bpy
 
 from ayon_core.pipeline import AYON_CONTAINER_ID
 
-from ayon_blender.api.pipeline import AVALON_PROPERTY
+from ayon_blender.api.constants import AYON_PROPERTY
 from ayon_blender.api import plugin
 
 
@@ -77,7 +77,7 @@ class CacheDataLoader(plugin.BlenderLoader):
         # for object_path in cache_file.object_paths:
 
         # Update representation id
-        cache_file[AVALON_PROPERTY]["representation"] = (
+        cache_file[AYON_PROPERTY]["representation"] = (
             context["representation"]["id"])
 
     def exec_remove(self, container: Dict) -> bool:
@@ -89,7 +89,7 @@ class CacheDataLoader(plugin.BlenderLoader):
         return True
 
     def _imprint(self, cache_file: "bpy.types.CacheFile", context):
-        cache_file[AVALON_PROPERTY] = {
+        cache_file[AYON_PROPERTY] = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
             "loader": str(self.__class__.__name__),
