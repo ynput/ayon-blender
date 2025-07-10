@@ -452,7 +452,8 @@ def get_ayon_property(node):
         property = node.get(AVALON_PROPERTY)
         if property:
             log.debug(
-                "Replacing Avalon property to Ayon property"
+                f"Replacing {node.name}'s Avalon "
+                f"property to {node.name}'s Ayon property"
             )
             node[AYON_PROPERTY] = property
             del node[AVALON_PROPERTY]
