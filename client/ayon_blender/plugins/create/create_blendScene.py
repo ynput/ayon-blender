@@ -22,12 +22,13 @@ class CreateBlendScene(plugin.BlenderCreator):
                                        pre_create_data)
 
         if pre_create_data.get("use_selection"):
-            selection = lib.get_selection(include_collections=True)
-            for data in selection:
-                if isinstance(data, bpy.types.Collection):
-                    instance_node.children.link(data)
-                elif isinstance(data, bpy.types.Object):
-                    instance_node.objects.link(data)
+            selected_objects = lib.get_selection()
+            for selected_object in selected_objects:
+                instance_node.objects.link(selected_object)
+
+            selected_collections = lib.get_selected_collections()
+            for selected_collection in selected_collections:
+                instance_node.children.link(selected_collection)
 
         return instance_node
 
