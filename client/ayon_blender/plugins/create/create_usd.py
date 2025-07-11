@@ -24,7 +24,5 @@ class CreateUSD(plugin.BlenderCreator):
             objects = lib.get_selection()
             for obj in objects:
                 collection.objects.link(obj)
-                if obj.type == 'EMPTY':
-                    objects.extend(obj.children)
 
         return collection
