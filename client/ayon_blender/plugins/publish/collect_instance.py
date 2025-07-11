@@ -38,8 +38,8 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin,
         members: set[str] = {instance_node}
         self.log.debug(f"Found instance node: {instance_node}")
         if isinstance(instance_node, bpy.types.Collection):
-            # Add all directly linked objects
-            objects = list(instance_node.objects)
+            # Add all linked objects to itself and all child collections
+            objects = set(instance_node.all_objects)
             members.update(objects)
 
             # Add all object children recursively (hierarchy)
