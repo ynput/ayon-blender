@@ -30,6 +30,8 @@ from ayon_core.tools.utils import host_tools
 
 from .workio import OpenFileCacher
 from . import pipeline
+from . import render_lib
+
 
 PREVIEW_COLLECTIONS: Dict = dict()
 
@@ -399,6 +401,20 @@ class SetUnitScale(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class CreateRenderSetup(bpy.types.Operator):
+    bl_idname = "wm.ayon_create_render_setup"
+    bl_label = "Create Render Setup"
+    bl_description = (
+        "Create a render setup for the current scene in Compositor based on "
+        "the current AYON project settings."
+    )
+
+    def execute(self, context):
+        # TODO: Likely don't want to hardcode this to just `Main`?
+        render_lib.prepare_rendering(variant_name="Main")
+        return {"FINISHED"}
+
+
 class VersionUpWorkfile(LaunchQtApp):
     """Perform Incremental Save Workfile."""
 
@@ -468,6 +484,8 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
         layout.operator(SetFrameRange.bl_idname, text="Set Frame Range")
         layout.operator(SetResolution.bl_idname, text="Set Resolution")
         layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
+        layout.operator(CreateRenderSetup.bl_idname,
+                        text="Create Render Setup")
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
@@ -487,6 +505,7 @@ classes = [
     SetFrameRange,
     SetResolution,
     SetUnitScale,
+    CreateRenderSetup,
     VersionUpWorkfile,
     TOPBAR_MT_ayon,
 ]
