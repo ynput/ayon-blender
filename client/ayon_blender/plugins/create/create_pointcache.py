@@ -6,7 +6,7 @@ from ayon_blender.api import plugin, lib
 class CreatePointcache(plugin.BlenderCreator):
     """Polygonal static geometry."""
 
-    identifier = "io.openpype.creators.blender.pointcache"
+    identifier = "io.ayon.creators.blender.pointcache"
     label = "Point Cache"
     product_type = "pointcache"
     icon = "gears"
