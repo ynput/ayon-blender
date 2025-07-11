@@ -55,7 +55,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin,
                     members.update(obj.children_recursive)
 
             # Add child collections
-            members.update(instance_node.children)
+            members.update(instance_node.children_recursive)
 
             # Special case for animation instances, include armatures
             if instance.data["productType"] == "animation":
