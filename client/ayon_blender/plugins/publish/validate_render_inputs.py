@@ -39,7 +39,6 @@ class ValidateRenderCompositorNodeFileOutputConnected(
                 if not input_.links:
                     invalid.append(input_)
 
-
         if invalid:
             raise PublishValidationError(
                 "The Compositor File Output Node has the following "
