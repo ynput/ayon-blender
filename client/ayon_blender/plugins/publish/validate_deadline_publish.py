@@ -53,7 +53,7 @@ class ValidateSceneRenderFilePath(
                     "Use Repair action to fix the render filepath."
                 ),
                 description=self.get_description(),
-                title="No scene render filepath set"
+                title="Invalid scene render filepath set"
             )
 
     @staticmethod
@@ -80,6 +80,10 @@ class ValidateSceneRenderFilePath(
         the scene render output is unused by AYON since we only manage the
         Compositor's Output File node for render outputs. The scene wide render
         outputs can't be disabled, so we set it to a temporary filepath.
+        
+        The temporary filepath is unique per workfile version to avoid 
+        conflicts of different workfile versions being rendered simultaneous 
+        on the farm and resulting in write locks on the same file.
         """)
 
 class ValidateDeadlinePublish(
