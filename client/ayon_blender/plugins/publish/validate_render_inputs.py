@@ -35,10 +35,7 @@ class ValidateRenderCompositorNodeFileOutputConnected(
         for input_ in output.inputs:
             # Assume all `NodeSocketColor` entries have inputs.
             # TODO: Validate only entries that relate to the `slots`, but how?
-            if (
-                    isinstance(input_, bpy.types.NodeSocketColor)
-                    and input_
-            ):
+            if isinstance(input_, bpy.types.NodeSocketColor):
                 if not input_.links:
                     invalid.append(input_)
 
