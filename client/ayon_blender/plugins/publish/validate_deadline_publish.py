@@ -32,6 +32,15 @@ class ValidateSceneRenderFilePath(
         if not self.is_active(instance.data):
             return
 
+        if not bpy.data.filepath:
+            # Blender workfile is not saved, so we can't validate the
+            # scene render filepath correctly.
+            self.log.warning(
+                "Blender workfile is not saved. "
+                "Please save the workfile before publishing."
+            )
+            return
+
         expected_render_path = self._get_expected_render_path(instance)
         if bpy.context.scene.render.filepath.rstrip("/") != expected_render_path:
             self.log.warning(
@@ -51,22 +60,12 @@ class ValidateSceneRenderFilePath(
     def _get_expected_render_path(instance: pyblish.api.Instance) -> str:
         """Get the expected render path based on the current scene."""
         project_settings = instance.context.data["project_settings"]
-        render_folder = render_lib.get_default_render_folder(
-            project_settings
-        )
-
-        tmp_render_path = os.path.join(
-            os.getenv("AYON_WORKDIR"), render_folder, "tmp"
-        )
-        tmp_render_path = tmp_render_path.replace("\\", "/")
-        return tmp_render_path
+        return render_lib.get_tmp_scene_render_output_path(project_settings)
 
     @classmethod
     def repair(cls, instance):
-        tmp_render_path = cls._get_expected_render_path(instance)
-        os.makedirs(tmp_render_path, exist_ok=True)
-        bpy.context.scene.render.filepath = f"{tmp_render_path}/"
-
+        project_settings = instance.context.data["project_settings"]
+        render_lib.set_tmp_scene_render_output_path(project_settings)
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
 
     @staticmethod

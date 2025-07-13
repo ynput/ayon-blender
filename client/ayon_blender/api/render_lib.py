@@ -443,14 +443,49 @@ def prepare_rendering(
         project_settings
     )
 
-    # Clear the scene render filepath, so that the outputs are handled only by
-    # the file output nodes in the compositor.
-    tmp_render_path = os.path.join(os.getenv("AYON_WORKDIR"), "renders", "tmp")
-    tmp_render_path = tmp_render_path.replace("\\", "/")
-    os.makedirs(tmp_render_path, exist_ok=True)
-    bpy.context.scene.render.filepath = tmp_render_path
+    set_tmp_scene_render_output_path(project_settings)
 
     return output_node
+
+
+def get_tmp_scene_render_output_path(project_settings: dict) -> str:
+    """Get the render output path for the current scene.
+
+    This is the scene-wide render path that AYON essentially does not use,
+    but it cannot be disabled in Blender. So we store at least a unique
+    temporary path for the scene render output.
+    """
+    render_folder = get_default_render_folder(project_settings)
+
+    workfile_filepath: str = bpy.data.filepath
+    if not workfile_filepath:
+        raise RuntimeError("Workfile not saved. Please save the file first.")
+
+    workfile_filename = os.path.basename(workfile_filepath)
+    workfile_filename_no_ext, _ext = os.path.splitext(workfile_filename)
+
+    # Even though we render a `tmp` file we still want to write into
+    # a unique folder or filename per folder to avoid conflicts on
+    # potential simultaneous renders on the farm trying to write into
+    # the same folder and have them unable to write due to file locks.
+    # TODO: Starting in Blender 4.5 we can use {blend_name} in the render path
+    #   so that we do not need to set this again for every workfile version
+    #   increase.
+    path = os.path.join(
+        os.getenv("AYON_WORKDIR"),
+        render_folder,
+        workfile_filename_no_ext,
+        "tmp"
+    )
+    return path.replace("\\", "/")
+
+
+def set_tmp_scene_render_output_path(project_settings: dict):
+    # Clear the scene render filepath, so that the outputs are handled only by
+    # the file output nodes in the compositor.
+    path = get_tmp_scene_render_output_path(project_settings)
+    os.makedirs(path, exist_ok=True)
+    bpy.context.scene.render.filepath = path
 
 
 def get_or_create_render_layer_nodes(
