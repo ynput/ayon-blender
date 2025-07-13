@@ -56,6 +56,18 @@ class ValidateSceneRenderFilePath(
                 title="Invalid scene render filepath set"
             )
 
+        if not bpy.context.scene.render.use_overwrite:
+            raise PublishValidationError(
+                title="Scene render overwrite is disabled",
+                message="Scene Render overwrite is disabled.",
+                description=(
+                    "### Scene Render Overwrite Disabled\n\n"
+                    "It's recommended to enable this so that requeue on farm "
+                    "will not skip rendering just because the file already "
+                    "exists. Use Repair action to enable overwrite."
+                )
+            )
+
     @staticmethod
     def _get_expected_render_path(instance: pyblish.api.Instance) -> str:
         """Get the expected render path based on the current scene."""
@@ -66,6 +78,11 @@ class ValidateSceneRenderFilePath(
     def repair(cls, instance):
         project_settings = instance.context.data["project_settings"]
         render_lib.set_tmp_scene_render_output_path(project_settings)
+
+        # Force enable overwrite so re-queue on the farm does not stop just
+        # because a file already exists.
+        bpy.context.scene.render.use_overwrite = True
+
         bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
 
     @staticmethod

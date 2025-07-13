@@ -444,6 +444,7 @@ def prepare_rendering(
     )
 
     set_tmp_scene_render_output_path(project_settings)
+    bpy.context.scene.render.use_overwrite = True
 
     return output_node
 
