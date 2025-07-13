@@ -92,7 +92,7 @@ class CreateRender(plugin.BlenderCreator):
 
         lib.imprint(node, instance_data)
 
-        return node
+        return instance
 
     def collect_instances(self):
         if not bpy.context.scene.use_nodes:
