@@ -1,3 +1,4 @@
+from typing import Optional
 import inspect
 import os
 
@@ -103,6 +104,7 @@ class ValidateSceneRenderFilePath(
         on the farm and resulting in write locks on the same file.
         """)
 
+
 class ValidateDeadlinePublish(
     plugin.BlenderInstancePlugin,
     OptionalPyblishPluginMixin
@@ -127,34 +129,27 @@ class ValidateDeadlinePublish(
         if not self.is_active(instance.data):
             return
 
-        invalid = self.get_invalid(instance)
-        if invalid:
-            bullet_point_invalid_statement = "\n".join(
-                "- {}".format(err) for err in invalid
-            )
-            report = (
-                "Render Output has invalid values(s).\n\n"
-                f"{bullet_point_invalid_statement}\n\n"
-            )
+        invalid_error_message = self.get_invalid(instance)
+        if invalid_error_message:
             raise PublishValidationError(
-                report,
-                title="Invalid value(s) for Render Output")
+                invalid_error_message,
+                title="Invalid compositor render outputs",
+                description=self.get_description()
+            )
 
     @classmethod
-    def get_invalid(cls, instance):
-        invalid = []
+    def get_invalid(cls, instance) -> Optional[str]:
         output_node: "bpy.types.CompositorNodeOutputFile" = (
             instance.data["transientData"]["instance_node"]
         )
         if not output_node:
-            msg = "No output node found in the compositor tree."
-            invalid.append(msg)
+            return "No output node found in the compositor tree."
 
         workfile_filepath: str = bpy.data.filepath
         if not workfile_filepath:
             cls.log.warning("No workfile scene filepath set. "
                             "Please save the workfile.")
-            return invalid
+            return None
 
         workfile_filename = os.path.basename(workfile_filepath)
         workfile_filename_no_ext, _ext = os.path.splitext(workfile_filename)
@@ -162,13 +157,13 @@ class ValidateDeadlinePublish(
             f"Found compositor output node '{output_node.name}' "
             f"with base path: {output_node.base_path}")
         if workfile_filename_no_ext not in output_node.base_path:
-            msg = (
+            return (
                 "Render output folder does not include workfile name: "
-                f"{workfile_filename_no_ext}. "
+                f"{workfile_filename_no_ext}.\n\n"
                 "Use Repair action to fix the render base filepath."
             )
-            invalid.append(msg)
-        return invalid
+
+        return None
 
     @classmethod
     def repair(cls, instance):
@@ -199,3 +194,17 @@ class ValidateDeadlinePublish(
             new_output_dir = os.path.join(output_node_dir, filename)
 
         output_node.base_path = new_output_dir
+
+    @staticmethod
+    def get_description():
+        return inspect.cleandoc("""
+        ### Compositor Output Filepaths Invalid
+        
+        The Output File node in the Compositor has invalid output paths.
+        
+        The filepaths must:
+        - Include the workfile name in the output path, this is to ensure
+          unique render paths for each workfile version.
+        - Not start with a single slash `/`. If you meant to use a relative
+          path then use `//` at the start of the path.
+        """)
