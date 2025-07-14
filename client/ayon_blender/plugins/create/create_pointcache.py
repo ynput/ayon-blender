@@ -20,11 +20,13 @@ class CreatePointcache(plugin.BlenderCreator):
         )
 
         if pre_create_data.get("use_selection"):
-            objects = lib.get_selection()
-            for obj in objects:
-                collection.objects.link(obj)
-                if obj.type == 'EMPTY':
-                    objects.extend(obj.children)
+            selected_objects = lib.get_selection()
+            for selected_object in selected_objects:
+                collection.objects.link(selected_object)
+
+            selected_collections = lib.get_selected_collections()
+            for selected_collection in selected_collections:
+                collection.children.link(selected_collection)
 
         return collection
 
