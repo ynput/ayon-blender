@@ -1,4 +1,5 @@
 from typing import Optional
+from pathlib import Path
 import inspect
 import os
 
@@ -43,7 +44,10 @@ class ValidateSceneRenderFilePath(
             return
 
         expected_render_path = self._get_expected_render_path(instance)
-        if bpy.context.scene.render.filepath.rstrip("/") != expected_render_path:
+        if (
+            Path(bpy.context.scene.render.filepath.rstrip("/")) !=
+            Path(expected_render_path)
+        ):
             self.log.warning(
                 f"Current scene output: {bpy.context.scene.render.filepath} "
             )
