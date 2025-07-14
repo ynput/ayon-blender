@@ -85,11 +85,24 @@ class ExtractBlend(
         containers = list(ls())
         with contextlib.ExitStack() as stack:
             # If the instance node is a Collection, we want to enforce the
-            # full child hierarchies to be included in the written collection.
+            # full child hierarchies to be included in the written collections.
             instance_node = instance.data["transientData"]["instance_node"]
             if isinstance(instance_node, bpy.types.Collection):
-                stack.enter_context(link_to_collection(
-                    instance_node, list(instance)))
+                # We only link children nodes to the 'parent' collection it is
+                # in so that the full children hierarchy is preserved for the
+                # main collection, and all its child collections.
+                collections = [instance_node]
+                collections.extend(instance_node.children_recursive)
+                for collection in set(collections):
+                    missing_child_hierarchy = set()
+                    for obj in collection.objects:
+                        for child in obj.children_recursive:
+                            if collection not in child.users_collection:
+                                missing_child_hierarchy.add(child)
+
+                    if missing_child_hierarchy:
+                        stack.enter_context(link_to_collection(
+                            collection, list(missing_child_hierarchy)))
 
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_namespace(containers))
