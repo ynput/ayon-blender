@@ -476,6 +476,7 @@ def get_tmp_scene_render_output_path(project_settings: dict) -> str:
         os.getenv("AYON_WORKDIR"),
         render_folder,
         workfile_filename_no_ext,
+        "tmp",
         "tmp"
     )
     return path.replace("\\", "/")
