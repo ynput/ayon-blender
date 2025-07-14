@@ -23,8 +23,10 @@ class CreateUSD(plugin.BlenderCreator):
         )
 
         objects = []
+        selected_collections = []
         if pre_create_data.get("use_selection"):
             objects = lib.get_selection()
+            selected_collections = lib.get_selected_collections()
 
         # Create template hierarchy
         if pre_create_data.get("createAssetTemplateHierarchy", False):
@@ -43,12 +45,13 @@ class CreateUSD(plugin.BlenderCreator):
                 obj.parent = geo
 
             # Override the objects list to include only the root object.
-            objects = [root]    
+            objects = [root]
 
         for obj in objects:
             collection.objects.link(obj)
-            if obj.type == 'EMPTY':
-                objects.extend(obj.children)
+
+        for selected_collection in selected_collections:
+            collection.children.link(selected_collection)
 
         return collection
 

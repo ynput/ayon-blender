@@ -279,9 +279,9 @@ class BlenderCreator(Creator):
         self.set_instance_data(product_name, instance_data)
 
         instance = CreatedInstance(
-            self.product_type, product_name, instance_data, self
+            self.product_type, product_name, instance_data, self,
+            transient_data={"instance_node": instance_node}
         )
-        instance.transient_data["instance_node"] = instance_node
         self._add_instance_to_context(instance)
 
         self.imprint(instance_node, instance_data)
@@ -309,9 +309,9 @@ class BlenderCreator(Creator):
             # Create instance object from existing data
             instance = CreatedInstance.from_existing(
                 instance_data=instance_data,
-                creator=self
+                creator=self,
+                transient_data={"instance_node": instance_node}
             )
-            instance.transient_data["instance_node"] = instance_node
 
             # Add instance to create context
             self._add_instance_to_context(instance)

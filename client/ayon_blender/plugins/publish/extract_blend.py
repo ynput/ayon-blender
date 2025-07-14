@@ -12,6 +12,23 @@ from ayon_blender.api.lib import (
 )
 
 
+@contextlib.contextmanager
+def link_to_collection(collection, objects):
+    """Link objects to a collection during context"""
+    unlink_after = []
+    try:
+        for obj in objects:
+            if not isinstance(obj, bpy.types.Object):
+                continue
+            if collection not in obj.users_collection:
+                unlink_after.append(obj)
+                collection.objects.link(obj)
+        yield
+    finally:
+        for obj in unlink_after:
+            collection.objects.unlink(obj)
+
+
 class ExtractBlend(
     plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin
 ):
@@ -67,6 +84,26 @@ class ExtractBlend(
 
         containers = list(ls())
         with contextlib.ExitStack() as stack:
+            # If the instance node is a Collection, we want to enforce the
+            # full child hierarchies to be included in the written collections.
+            instance_node = instance.data["transientData"]["instance_node"]
+            if isinstance(instance_node, bpy.types.Collection):
+                # We only link children nodes to the 'parent' collection it is
+                # in so that the full children hierarchy is preserved for the
+                # main collection, and all its child collections.
+                collections = [instance_node]
+                collections.extend(instance_node.children_recursive)
+                for collection in set(collections):
+                    missing_child_hierarchy = set()
+                    for obj in collection.objects:
+                        for child in obj.children_recursive:
+                            if collection not in child.users_collection:
+                                missing_child_hierarchy.add(child)
+
+                    if missing_child_hierarchy:
+                        stack.enter_context(link_to_collection(
+                            collection, list(missing_child_hierarchy)))
+
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_namespace(containers))
             bpy.data.libraries.write(
