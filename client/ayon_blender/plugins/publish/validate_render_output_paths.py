@@ -45,7 +45,7 @@ class ValidateSceneRenderFilePath(
 
         expected_render_path = self._get_expected_render_path(instance)
         if (
-            Path(bpy.context.scene.render.filepath.rstrip("/")) !=
+            Path(bpy.context.scene.render.filepath) !=
             Path(expected_render_path)
         ):
             self.log.warning(
