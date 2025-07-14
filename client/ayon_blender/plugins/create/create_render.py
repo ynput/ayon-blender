@@ -90,7 +90,7 @@ class CreateRender(plugin.BlenderCreator):
         instance.transient_data["instance_node"] = node
         self._add_instance_to_context(instance)
 
-        lib.imprint(node, instance_data)
+        self.imprint(node, instance_data)
 
         return instance
 
@@ -134,7 +134,7 @@ class CreateRender(plugin.BlenderCreator):
                 raise RuntimeError("No compositor node found")
 
             instance.transient_data["instance_node"] = comp_node
-            lib.imprint(comp_node, instance.data_to_store())
+            self.imprint(comp_node, instance.data_to_store())
 
             # Delete the original object
             bpy.data.collections.remove(node)
@@ -152,6 +152,8 @@ class CreateRender(plugin.BlenderCreator):
         folder_entity = self.create_context.get_current_folder_entity()
         task_entity = self.create_context.get_current_task_entity()
         for node in unregistered_output_nodes:
+            self.log.info("Found unregistered render output node: %s",
+                          node.name)
             variant = clean_name(node.name)
             product_name = self.get_product_name(
                 project_name=project_name,
@@ -159,15 +161,18 @@ class CreateRender(plugin.BlenderCreator):
                 task_entity=task_entity,
                 variant=variant
             )
+            instance_data = self.read(node)
+            instance_data.update({
+                "folderPath": folder_entity["path"],
+                "task": task_entity["name"],
+                "productName": product_name,
+                "variant": variant,
+            })
+
             instance = CreatedInstance(
                 self.product_type,
                 product_name,
-                data={
-                    "folderPath": folder_entity["path"],
-                    "task": task_entity["name"],
-                    "productName": product_name,
-                    "variant": variant,
-                },
+                data=instance_data,
                 creator=self,
                 transient_data={
                     "instance_node": node
@@ -188,3 +193,15 @@ class CreateRender(plugin.BlenderCreator):
                 tooltip="Create Render Setup",
             )
         ]
+
+    def imprint(self, node: bpy.types.CompositorNodeOutputFile, data: dict):
+        # Use the node `mute` state to define the active state of the instance.
+        active = data.pop("active", True)
+        node.mute = not active
+        super().imprint(node, data)
+
+    def read(self, node: bpy.types.CompositorNodeOutputFile) -> dict:
+        # Read the active state from the node `mute` state.
+        data = super().read(node)
+        data["active"] = not node.mute
+        return data

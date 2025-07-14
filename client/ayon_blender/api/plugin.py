@@ -284,7 +284,7 @@ class BlenderCreator(Creator):
         instance.transient_data["instance_node"] = instance_node
         self._add_instance_to_context(instance)
 
-        imprint(instance_node, instance_data)
+        self.imprint(instance_node, instance_data)
 
         return instance_node
 
@@ -304,10 +304,11 @@ class BlenderCreator(Creator):
 
         # Process only instances that were created by this creator
         for instance_node in cached_instances.get(self.identifier, []):
-            property = instance_node.get(AYON_PROPERTY)
+            instance_data = self.read(instance_node)
+
             # Create instance object from existing data
             instance = CreatedInstance.from_existing(
-                instance_data=property.to_dict(),
+                instance_data=instance_data,
                 creator=self
             )
             instance.transient_data["instance_node"] = instance_node
@@ -349,7 +350,7 @@ class BlenderCreator(Creator):
                 )
                 node.name = name
 
-            imprint(node, data)
+            self.imprint(node, data)
 
     def remove_instances(self, instances: List[CreatedInstance]):
 
@@ -401,6 +402,26 @@ class BlenderCreator(Creator):
                     label="Use selection",
                     default=True)
         ]
+
+    def imprint(self, node, data: dict):
+        """Imprint data to the instance node.
+
+        This can be overridden by a sub-class to store certain data of the
+        instance in a different way, e.g. in a custom property or the 'mute'
+        state of a node.
+        """
+        imprint(node, data)
+
+    def read(self, node) -> dict:
+        """Read data from the instance node.
+
+        The `data` dictionary is the readily stored
+        """
+        ayon_property = node.get(AYON_PROPERTY)
+        if not ayon_property:
+            return {}
+
+        return ayon_property.to_dict()
 
 
 class BlenderLoader(LoaderPlugin):
