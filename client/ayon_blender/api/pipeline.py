@@ -382,6 +382,12 @@ def on_open():
 
 
 def on_before_save(event):
+    """Handle the event before saving a Blender file.
+
+    When saving to a new scene name, e.g. on incrementing the workfile then
+    update the render paths to match the new scene name by replacing the old
+    scene name with the new one in all render paths.
+    """
     blend_path_before: str = bpy.data.filepath
     blend_path_after: str = event.get("filename")
 
