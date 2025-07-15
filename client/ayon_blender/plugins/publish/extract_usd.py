@@ -55,11 +55,14 @@ class ExtractUSD(plugin.BlenderExtractor,
             active=root, selected=selected)
         
         attribute_values = self.get_attr_values_from_data(instance.data)
-        convert_orientation = attribute_values.get("convert_orientation")
+        convert_orientation = attribute_values.get(
+            "convert_orientation",
+            self.convert_orientation
+        )
         kwargs = {
             "convert_orientation": convert_orientation,
-            "export_global_forward_selection": attribute_values.get("forward_axis"),
-            "export_global_up_selection": attribute_values.get("up_axis"),
+            "export_global_forward_selection": attribute_values.get("forward_axis", "Z"),
+            "export_global_up_selection": attribute_values.get("up_axis", "Y"),
         }
         if lib.get_blender_version() < (4, 2, 1):
             kwargs = {}

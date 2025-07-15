@@ -37,7 +37,10 @@ class ExtractFBX(
 
         selected = []
         for obj in instance:
-            obj.select_set(True)
+            try:
+                obj.select_set(True)
+            except AttributeError:
+                continue
             selected.append(obj)
 
         context = plugin.create_blender_context(
