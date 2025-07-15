@@ -204,6 +204,9 @@ class BlenderCreator(Creator):
             cache_legacy = {}
             convert_avalon_instances()
             ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
+            if ayon_instances:
+                ayon_instances.color_tag = "COLOR_04"
+                ayon_instances.use_fake_user = True
             ayon_instance_objs = (
                 ayon_instances.objects if ayon_instances else []
             )
@@ -254,6 +257,8 @@ class BlenderCreator(Creator):
         instances = bpy.data.collections.get(AYON_INSTANCES)
         if not instances:
             instances = bpy.data.collections.new(name=AYON_INSTANCES)
+            instances.color_tag = "COLOR_04"
+            instances.use_fake_user = True
             bpy.context.scene.collection.children.link(instances)
 
         # Create asset group

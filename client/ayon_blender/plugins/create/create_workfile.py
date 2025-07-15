@@ -5,7 +5,7 @@ from ayon_blender.api.plugin import BlenderCreator
 from ayon_blender.api.pipeline import convert_avalon_containers
 from ayon_blender.api.constants import (
     AYON_PROPERTY,
-    AYON_CONTAINERS
+    AYON_INSTANCES
 )
 
 
@@ -87,14 +87,15 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["productName"] = product_name
 
         convert_avalon_containers()
-        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
+        instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
-            instance_node = bpy.data.collections.new(name=AYON_CONTAINERS)
+            instance_node = bpy.data.collections.new(name=AYON_INSTANCES)
+            instance_node.color_tag = "COLOR_04"
+            instance_node.use_fake_user = True
         workfile_instance.transient_data["instance_node"] = instance_node
 
     def collect_instances(self):
-
-        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
+        instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
             return
 
