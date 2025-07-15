@@ -2,7 +2,6 @@ import bpy
 
 from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
-from ayon_blender.api.pipeline import convert_avalon_containers
 from ayon_blender.api.constants import (
     AYON_PROPERTY,
     AYON_INSTANCES
@@ -12,7 +11,7 @@ from ayon_blender.api.constants import (
 class CreateWorkfile(BlenderCreator, AutoCreator):
     """Workfile auto-creator.
 
-    The workfile instance stores its data on the `AYON_CONTAINERS` collection
+    The workfile instance stores its data on the `AYON_WORKFILE` collection
     as custom attributes, because unlike other instances it doesn't have an
     instance node of its own.
 
@@ -86,12 +85,13 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["task"] = task_name
             workfile_instance["productName"] = product_name
 
-        convert_avalon_containers()
         instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
-            instance_node = bpy.data.collections.new(name=AYON_INSTANCES)
+            instance_node = bpy.data.collections.new(AYON_INSTANCES)
             instance_node.color_tag = "COLOR_04"
             instance_node.use_fake_user = True
+            bpy.context.scene.collection.children.link(instance_node)
+
         workfile_instance.transient_data["instance_node"] = instance_node
 
     def collect_instances(self):

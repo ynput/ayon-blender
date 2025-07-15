@@ -7,10 +7,7 @@ from typing import Dict, List, Optional
 import bpy
 import os
 
-from ayon_core.pipeline import (
-    get_representation_path,
-    AYON_CONTAINER_ID,
-)
+from ayon_core.pipeline import AYON_CONTAINER_ID
 
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,
@@ -229,7 +226,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         object_name = container["objectName"]
         asset_group = bpy.data.objects.get(object_name)
-        libpath = Path(get_representation_path(repre_entity))
+        libpath = Path(self.filepath_from_context(context))
         extension = libpath.suffix.lower()
 
         self.log.info(

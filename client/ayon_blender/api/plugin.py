@@ -54,9 +54,7 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        return "01"
+    ayon_container = bpy.context.scene.collection
     # Check the names of both object and collection containers
     obj_asset_groups = ayon_container.objects
     obj_group_names = {
@@ -66,10 +64,13 @@ def get_unique_number(
     coll_group_names = {
         c.name for c in coll_asset_groups
         if c.get(AYON_PROPERTY)}
-    container_names = obj_group_names.union(coll_group_names)
+    container_names = {
+        name.lower() for name
+        in obj_group_names.union(coll_group_names)
+    }
     count = 1
     name = f"{folder_name}_{count:0>2}_{product_name}"
-    while name in container_names:
+    while name.lower() in container_names:
         count += 1
         name = f"{folder_name}_{count:0>2}_{product_name}"
     return f"{count:0>2}"
