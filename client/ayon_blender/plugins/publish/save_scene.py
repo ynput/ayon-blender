@@ -18,10 +18,12 @@ class SaveCurrentSceneBlender(pyblish.api.ContextPlugin):
         host = registered_host()
 
         # If file has no modifications, skip forcing a file save
-        if not host.workfile_has_unsaved_changes():
-            self.log.debug("Skipping file save as there "
-                           "are no unsaved changes..")
-            return
+        # TODO: Making changes to the scene through Python does not mark the
+        #  scene as modified, so we cannot rely on this.
+        # if not host.workfile_has_unsaved_changes():
+        #     self.log.debug("Skipping file save as there "
+        #                    "are no unsaved changes..")
+        #     return
 
         # Filename must not have changed since collecting
         current_file = host.get_current_workfile()

@@ -48,6 +48,7 @@ from .constants import (
     AYON_PROPERTY,
     IS_HEADLESS
 )
+from .lib import search_replace_render_paths
 
 from .workio import (
     open_file,
@@ -183,6 +184,7 @@ def install():
 
     register_event_callback("new", on_new)
     register_event_callback("open", on_open)
+    register_event_callback("before.save", on_before_save)
 
     _register_callbacks()
 
@@ -379,9 +381,42 @@ def on_open():
                 "Base file unit scale changed to match the project settings.")
 
 
+def on_before_save(event):
+    """Handle the event before saving a Blender file.
+
+    When saving to a new scene name, e.g. on incrementing the workfile then
+    update the render paths to match the new scene name by replacing the old
+    scene name with the new one in all render paths.
+    """
+    blend_path_before: str = bpy.data.filepath
+    blend_path_after: str = event.get("filename")
+
+    if not blend_path_before:
+        # Saving from a new unsaved file, no need to check for changes.
+        return
+
+    blend_name_before: str = os.path.splitext(
+        os.path.basename(blend_path_before))[0]
+    blend_name_after: str = os.path.splitext(
+        os.path.basename(blend_path_after))[0]
+    if blend_name_before != blend_name_after:
+        print(f"Detected scene name change from {blend_name_before} to "
+              f"{blend_name_after}")
+        # TODO: We may want to allow disabling this feature, especially after
+        #  Blender 4.5+ supporting the `{blend_name}` in templates in render
+        #  paths to avoid needing to hardcode the blender scene filename into
+        #  those paths.
+        # Update any render paths if they previously contained the scene name
+        # Warning: if the scene name is `a` before and now `helloworld` then
+        #  this may easily get out of hand by turning `asset` into
+        #  `helloworldsset`, but since filenames tend to be longer and
+        #  contain version numbers, this is not expected to happen often.
+        search_replace_render_paths(blend_name_before, blend_name_after)
+
+
 @bpy.app.handlers.persistent
-def _on_save_pre(*args):
-    emit_event("before.save")
+def _on_save_pre(filename: str):
+    emit_event("before.save", data={"filename": filename})
 
 
 @bpy.app.handlers.persistent
