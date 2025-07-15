@@ -2,6 +2,7 @@ from typing import Optional
 from pathlib import Path
 import inspect
 import os
+import re
 
 import bpy
 import pyblish.api
@@ -13,6 +14,71 @@ from ayon_core.pipeline.publish import (
     OptionalPyblishPluginMixin
 )
 from ayon_blender.api import plugin, render_lib
+
+
+def fix_filename(path: str, extension: Optional[str] = None) -> str:
+    """Ensure the filename ends with `.{frame}.{ext}`.
+
+    It's also fine for the path to not specify frame number
+    and extension, in which case Blender will automatically add it.
+
+    Examples:
+        >>> fix_filename("folder/beauty")
+        'folder/beauty.'
+
+        >>> fix_filename("folder/beauty#.exr")
+        'folder/beauty.#.exr'
+
+        >>> fix_filename("test.exr")
+        'test.####.exr'
+
+        >>> fix_filename("test.", extension=".exr")
+        'test.'
+
+        >>> fix_filename("test.####.aov.exr", extension=".png")
+        'test.aov.####.png'
+
+    Arguments:
+        path (str): The file path to fix.
+        extension (Optional[str]): The file extension to use. If not provided,
+            it will be inferred from the filename if it has an extension.
+            If the `path` does not have an extension, the `extensions` argument
+            will remain unused. The extension should start with a dot, e.g.
+            `.exr`.
+
+    Returns:
+        str: The fixed file path with the filename ending in `.{frame}.{ext}`.
+
+    """
+    folder, filename = os.path.split(path)
+
+    # Get characteristics of the current filename to determine what
+    # we want to preserve.
+    has_extension: bool = bool(re.search(r".*\.[A-Za-z]+$", filename))
+    if extension is None and has_extension:
+        extension = os.path.splitext(filename)[-1]
+    has_frame_token: bool = "#" in filename
+    frame_padding: int = filename.count("#") or 4
+
+    # Remove extension and frame tokens
+    if has_extension:
+        filename = os.path.splitext(filename)[0]
+    if has_frame_token:
+        # remove any dots with frame tokens to avoid e.g. `test.####.aov.exr`
+        # becoming `test..aov.exr`
+        filename = filename.replace(".#", "")
+        filename = filename.replace("#", "")
+
+    # Remove any trailing dots or underscores
+    filename = filename.rstrip("._")
+
+    filename += "."  # Ensure there's a dot before the frame number
+    if has_extension or has_frame_token:
+        filename += f"{'#' * frame_padding}"
+    if has_extension:
+        filename += extension
+
+    return os.path.join(folder, filename)
 
 
 class ValidateSceneRenderFilePath(
@@ -109,13 +175,18 @@ class ValidateSceneRenderFilePath(
         """)
 
 
-class ValidateDeadlinePublish(
+class ValidateCompositorNodeFileOutputPaths(
     plugin.BlenderInstancePlugin,
     OptionalPyblishPluginMixin
 ):
-    """Validates Render File Directory is not the same in every submission
+    """Validate output render paths from the Compositor Node Output File.
 
-    Validates the render outputs of the `CompositorNodeOutputFile` node.
+    This validator checks that the render output paths set in the
+    `CompositorNodeOutputFile` adhere to a few strict requirements:
+    - The output base path must include the workfile name in the output path.
+    - The output filename must end with `.{frame}.{ext}` where it is fine
+      if the path on the node is set as `filename.` because if frame number
+      and extension are missing Blender will automatically append them.
     """
 
     order = ValidateContentsOrder
@@ -143,11 +214,6 @@ class ValidateDeadlinePublish(
 
     @classmethod
     def get_invalid(cls, instance) -> Optional[str]:
-        output_node: "bpy.types.CompositorNodeOutputFile" = (
-            instance.data["transientData"]["instance_node"]
-        )
-        if not output_node:
-            return "No output node found in the compositor tree."
 
         workfile_filepath: str = bpy.data.filepath
         if not workfile_filepath:
@@ -157,15 +223,47 @@ class ValidateDeadlinePublish(
 
         workfile_filename = os.path.basename(workfile_filepath)
         workfile_filename_no_ext, _ext = os.path.splitext(workfile_filename)
-        cls.log.debug(
-            f"Found compositor output node '{output_node.name}' "
-            f"with base path: {output_node.base_path}")
-        if workfile_filename_no_ext not in output_node.base_path:
-            return (
-                "Render output folder does not include workfile name: "
-                f"{workfile_filename_no_ext}.\n\n"
-                "Use Repair action to fix the render base filepath."
-            )
+
+        # Get expected files per AOV
+        expected_files: dict[str, list[str]] = (
+            instance.data["expectedFiles"][0]
+        )
+
+        # For each AOV output check the output filenames as they must end with
+        # `.{frame}.{ext}` where the frame is a number and ext is the extension
+        for _aov, output_files in expected_files.items():
+            first_file = output_files[0]
+
+            # Ensure filename ends with `.{frame}.{ext}` by checking whether
+            file_no_ext = os.path.splitext(first_file)[0]
+            if not file_no_ext[-1].isdigit():
+                cls.log.warning(
+                    f"Output file '{first_file}' does not end with "
+                    "`.{frame}.{extension}`."
+                )
+                return (
+                    "Output file does not contain a frame number before the "
+                    "extension."
+                )
+
+            # Before the digits there must be a dot `.`
+            file_no_frame = file_no_ext.rstrip("1234567890")
+            if not file_no_frame.endswith("."):
+                cls.log.warning(
+                    f"Output file '{first_file}' does not end with "
+                    "`.{frame}.{extension}`."
+                )
+                return (
+                    "Output file does not end with a dot separator before the "
+                    "frame number."
+                )
+
+            if workfile_filename_no_ext not in first_file:
+                return (
+                    "Render output does not include workfile name: "
+                    f"{workfile_filename_no_ext}.\n\n"
+                    "Use Repair action to fix the render base filepath."
+                )
 
         return None
 
@@ -199,6 +297,25 @@ class ValidateDeadlinePublish(
 
         output_node.base_path = new_output_dir
 
+        # Repair all output filenames to ensure they end with `.{frame}.{ext}`
+        base_path: str = output_node.base_path
+
+        if is_multilayer:
+            file_format = output_node.format.file_format
+            ext = render_lib.get_file_format_extension(file_format)
+            ext = f".{ext}"
+            output_node.base_path = fix_filename(base_path, extension=ext)
+        else:
+            for file_slot in output_node.file_slots:
+                if file_slot.use_node_format:
+                    file_format = output_node.format.file_format
+                else:
+                    file_format = file_slot.format.file_format
+
+                ext = render_lib.get_file_format_extension(file_format)
+                ext = f".{ext}"
+                file_slot.path = fix_filename(file_slot.path, extension=ext)
+
     @staticmethod
     def get_description():
         return inspect.cleandoc("""
@@ -207,8 +324,12 @@ class ValidateDeadlinePublish(
         The Output File node in the Compositor has invalid output paths.
         
         The filepaths must:
+        
         - Include the workfile name in the output path, this is to ensure
           unique render paths for each workfile version.
-        - Not start with a single slash `/`. If you meant to use a relative
-          path then use `//` at the start of the path.
+          
+        - End with `.####.{ext}`. It is allowed to specify no extension and
+          frame tokens at all. As such, `filename.` is valid, because if frame
+          number and extension are missing Blender will automatically append
+          them.
         """)
