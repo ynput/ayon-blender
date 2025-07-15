@@ -22,7 +22,6 @@ from .pipeline import (
     convert_avalon_instances,
 )
 from .constants import (
-    AYON_CONTAINERS,
     AYON_INSTANCES,
     AYON_PROPERTY,
 )
