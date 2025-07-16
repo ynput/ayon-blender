@@ -96,14 +96,16 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
         workfile_instance.transient_data["instance_node"] = instance_node
 
     def collect_instances(self):
-        old_property = self._find_old_workfile_property()
         instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
             return
 
-        property = old_property or instance_node.get(AYON_PROPERTY)
-        if not property:
+        old_property = self._find_old_workfile_property()
+        property = instance_node.get(AYON_PROPERTY)
+        if not old_property and not property:
             return
+        elif old_property and not property:
+            instance_node[AYON_PROPERTY] = old_property
 
         # Create instance object from existing data
         instance = CreatedInstance.from_existing(
