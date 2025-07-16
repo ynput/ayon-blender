@@ -4,7 +4,8 @@ from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
 from ayon_blender.api.constants import (
     AYON_PROPERTY,
-    AYON_INSTANCES
+    AYON_INSTANCES,
+    AYON_CONTAINERS
 )
 
 
@@ -95,11 +96,12 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
         workfile_instance.transient_data["instance_node"] = instance_node
 
     def collect_instances(self):
+        old_property = self._find_old_workfile_property()
         instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
             return
 
-        property = instance_node.get(AYON_PROPERTY)
+        property = old_property or instance_node.get(AYON_PROPERTY)
         if not property:
             return
 
@@ -113,9 +115,8 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
         # Add instance to create context
         self._add_instance_to_context(instance)
 
-    def remove_instances(self, instances):
-        for instance in instances:
-            node = instance.transient_data["instance_node"]
-            del node[AYON_PROPERTY]
-
-            self._remove_instance_from_context(instance)
+    def _find_old_workfile_property(self):
+        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
+        if instance_node:
+            return instance_node.get(AYON_PROPERTY)
+        return None

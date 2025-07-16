@@ -495,19 +495,7 @@ def convert_avalon_containers():
 def add_to_ayon_container(container: Union[bpy.types.Collection, bpy.types.Object]):
     """Add the container to the AYON container."""
     convert_avalon_containers()
-    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
-
-        # Link the container to the scene so it's easily visible to the artist
-        # and can be managed easily. Otherwise it's only found in "Blender
-        # File" view and it will be removed by Blenders garbage collection,
-        # unless you set a 'fake user'.
-
-        bpy.context.scene.collection.children.link(ayon_container)
-
-    ayon_container.color_tag = "COLOR_02"
-    ayon_container.use_fake_user = True
+    ayon_container = ensure_ayon_container()
 
     if isinstance(container, bpy.types.Collection):
         ayon_container.children.link(container)
@@ -519,6 +507,20 @@ def add_to_ayon_container(container: Union[bpy.types.Collection, bpy.types.Objec
     #     for child in view_layer.layer_collection.children:
     #         if child.collection == ayon_container:
     #             child.exclude = True
+
+
+def ensure_ayon_container() -> bpy.types.Collection:
+    """Ensure AYON_CONTAINERS exists and is ready for use."""
+    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+    if ayon_container:
+        return ayon_container
+
+    # Create and configure container
+    ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+    bpy.context.scene.collection.children.link(ayon_container)
+    ayon_container.color_tag = "COLOR_02"
+    ayon_container.use_fake_user = True
+    return ayon_container
 
 
 def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):

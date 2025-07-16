@@ -63,13 +63,10 @@ def get_unique_number(
     coll_group_names = {
         c.name for c in coll_asset_groups
         if c.get(AYON_PROPERTY)}
-    container_names = {
-        name.lower() for name
-        in obj_group_names.union(coll_group_names)
-    }
+    container_names = obj_group_names.union(coll_group_names)
     count = 1
     name = f"{folder_name}_{count:0>2}_{product_name}"
-    while name.lower() in container_names:
+    while name in container_names:
         count += 1
         name = f"{folder_name}_{count:0>2}_{product_name}"
     return f"{count:0>2}"
