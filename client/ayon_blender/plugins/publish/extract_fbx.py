@@ -37,11 +37,9 @@ class ExtractFBX(
 
         selected = []
         for obj in instance:
-            try:
+            if isinstance(obj, bpy.types.Object):
                 obj.select_set(True)
-            except AttributeError:
-                continue
-            selected.append(obj)
+                selected.append(obj)
 
         context = plugin.create_blender_context(
             active=asset_group, selected=selected)
