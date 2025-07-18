@@ -344,8 +344,8 @@ class BlenderCreator(Creator):
                 node.name = name
 
             self.imprint(node, data)
-            created_instance.transient_data["instance_node"] = node
 
+            created_instance.transient_data["instance_node"] = node
 
     def remove_instances(self, instances: List[CreatedInstance]):
 
