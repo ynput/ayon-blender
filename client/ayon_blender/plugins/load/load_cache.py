@@ -10,7 +10,6 @@ import os
 from ayon_core.pipeline import AYON_CONTAINER_ID
 
 from ayon_blender.api.constants import (
-    AYON_CONTAINERS,
     AYON_PROPERTY,
     VALID_EXTENSIONS,
 )
