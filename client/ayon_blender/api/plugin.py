@@ -327,14 +327,12 @@ class BlenderCreator(Creator):
 
         for created_instance, changes in update_list:
             data = created_instance.data_to_store()
-            node = created_instance.transient_data["instance_node"]
+            node = created_instance.transient_data.get("instance_node")
             if not node:
                 node = self._create_instance_node()
             else:
                 node = self._transfer_workfile_property(node)
-            #   or folder changed.
-            # Do not rename the instance if the family is workfile, as the
-            # workfile instance is included in the AYON_CONTAINER collection.
+
             if (
                 "productName" in changes.changed_keys
                 or "folderPath" in changes.changed_keys
@@ -346,6 +344,8 @@ class BlenderCreator(Creator):
                 node.name = name
 
             self.imprint(node, data)
+
+            created_instance.transient_data["instance_node"] = node
 
     def remove_instances(self, instances: List[CreatedInstance]):
 
