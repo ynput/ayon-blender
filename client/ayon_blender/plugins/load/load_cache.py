@@ -140,13 +140,13 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         return objects
 
-    def _link_objects(self, objects, collection, containers):
+    def _link_objects(self, objects, collection, container):
         # Link the imported objects to any collection where the asset group is
         # linked to, except the AYON_CONTAINERS collection
         group_collections = [
             collection
             for collection in collection.users_collection
-            if collection != containers]
+            if collection != container]
 
         for obj in objects:
             for collection in group_collections:
@@ -183,8 +183,8 @@ class CacheModelLoader(plugin.BlenderLoader):
         # Link the asset group to the active collection
         collection = bpy.context.view_layer.active_layer_collection.collection
         collection.objects.link(asset_group)
-        containers = get_ayon_container()
-        self._link_objects(objects, asset_group, containers)
+        container = get_ayon_container()
+        self._link_objects(objects, asset_group, container)
 
         product_type = context["product"]["productType"]
         asset_group[AYON_PROPERTY] = {
@@ -267,8 +267,8 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             objects = self._process(str(libpath), asset_group, object_name)
 
-            containers = get_ayon_container()
-            self._link_objects(objects, asset_group, containers)
+            container = get_ayon_container()
+            self._link_objects(objects, asset_group, container)
 
             asset_group.matrix_basis = mat
         else:
