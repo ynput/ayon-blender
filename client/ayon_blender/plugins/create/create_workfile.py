@@ -121,12 +121,22 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             if not node:
                 node = self._create_instance_node()
             else:
-                node = self._convert_workfile_property(node)
+                node = self._transfer_workfile_property(node)
 
             imprint(node, data)
 
-    def _convert_workfile_property(
+    def _transfer_workfile_property(
             self, node: bpy.types.Collection)-> bpy.types.Collection:
+        """Transfer all workfile-related instance data from
+        AYON_CONTAINERS to AYON_INSTANCES if any. Backward
+        compatibility only
+
+        Args:
+            node (bpy.types.Collection): instance node
+
+        Returns:
+            bpy.types.Collection: instance node
+        """
         if (
             not isinstance(node, bpy.types.Collection)
             or node.name != AYON_CONTAINERS
@@ -141,6 +151,11 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
         return instance_node
 
     def _create_instance_node(self) -> bpy.types.Collection:
+        """Create Instance node
+
+        Returns:
+            bpy.types.Collection: Instance node
+        """
         node = bpy.data.collections.new(AYON_INSTANCES)
         node.color_tag = "COLOR_04"
         node.use_fake_user = True
