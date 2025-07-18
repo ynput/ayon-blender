@@ -205,9 +205,16 @@ class BlenderCreator(Creator):
             ayon_instance_objs = (
                 ayon_instances.objects if ayon_instances else []
             )
+
+            # Consider any node tree objects as well
+            node_tree_objects = []
+            if bpy.context.scene.node_tree:
+                node_tree_objects = bpy.context.scene.node_tree.nodes
+
             for obj_or_col in itertools.chain(
-                ayon_instance_objs,
-                bpy.data.collections
+                    ayon_instance_objs,
+                    bpy.data.collections,
+                    node_tree_objects
             ):
                 ayon_prop = get_ayon_property(obj_or_col)
                 if not ayon_prop:
@@ -277,7 +284,7 @@ class BlenderCreator(Creator):
         )
         self._add_instance_to_context(instance)
 
-        imprint(instance_node, instance_data)
+        self.imprint(instance_node, instance_data)
 
         return instance_node
 
@@ -297,10 +304,11 @@ class BlenderCreator(Creator):
 
         # Process only instances that were created by this creator
         for instance_node in cached_instances.get(self.identifier, []):
-            property = instance_node.get(AYON_PROPERTY)
+            instance_data = self.read(instance_node)
+
             # Create instance object from existing data
             instance = CreatedInstance.from_existing(
-                instance_data=property.to_dict(),
+                instance_data=instance_data,
                 creator=self,
                 transient_data={"instance_node": instance_node}
             )
@@ -337,7 +345,7 @@ class BlenderCreator(Creator):
                 )
                 node.name = name
 
-            imprint(node, data)
+            self.imprint(node, data)
 
     def remove_instances(self, instances: List[CreatedInstance]):
 
@@ -354,6 +362,9 @@ class BlenderCreator(Creator):
                 bpy.data.collections.remove(node)
             elif isinstance(node, bpy.types.Object):
                 bpy.data.objects.remove(node)
+            elif isinstance(node, bpy.types.CompositorNode):
+                # Remove compositor node
+                bpy.context.scene.node_tree.nodes.remove(node)
 
             self._remove_instance_from_context(instance)
 
@@ -365,9 +376,9 @@ class BlenderCreator(Creator):
         """Fill instance data with required items.
 
         Args:
-            product_name(str): Product name of created instance.
-            instance_data(dict): Instance base data.
-            instance_node(bpy.types.ID): Instance node in blender scene.
+            product_name (str): Product name of created instance.
+            instance_data (dict): Instance base data.
+            instance_node (bpy.types.ID): Instance node in blender scene.
         """
         if not instance_data:
             instance_data = {}
@@ -425,6 +436,26 @@ class BlenderCreator(Creator):
                     default=True)
         ]
 
+    def imprint(self, node, data: dict):
+        """Imprint data to the instance node.
+
+        This can be overridden by a sub-class to store certain data of the
+        instance in a different way, e.g. in a custom property or the 'mute'
+        state of a node.
+        """
+        imprint(node, data)
+
+    def read(self, node) -> dict:
+        """Read data from the instance node.
+
+        The `data` dictionary is the readily stored
+        """
+        ayon_property = node.get(AYON_PROPERTY)
+        if not ayon_property:
+            return {}
+
+        return ayon_property.to_dict()
+
 
 class BlenderLoader(LoaderPlugin):
     """A basic AssetLoader for Blender
@@ -432,7 +463,7 @@ class BlenderLoader(LoaderPlugin):
     This will implement the basic logic for linking/appending assets
     into another Blender scene.
 
-    The `update` method should be implemented by a sub-class, because
+    The `update` method should be implemented by a subclass, because
     it's different for different types (e.g. model, rig, animation,
     etc.).
     """
@@ -486,8 +517,8 @@ class BlenderLoader(LoaderPlugin):
                       name: str,
                       namespace: Optional[str] = None,
                       options: Optional[Dict] = None):
-        """Must be implemented by a sub-class"""
-        raise NotImplementedError("Must be implemented by a sub-class")
+        """Must be implemented by a subclass"""
+        raise NotImplementedError("Must be implemented by a subclass")
 
     def load(self,
              context: dict,
@@ -559,8 +590,8 @@ class BlenderLoader(LoaderPlugin):
         # return self._get_instance_collection(instance_name, nodes)
 
     def exec_update(self, container: Dict, context: Dict):
-        """Must be implemented by a sub-class"""
-        raise NotImplementedError("Must be implemented by a sub-class")
+        """Must be implemented by a subclass"""
+        raise NotImplementedError("Must be implemented by a subclass")
 
     def update(self, container: Dict, context: Dict):
         """ Run the update on Blender main thread"""
@@ -568,8 +599,8 @@ class BlenderLoader(LoaderPlugin):
         execute_in_main_thread(mti)
 
     def exec_remove(self, container: Dict) -> bool:
-        """Must be implemented by a sub-class"""
-        raise NotImplementedError("Must be implemented by a sub-class")
+        """Must be implemented by a subclass"""
+        raise NotImplementedError("Must be implemented by a subclass")
 
     def remove(self, container: Dict) -> bool:
         """ Run the remove on Blender main thread"""
