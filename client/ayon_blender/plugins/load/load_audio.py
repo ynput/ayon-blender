@@ -6,12 +6,10 @@ from typing import Dict, List, Optional
 
 import bpy
 
-from ayon_core.pipeline import (
-    AYON_CONTAINER_ID,
-    add_to_ayon_container
-)
+from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
 from ayon_blender.api.constants import AYON_PROPERTY
+from ayon_blender.api.pipeline import add_to_ayon_container
 
 
 class AudioLoader(plugin.BlenderLoader):

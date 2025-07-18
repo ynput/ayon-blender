@@ -24,6 +24,7 @@ from .pipeline import (
 from .constants import (
     AYON_INSTANCES,
     AYON_PROPERTY,
+    AYON_CONTAINERS
 )
 from .ops import (
     MainThreadItem,
@@ -201,13 +202,9 @@ class BlenderCreator(Creator):
             cache_legacy = {}
             convert_avalon_instances()
             ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
-            if ayon_instances:
-                ayon_instances.color_tag = "COLOR_04"
-                ayon_instances.use_fake_user = True
             ayon_instance_objs = (
                 ayon_instances.objects if ayon_instances else []
             )
-
             for obj_or_col in itertools.chain(
                 ayon_instance_objs,
                 bpy.data.collections
@@ -324,14 +321,9 @@ class BlenderCreator(Creator):
             data = created_instance.data_to_store()
             node = created_instance.transient_data["instance_node"]
             if not node:
-                # We can't update if we don't know the node
-                self.log.error(
-                    f"Unable to update instance {created_instance} "
-                    f"without instance node."
-                )
-                return
-
-            # Rename the instance node in the scene if product
+                node = self._create_instance_node()
+            else:
+                node = self._transfer_workfile_property(node)
             #   or folder changed.
             # Do not rename the instance if the family is workfile, as the
             # workfile instance is included in the AYON_CONTAINER collection.
@@ -387,6 +379,44 @@ class BlenderCreator(Creator):
                 "productName": product_name,
             }
         )
+
+    def _transfer_workfile_property(
+            self, node: bpy.types.Collection)-> bpy.types.Collection:
+        """Transfer all workfile-related instance data from
+        AYON_CONTAINERS to AYON_INSTANCES if any. Backward
+        compatibility only.
+
+        Args:
+            node (bpy.types.Collection): instance node
+
+        Returns:
+            bpy.types.Collection: instance node
+        """
+        if (
+            not isinstance(node, bpy.types.Collection)
+            or node.name != AYON_CONTAINERS
+            or AYON_PROPERTY not in node
+        ):
+            return node
+
+        instance_node = bpy.data.collections.get(AYON_INSTANCES)
+        if not instance_node:
+            instance_node = self._create_instance_node()
+        instance_node[AYON_PROPERTY] = node.get(AYON_PROPERTY)
+        del node[AYON_PROPERTY]
+        return instance_node
+
+    def _create_instance_node(self) -> bpy.types.Collection:
+        """Create Instance node
+
+        Returns:
+            bpy.types.Collection: Instance node
+        """
+        node = bpy.data.collections.new(AYON_INSTANCES)
+        node.color_tag = "COLOR_04"
+        node.use_fake_user = True
+        bpy.context.scene.collection.children.link(node)
+        return node
 
     def get_pre_create_attr_defs(self):
         return [

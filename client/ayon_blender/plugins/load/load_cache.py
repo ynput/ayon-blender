@@ -15,7 +15,10 @@ from ayon_blender.api.constants import (
     VALID_EXTENSIONS,
 )
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import convert_avalon_containers
+from ayon_blender.api.pipeline import (
+    add_to_ayon_container,
+    get_ayon_container
+)
 
 
 class CacheModelLoader(plugin.BlenderLoader):
@@ -138,12 +141,12 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         return objects
 
-    def _link_objects(self, objects, collection, containers, asset_group):
+    def _link_objects(self, objects, collection, containers):
         # Link the imported objects to any collection where the asset group is
         # linked to, except the AYON_CONTAINERS collection
         group_collections = [
             collection
-            for collection in asset_group.users_collection
+            for collection in collection.users_collection
             if collection != containers]
 
         for obj in objects:
@@ -173,24 +176,16 @@ class CacheModelLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        convert_avalon_containers()
-        containers = bpy.data.collections.get(AYON_CONTAINERS)
-
-        if not containers:
-            containers = bpy.data.collections.new(name=AYON_CONTAINERS)
-            bpy.context.scene.collection.children.link(containers)
-
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         asset_group.empty_display_type = 'SINGLE_ARROW'
-        containers.objects.link(asset_group)
-
+        add_to_ayon_container(asset_group)
         objects = self._process(libpath, asset_group, group_name)
 
         # Link the asset group to the active collection
         collection = bpy.context.view_layer.active_layer_collection.collection
         collection.objects.link(asset_group)
-
-        self._link_objects(objects, asset_group, containers, asset_group)
+        containers = get_ayon_container()
+        self._link_objects(objects, asset_group, containers)
 
         product_type = context["product"]["productType"]
         asset_group[AYON_PROPERTY] = {
@@ -273,9 +268,8 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             objects = self._process(str(libpath), asset_group, object_name)
 
-            convert_avalon_containers()
-            containers = bpy.data.collections.get(AYON_CONTAINERS)
-            self._link_objects(objects, asset_group, containers, asset_group)
+            containers = get_ayon_container()
+            self._link_objects(objects, asset_group, containers)
 
             asset_group.matrix_basis = mat
         else:

@@ -488,6 +488,20 @@ def convert_avalon_instances():
 
 def add_to_ayon_container(container: Union[bpy.types.Collection, bpy.types.Object]):
     """Add the container to the AYON container."""
+    ayon_container = get_ayon_container()
+
+    if isinstance(container, bpy.types.Collection):
+        ayon_container.children.link(container)
+    elif isinstance(container, bpy.types.Object):
+        ayon_container.objects.link(container)
+
+
+def get_ayon_container() -> bpy.types.Collection:
+    """Get Ayon Container
+
+    Returns:
+         bpy.types.Collection: Ayon containers collection
+    """
     names = (
     AYON_CONTAINERS,
     # Backwards compatibility
@@ -500,17 +514,7 @@ def add_to_ayon_container(container: Union[bpy.types.Collection, bpy.types.Objec
             break
     else:
         ayon_container = ensure_ayon_container()
-
-    if isinstance(container, bpy.types.Collection):
-        ayon_container.children.link(container)
-    elif isinstance(container, bpy.types.Object):
-        ayon_container.objects.link(container)
-
-    # TODO: Disable AYON containers for the view layers
-    # for view_layer in bpy.context.scene.view_layers:
-    #     for child in view_layer.layer_collection.children:
-    #         if child.collection == ayon_container:
-    #             child.exclude = True
+    return ayon_container
 
 
 def ensure_ayon_container() -> bpy.types.Collection:

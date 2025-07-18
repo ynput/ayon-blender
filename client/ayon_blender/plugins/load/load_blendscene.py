@@ -12,7 +12,6 @@ from ayon_blender.api.constants import (
     AYON_PROPERTY,
 )
 from ayon_blender.api.pipeline import (
-    convert_avalon_containers,
     add_to_ayon_container,
     get_ayon_property
 )
@@ -158,7 +157,6 @@ class BlendSceneLoader(plugin.BlenderLoader):
         member_transforms = {}
         members = asset_group.get(AYON_PROPERTY).get("members", [])
         loaded_collections = {c for c in bpy.data.collections if c in members}
-        convert_avalon_containers()
         loaded_collections.add(bpy.data.collections.get(AYON_CONTAINERS))
         for member in members:
             if isinstance(member, bpy.types.Object):
