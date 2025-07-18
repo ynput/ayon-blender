@@ -7,6 +7,7 @@ from ayon_blender.api.constants import (
     AYON_INSTANCES,
     AYON_CONTAINERS
 )
+from ayon_blender.api.lib import imprint
 
 
 class CreateWorkfile(BlenderCreator, AutoCreator):
@@ -86,26 +87,14 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             workfile_instance["task"] = task_name
             workfile_instance["productName"] = product_name
 
-        instance_node = bpy.data.collections.get(AYON_INSTANCES)
-        if not instance_node:
-            instance_node = bpy.data.collections.new(AYON_INSTANCES)
-            instance_node.color_tag = "COLOR_04"
-            instance_node.use_fake_user = True
-            bpy.context.scene.collection.children.link(instance_node)
-
-        workfile_instance.transient_data["instance_node"] = instance_node
-
     def collect_instances(self):
         instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
             return
 
-        old_property = self._find_old_workfile_property()
         property = instance_node.get(AYON_PROPERTY)
-        if not old_property and not property:
+        if not property:
             return
-        elif old_property and not property:
-            instance_node[AYON_PROPERTY] = old_property
 
         # Create instance object from existing data
         instance = CreatedInstance.from_existing(
@@ -117,8 +106,43 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
         # Add instance to create context
         self._add_instance_to_context(instance)
 
-    def _find_old_workfile_property(self):
-        instance_node = bpy.data.collections.get(AYON_CONTAINERS)
-        if instance_node:
-            return instance_node.get(AYON_PROPERTY)
-        return None
+    def update_instances(self, update_list):
+        """Override abstract method from BlenderCreator.
+        Store changes of existing instances so they can be recollected.
+
+        Args:
+            update_list(List[UpdateData]): Changed instances
+                and their changes, as a list of tuples.
+        """
+
+        for created_instance, _ in update_list:
+            data = created_instance.data_to_store()
+            node = created_instance.transient_data.get("instance_node")
+            if not node:
+                node = self._create_instance_node()
+            else:
+                node = self._convert_workfile_property(node)
+
+            imprint(node, data)
+
+    def _convert_workfile_property(
+            self, node: bpy.types.Collection)-> bpy.types.Collection:
+        if (
+            not isinstance(node, bpy.types.Collection)
+            or node.name != AYON_CONTAINERS
+            or AYON_PROPERTY not in node
+        ):
+            return node
+
+        instance_node = bpy.data.collections.get(AYON_INSTANCES)
+        if not instance_node:
+            instance_node = self._create_instance_node()
+        instance_node[AYON_PROPERTY] = node.get(AYON_PROPERTY)
+        return instance_node
+
+    def _create_instance_node(self) -> bpy.types.Collection:
+        node = bpy.data.collections.new(AYON_INSTANCES)
+        node.color_tag = "COLOR_04"
+        node.use_fake_user = True
+        bpy.context.scene.collection.children.link(node)
+        return node

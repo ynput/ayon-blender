@@ -338,7 +338,7 @@ class BlenderCreator(Creator):
             if (
                 "productName" in changes.changed_keys
                 or "folderPath" in changes.changed_keys
-            ) and created_instance.product_type != "workfile":
+            ):
                 folder_name = data["folderPath"].split("/")[-1]
                 name = prepare_scene_name(
                     folder_name, data["productName"]

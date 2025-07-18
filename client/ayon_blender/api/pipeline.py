@@ -486,16 +486,20 @@ def convert_avalon_instances():
         avalon_instances.name = AYON_INSTANCES
 
 
-def convert_avalon_containers():
-    avalon_containers = bpy.data.collections.get(AVALON_CONTAINERS)
-    if avalon_containers:
-        avalon_containers.name = AYON_CONTAINERS
-
-
 def add_to_ayon_container(container: Union[bpy.types.Collection, bpy.types.Object]):
     """Add the container to the AYON container."""
-    convert_avalon_containers()
-    ayon_container = ensure_ayon_container()
+    names = (
+    AYON_CONTAINERS,
+    # Backwards compatibility
+    AVALON_CONTAINERS
+    )
+    for name in names:
+        ayon_container = bpy.data.collections.get(name)
+        if ayon_container:
+            # Found existing container property
+            break
+    else:
+        ayon_container = ensure_ayon_container()
 
     if isinstance(container, bpy.types.Collection):
         ayon_container.children.link(container)
