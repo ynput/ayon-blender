@@ -538,9 +538,9 @@ def get_ayon_container() -> bpy.types.Collection:
          bpy.types.Collection: Ayon containers collection
     """
     names = (
-    AYON_CONTAINERS,
-    # Backwards compatibility
-    AVALON_CONTAINERS
+        AYON_CONTAINERS,
+        # Backwards compatibility
+        AVALON_CONTAINERS
     )
     for name in names:
         ayon_container = bpy.data.collections.get(name)

@@ -24,6 +24,7 @@ from .pipeline import (
 from .constants import (
     AYON_INSTANCES,
     AYON_PROPERTY,
+    AYON_CONTAINERS
 )
 from .ops import (
     MainThreadItem,
@@ -53,7 +54,7 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    ayon_container = bpy.context.scene.collection
+    ayon_container = bpy.data.collection.get(AYON_CONTAINERS)
     # Check the names of both object and collection containers
     obj_asset_groups = ayon_container.objects
     obj_group_names = {
