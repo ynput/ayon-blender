@@ -22,9 +22,9 @@ from .pipeline import (
     convert_avalon_instances,
 )
 from .constants import (
-    AYON_CONTAINERS,
     AYON_INSTANCES,
     AYON_PROPERTY,
+    AYON_CONTAINERS
 )
 from .ops import (
     MainThreadItem,
@@ -54,9 +54,7 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        return "01"
+    ayon_container = bpy.data.collection.get(AYON_CONTAINERS)
     # Check the names of both object and collection containers
     obj_asset_groups = ayon_container.objects
     obj_group_names = {
@@ -260,6 +258,8 @@ class BlenderCreator(Creator):
         instances = bpy.data.collections.get(AYON_INSTANCES)
         if not instances:
             instances = bpy.data.collections.new(name=AYON_INSTANCES)
+            instances.color_tag = "COLOR_04"
+            instances.use_fake_user = True
             bpy.context.scene.collection.children.link(instances)
 
         # Create asset group

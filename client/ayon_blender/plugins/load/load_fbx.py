@@ -6,17 +6,13 @@ from typing import Dict, List, Optional
 
 import bpy
 
-from ayon_core.pipeline import (
-    get_representation_path,
-    AYON_CONTAINER_ID,
-)
+from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.constants import (
-    AYON_CONTAINERS,
     AYON_PROPERTY,
     VALID_EXTENSIONS,
 )
-from ayon_blender.api.pipeline import convert_avalon_containers
+from ayon_blender.api.pipeline import add_to_ayon_container
 
 
 class FbxModelLoader(plugin.BlenderLoader):
@@ -151,14 +147,8 @@ class FbxModelLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        convert_avalon_containers()
-        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-        if not ayon_container:
-            ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
-            bpy.context.scene.collection.children.link(ayon_container)
-
         asset_group = bpy.data.objects.new(group_name, object_data=None)
-        ayon_container.objects.link(asset_group)
+        add_to_ayon_container(asset_group)
 
         objects = self._process(libpath, asset_group, group_name, None)
 
@@ -204,7 +194,7 @@ class FbxModelLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         object_name = container["objectName"]
         asset_group = bpy.data.objects.get(object_name)
-        libpath = Path(get_representation_path(repre_entity))
+        libpath = Path(self.filepath_from_context(context))
         extension = libpath.suffix.lower()
 
         self.log.info(

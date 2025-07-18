@@ -8,7 +8,6 @@ import os
 import json
 import bpy
 
-from ayon_core.pipeline import get_representation_path
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import containerise_existing
 from ayon_blender.api.constants import (
@@ -143,7 +142,7 @@ class BlendLookLoader(plugin.BlenderLoader):
     def update(self, container: Dict, context: Dict):
         collection = bpy.data.collections.get(container["objectName"])
         repre_entity = context["representation"]
-        libpath = Path(get_representation_path(repre_entity))
+        libpath = Path(self.filepath_from_context(context))
         extension = libpath.suffix.lower()
 
         self.log.info(
