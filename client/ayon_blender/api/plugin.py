@@ -24,7 +24,6 @@ from .pipeline import (
 from .constants import (
     AYON_INSTANCES,
     AYON_PROPERTY,
-    AYON_CONTAINERS
 )
 from .ops import (
     MainThreadItem,
