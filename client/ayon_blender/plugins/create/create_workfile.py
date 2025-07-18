@@ -4,7 +4,8 @@ from ayon_core.pipeline import CreatedInstance, AutoCreator
 from ayon_blender.api.plugin import BlenderCreator
 from ayon_blender.api.constants import (
     AYON_PROPERTY,
-    AYON_INSTANCES
+    AYON_INSTANCES,
+    AYON_CONTAINERS
 )
 
 
@@ -103,3 +104,62 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
 
         # Add instance to create context
         self._add_instance_to_context(instance)
+
+    def update_instances(self, update_list):
+        """Override abstract method from BlenderCreator.
+        Store changes of existing instances so they can be recollected.
+
+        Args:
+            update_list(List[UpdateData]): Changed instances
+                and their changes, as a list of tuples.
+        """
+
+        for created_instance, _ in update_list:
+            data = created_instance.data_to_store()
+            node = created_instance.transient_data.get("instance_node")
+            if not node:
+                node = self._create_instance_node()
+            else:
+                node = self._transfer_workfile_property(node)
+
+            self.imprint(node, data)
+
+            created_instance.transient_data["instance_node"] = node
+
+    def _transfer_workfile_property(
+            self, node: bpy.types.Collection)-> bpy.types.Collection:
+        """Transfer all workfile-related instance data from
+        AYON_CONTAINERS to AYON_INSTANCES if any. Backward
+        compatibility only.
+
+        Args:
+            node (bpy.types.Collection): instance node
+
+        Returns:
+            bpy.types.Collection: instance node
+        """
+        if (
+            not isinstance(node, bpy.types.Collection)
+            or node.name != AYON_CONTAINERS
+            or AYON_PROPERTY not in node
+        ):
+            return node
+
+        instance_node = bpy.data.collections.get(AYON_INSTANCES)
+        if not instance_node:
+            instance_node = self._create_instance_node()
+        instance_node[AYON_PROPERTY] = node.get(AYON_PROPERTY)
+        del node[AYON_PROPERTY]
+        return instance_node
+
+    def _create_instance_node(self) -> bpy.types.Collection:
+        """Create Instance node
+
+        Returns:
+            bpy.types.Collection: Instance node
+        """
+        node = bpy.data.collections.new(AYON_INSTANCES)
+        node.color_tag = "COLOR_04"
+        node.use_fake_user = True
+        bpy.context.scene.collection.children.link(node)
+        return node
