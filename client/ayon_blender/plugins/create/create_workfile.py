@@ -118,7 +118,7 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             data = created_instance.data_to_store()
             node = created_instance.transient_data.get("instance_node")
             if not node:
-                node = self._create_instance_node()
+                node = self._create_ayon_instances_collection()
             else:
                 node = self._transfer_workfile_property(node)
 
@@ -154,7 +154,7 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
 
     def remove_instances(self, instances):
         for instance in instances:
-            node = instances.transient_data.get("instance_node")
+            node = instance.transient_data.get("instance_node")
             if node:
                 if node.children or node.objects:
                     # If it has members, keep collection around
