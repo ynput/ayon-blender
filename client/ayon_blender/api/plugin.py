@@ -255,9 +255,8 @@ class BlenderCreator(Creator):
                 Those may affect how creator works.
         """
         # Get Instance Container or create it if it does not exist
-        ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
-        if not ayon_instances:
-            ayon_instances = self._create_ayon_instances_collection()
+        ayon_instances = self._ensure_ayon_instances_collection()
+
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
 
@@ -392,12 +391,17 @@ class BlenderCreator(Creator):
             }
         )
 
-    def _create_ayon_instances_collection(self) -> bpy.types.Collection:
+    def _ensure_ayon_instances_collection(self) -> bpy.types.Collection:
         """Create AYON Instances collections that contains created instances.
 
         Returns:
             bpy.types.Collection: AYON Instances collection
         """
+        node = bpy.data.collections.get(AYON_INSTANCES)
+        if node:
+            # Already exists, return it
+            return node
+
         node = bpy.data.collections.new(AYON_INSTANCES)
         node.color_tag = "COLOR_04"
         node.use_fake_user = True
