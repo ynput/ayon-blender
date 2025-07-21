@@ -1,12 +1,11 @@
 import os
 import sys
 import traceback
-from typing import Callable, Dict, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import bpy
 
 import pyblish.api
-from typing import Union
 
 from ayon_core.host import (
     HostBase,
@@ -521,32 +520,54 @@ def convert_avalon_instances():
         avalon_instances.name = AYON_INSTANCES
 
 
-def convert_avalon_containers():
-    avalon_containers = bpy.data.collections.get(AVALON_CONTAINERS)
-    if avalon_containers:
-        avalon_containers.name = AYON_CONTAINERS
+def add_to_ayon_container(
+    container: Union[bpy.types.Collection, bpy.types.Object]
+):
+    """Add the container (object or collection) to the AYON container."""
+    ayon_container = get_ayon_container()
+    if isinstance(container, bpy.types.Collection):
+        ayon_container.children.link(container)
+    elif isinstance(container, bpy.types.Object):
+        ayon_container.objects.link(container)
 
 
-def add_to_ayon_container(container: bpy.types.Collection):
-    """Add the container to the AYON container."""
+def get_ayon_container() -> bpy.types.Collection:
+    """Get Ayon Container
 
+    Returns:
+         bpy.types.Collection: Ayon containers collection
+    """
     ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+    if ayon_container:
+        return ayon_container
 
-        # Link the container to the scene so it's easily visible to the artist
-        # and can be managed easily. Otherwise it's only found in "Blender
-        # File" view and it will be removed by Blenders garbage collection,
-        # unless you set a 'fake user'.
-        bpy.context.scene.collection.children.link(ayon_container)
+    # Backwards compatibility, check for legacy Avalon container
+    avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
+    if avalon_container:
+        # Convert legacy Avalon container to Ayon container
+        log.debug(
+            "Converting legacy Avalon container to AYON container."
+        )
+        # Rename the collection
+        avalon_container.name = AYON_CONTAINERS
+        return avalon_container
 
-    ayon_container.children.link(container)
+    # Create a new AYON container if it does not exist
+    return ensure_ayon_container()
 
-    # Disable AYON containers for the view layers.
-    for view_layer in bpy.context.scene.view_layers:
-        for child in view_layer.layer_collection.children:
-            if child.collection == ayon_container:
-                child.exclude = True
+
+def ensure_ayon_container() -> bpy.types.Collection:
+    """Ensure AYON_CONTAINERS exists and is ready for use."""
+    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+    if ayon_container:
+        return ayon_container
+
+    # Create and configure container
+    ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+    bpy.context.scene.collection.children.link(ayon_container)
+    ayon_container.color_tag = "COLOR_02"
+    ayon_container.use_fake_user = True
+    return ayon_container
 
 
 def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):

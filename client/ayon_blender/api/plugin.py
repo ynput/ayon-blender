@@ -20,11 +20,11 @@ from ayon_core.lib import BoolDef
 from .pipeline import (
     get_ayon_property,
     convert_avalon_instances,
+    get_ayon_container,
 )
 from .constants import (
-    AYON_CONTAINERS,
     AYON_INSTANCES,
-    AYON_PROPERTY,
+    AYON_PROPERTY
 )
 from .ops import (
     MainThreadItem,
@@ -54,9 +54,7 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        return "01"
+    ayon_container = get_ayon_container()
     # Check the names of both object and collection containers
     obj_asset_groups = ayon_container.objects
     obj_group_names = {
@@ -257,10 +255,7 @@ class BlenderCreator(Creator):
                 Those may affect how creator works.
         """
         # Get Instance Container or create it if it does not exist
-        instances = bpy.data.collections.get(AYON_INSTANCES)
-        if not instances:
-            instances = bpy.data.collections.new(name=AYON_INSTANCES)
-            bpy.context.scene.collection.children.link(instances)
+        ayon_instances = self._ensure_ayon_instances_collection()
 
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
@@ -270,11 +265,11 @@ class BlenderCreator(Creator):
             # Create instance as empty
             instance_node = bpy.data.objects.new(name=name, object_data=None)
             instance_node.empty_display_type = 'SINGLE_ARROW'
-            instances.objects.link(instance_node)
+            ayon_instances.objects.link(instance_node)
         else:
             # Create instance collection
             instance_node = bpy.data.collections.new(name=name)
-            instances.children.link(instance_node)
+            ayon_instances.children.link(instance_node)
 
         self.set_instance_data(product_name, instance_data)
 
@@ -395,6 +390,23 @@ class BlenderCreator(Creator):
                 "productName": product_name,
             }
         )
+
+    def _ensure_ayon_instances_collection(self) -> bpy.types.Collection:
+        """Create AYON Instances collections that contains created instances.
+
+        Returns:
+            bpy.types.Collection: AYON Instances collection
+        """
+        node = bpy.data.collections.get(AYON_INSTANCES)
+        if node:
+            # Already exists, return it
+            return node
+
+        node = bpy.data.collections.new(AYON_INSTANCES)
+        node.color_tag = "COLOR_04"
+        node.use_fake_user = True
+        bpy.context.scene.collection.children.link(node)
+        return node
 
     def get_pre_create_attr_defs(self):
         return [
