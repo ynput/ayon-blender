@@ -537,19 +537,23 @@ def get_ayon_container() -> bpy.types.Collection:
     Returns:
          bpy.types.Collection: Ayon containers collection
     """
-    names = (
-        AYON_CONTAINERS,
-        # Backwards compatibility
-        AVALON_CONTAINERS
-    )
-    for name in names:
-        ayon_container = bpy.data.collections.get(name)
-        if ayon_container:
-            # Found existing container property
-            break
-    else:
-        ayon_container = ensure_ayon_container()
-    return ayon_container
+    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+    if ayon_container:
+        return ayon_container
+
+    # Backwards compatibility, check for legacy Avalon container
+    avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
+    if avalon_container:
+        # Convert legacy Avalon container to Ayon container
+        log.debug(
+            "Converting legacy Avalon container to AYON container."
+        )
+        # Rename the collection
+        avalon_container.name = AYON_CONTAINERS
+        return avalon_container
+
+    # Create a new AYON container if it does not exist
+    return ensure_ayon_container()
 
 
 def ensure_ayon_container() -> bpy.types.Collection:
