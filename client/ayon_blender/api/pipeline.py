@@ -521,10 +521,11 @@ def convert_avalon_instances():
         avalon_instances.name = AYON_INSTANCES
 
 
-def add_to_ayon_container(container: Union[bpy.types.Collection, bpy.types.Object]):
-    """Add the container to the AYON container."""
+def add_to_ayon_container(
+    container: Union[bpy.types.Collection, bpy.types.Object]
+):
+    """Add the container (object or collection) to the AYON container."""
     ayon_container = get_ayon_container()
-
     if isinstance(container, bpy.types.Collection):
         ayon_container.children.link(container)
     elif isinstance(container, bpy.types.Object):
