@@ -255,9 +255,9 @@ class BlenderCreator(Creator):
                 Those may affect how creator works.
         """
         # Get Instance Container or create it if it does not exist
-        instances = bpy.data.collections.get(AYON_INSTANCES)
-        if not instances:
-            instances = self._create_ayon_instance_node()
+        ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
+        if not ayon_instances:
+            ayon_instances = self._create_ayon_instances_collection()
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
 
@@ -266,11 +266,11 @@ class BlenderCreator(Creator):
             # Create instance as empty
             instance_node = bpy.data.objects.new(name=name, object_data=None)
             instance_node.empty_display_type = 'SINGLE_ARROW'
-            instances.objects.link(instance_node)
+            ayon_instances.objects.link(instance_node)
         else:
             # Create instance collection
             instance_node = bpy.data.collections.new(name=name)
-            instances.children.link(instance_node)
+            ayon_instances.children.link(instance_node)
 
         self.set_instance_data(product_name, instance_data)
 
@@ -392,8 +392,8 @@ class BlenderCreator(Creator):
             }
         )
 
-    def _create_ayon_instance_node(self) -> bpy.types.Collection:
-        """Create AYON Instance node that contains created instances.
+    def _create_ayon_instances_collection(self) -> bpy.types.Collection:
+        """Create AYON Instances collections that contains created instances.
 
         Returns:
             bpy.types.Collection: AYON Instances collection

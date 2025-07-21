@@ -147,7 +147,7 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
 
         instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
-            instance_node = self._create_ayon_instance_node()
+            instance_node = self._create_ayon_instances_collection()
         instance_node[AYON_PROPERTY] = node.get(AYON_PROPERTY)
         del node[AYON_PROPERTY]
         return instance_node
