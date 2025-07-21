@@ -257,7 +257,7 @@ class BlenderCreator(Creator):
         # Get Instance Container or create it if it does not exist
         instances = bpy.data.collections.get(AYON_INSTANCES)
         if not instances:
-            self._create_ayon_instance_node()
+            instances = self._create_ayon_instance_node()
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
 
