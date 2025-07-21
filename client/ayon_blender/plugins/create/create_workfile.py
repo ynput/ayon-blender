@@ -147,19 +147,21 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
 
         instance_node = bpy.data.collections.get(AYON_INSTANCES)
         if not instance_node:
-            instance_node = self._create_instance_node()
+            instance_node = self.create_instance_node()
         instance_node[AYON_PROPERTY] = node.get(AYON_PROPERTY)
         del node[AYON_PROPERTY]
         return instance_node
 
-    def _create_instance_node(self) -> bpy.types.Collection:
-        """Create Instance node
+    def remove_instances(self, instances):
+        for instance in instances:
+            node = instances.transient_data.get("instance_node")
+            if node:
+                if node.children or node.objects:
+                    # If it has members, keep collection around
+                    # but only remove imprinted data
+                    del node[AYON_PROPERTY]
+                else:
+                    # Delete the collection
+                    bpy.data.collections.remove(node)
 
-        Returns:
-            bpy.types.Collection: Instance node
-        """
-        node = bpy.data.collections.new(AYON_INSTANCES)
-        node.color_tag = "COLOR_04"
-        node.use_fake_user = True
-        bpy.context.scene.collection.children.link(node)
-        return node
+            self._remove_instance_from_context(instance)

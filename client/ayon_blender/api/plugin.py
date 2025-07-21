@@ -20,11 +20,11 @@ from ayon_core.lib import BoolDef
 from .pipeline import (
     get_ayon_property,
     convert_avalon_instances,
+    get_ayon_container,
 )
 from .constants import (
     AYON_INSTANCES,
-    AYON_PROPERTY,
-    AYON_CONTAINERS
+    AYON_PROPERTY
 )
 from .ops import (
     MainThreadItem,
@@ -54,7 +54,7 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    ayon_container = bpy.data.collection.get(AYON_CONTAINERS)
+    ayon_container = get_ayon_container()
     # Check the names of both object and collection containers
     obj_asset_groups = ayon_container.objects
     obj_group_names = {
@@ -257,11 +257,7 @@ class BlenderCreator(Creator):
         # Get Instance Container or create it if it does not exist
         instances = bpy.data.collections.get(AYON_INSTANCES)
         if not instances:
-            instances = bpy.data.collections.new(name=AYON_INSTANCES)
-            instances.color_tag = "COLOR_04"
-            instances.use_fake_user = True
-            bpy.context.scene.collection.children.link(instances)
-
+            self.create_instance_node()
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
 
@@ -395,6 +391,18 @@ class BlenderCreator(Creator):
                 "productName": product_name,
             }
         )
+
+    def create_instance_node(self) -> bpy.types.Collection:
+        """Create Instance node
+
+        Returns:
+            bpy.types.Collection: Instance node
+        """
+        node = bpy.data.collections.new(AYON_INSTANCES)
+        node.color_tag = "COLOR_04"
+        node.use_fake_user = True
+        bpy.context.scene.collection.children.link(node)
+        return node
 
     def get_pre_create_attr_defs(self):
         return [
