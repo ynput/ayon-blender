@@ -257,7 +257,7 @@ class BlenderCreator(Creator):
         # Get Instance Container or create it if it does not exist
         instances = bpy.data.collections.get(AYON_INSTANCES)
         if not instances:
-            self.create_instance_node()
+            self._create_ayon_instance_node()
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
 
@@ -392,11 +392,11 @@ class BlenderCreator(Creator):
             }
         )
 
-    def create_instance_node(self) -> bpy.types.Collection:
-        """Create Instance node
+    def _create_ayon_instance_node(self) -> bpy.types.Collection:
+        """Create AYON Instance node that contains created instances.
 
         Returns:
-            bpy.types.Collection: Instance node
+            bpy.types.Collection: AYON Instances collection
         """
         node = bpy.data.collections.new(AYON_INSTANCES)
         node.color_tag = "COLOR_04"
