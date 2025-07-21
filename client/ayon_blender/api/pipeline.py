@@ -1,12 +1,11 @@
 import os
 import sys
 import traceback
-from typing import Callable, Dict, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import bpy
 
 import pyblish.api
-from typing import Union
 
 from ayon_core.host import (
     HostBase,
