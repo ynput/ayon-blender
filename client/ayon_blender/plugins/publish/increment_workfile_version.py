@@ -1,6 +1,8 @@
 import pyblish.api
-from ayon_core.pipeline.publish import OptionalPyblishPluginMixin
-from ayon_blender.api.workio import save_file
+
+from ayon_core.lib import version_up
+from ayon_core.host import IWorkfileHost
+from ayon_core.pipeline import registered_host, OptionalPyblishPluginMixin
 from ayon_blender.api import plugin
 
 
@@ -24,10 +26,25 @@ class IncrementWorkfileVersion(
         assert all(result["success"] for result in context.data["results"]), (
             "Publishing not successful so version is not increased.")
 
-        from ayon_core.lib import version_up
-        path = context.data["currentFile"]
-        filepath = version_up(path)
+        current_filepath = context.data["currentFile"]
+        new_filepath = version_up(current_filepath)
 
-        save_file(filepath, copy=False)
-
-        self.log.debug('Incrementing blender workfile version')
+        host: IWorkfileHost = registered_host()
+        if hasattr(host, "save_workfile_with_context"):
+            from ayon_core.host.interfaces import SaveWorkfileOptionalData
+            host.save_workfile_with_context(
+                filepath=new_filepath,
+                folder_entity=context.data["folderEntity"],
+                task_entity=context.data["taskEntity"],
+                description="Incremented by publishing.",
+                # Optimize the save by reducing needed queries for context
+                prepared_data=SaveWorkfileOptionalData(
+                    project_entity=context.data["projectEntity"],
+                    project_settings=context.data["project_settings"],
+                    anatomy=context.data["anatomy"],
+                )
+            )
+        else:
+            # Backwards compatibility before:
+            # https://github.com/ynput/ayon-core/pull/1275
+            host.save_workfile(new_filepath
