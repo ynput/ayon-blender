@@ -47,4 +47,4 @@ class IncrementWorkfileVersion(
         else:
             # Backwards compatibility before:
             # https://github.com/ynput/ayon-core/pull/1275
-            host.save_workfile(new_filepath
+            host.save_workfile(new_filepath)
