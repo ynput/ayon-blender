@@ -32,10 +32,11 @@ def clean_name(name: str) -> str:
 
 
 class CreateRender(plugin.BlenderCreator):
-    """Create render instance."""
+    """Create render from Compositor File Output node"""
 
     identifier = "io.ayon.creators.blender.render"
     label = "Render"
+    description = __doc__
     product_type = "render"
     icon = "eye"
 

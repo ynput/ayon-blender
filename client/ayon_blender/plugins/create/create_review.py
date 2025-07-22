@@ -4,10 +4,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateReview(plugin.BlenderCreator):
-    """Single baked camera."""
+    """Render viewport preview for review purposes"""
 
     identifier = "io.ayon.creators.blender.review"
     label = "Review"
+    description = __doc__
     product_type = "review"
     icon = "video-camera"
 

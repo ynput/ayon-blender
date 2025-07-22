@@ -4,10 +4,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreatePointcache(plugin.BlenderCreator):
-    """Polygonal static geometry."""
+    """Geometrical pointcache data"""
 
     identifier = "io.ayon.creators.blender.pointcache"
     label = "Point Cache"
+    description = __doc__
     product_type = "pointcache"
     icon = "gears"
 

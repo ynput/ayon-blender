@@ -6,10 +6,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateBlendScene(plugin.BlenderCreator):
-    """Generic group of assets."""
+    """Generic .blend export writing linked datablocks"""
 
     identifier = "io.ayon.creators.blender.blendscene"
     label = "Blender Scene"
+    description = __doc__
     product_type = "blendScene"
     icon = "cubes"
 
