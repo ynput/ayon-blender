@@ -6,7 +6,7 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateBlendScene(plugin.BlenderCreator):
-    """Generic .blend export writing linked datablocks"""
+    """Generic .blend export writing datablocks"""
 
     identifier = "io.ayon.creators.blender.blendscene"
     label = "Blender Scene"
