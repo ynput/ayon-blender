@@ -6,10 +6,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateRig(plugin.BlenderCreator):
-    """Artist-friendly rig with controls to direct motion."""
+    """Artist-friendly rig with controls to direct motion"""
 
     identifier = "io.ayon.creators.blender.rig"
     label = "Rig"
+    description = __doc__
     product_type = "rig"
     icon = "wheelchair"
 
