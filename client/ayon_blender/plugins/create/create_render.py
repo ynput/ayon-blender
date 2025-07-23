@@ -204,5 +204,10 @@ class CreateRender(plugin.BlenderCreator):
     def read(self, node: bpy.types.CompositorNodeOutputFile) -> dict:
         # Read the active state from the node `mute` state.
         data = super().read(node)
-        data["active"] = not node.mute
+
+        # On super().collect_instances() it may collect legacy render instances
+        # that are not Compositor nodes but Collection objects.
+        if isinstance(node, bpy.types.CompositorNodeOutputFile):
+            data["active"] = not node.mute
+
         return data
