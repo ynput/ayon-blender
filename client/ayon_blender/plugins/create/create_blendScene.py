@@ -1,7 +1,5 @@
 """Create a Blender scene asset."""
 
-import bpy
-
 from ayon_blender.api import plugin, lib
 
 
