@@ -6,10 +6,11 @@ from ayon_blender.api import lib, plugin
 
 
 class CreateAction(plugin.BlenderCreator):
-    """Action output for character rigs."""
+    """Action output for character rig"""
 
     identifier = "io.ayon.creators.blender.action"
     label = "Action"
+    description = __doc__
     product_type = "action"
     icon = "male"
 

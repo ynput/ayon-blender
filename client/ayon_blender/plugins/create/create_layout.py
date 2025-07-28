@@ -6,10 +6,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateLayout(plugin.BlenderCreator):
-    """Layout output for character rigs."""
+    """Layout output for character rigs"""
 
     identifier = "io.ayon.creators.blender.layout"
     label = "Layout"
+    description = __doc__
     product_type = "layout"
     icon = "cubes"
 
