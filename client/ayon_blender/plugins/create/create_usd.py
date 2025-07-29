@@ -11,6 +11,7 @@ class CreateUSD(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.usd"
     name = "usdMain"
     label = "USD"
+    description = __doc__
     product_type = "usd"
     icon = "gears"
 

@@ -4,10 +4,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateAnimation(plugin.BlenderCreator):
-    """Animation output for character rigs."""
+    """Animation output for character rig"""
 
     identifier = "io.ayon.creators.blender.animation"
     label = "Animation"
+    description = __doc__
     product_type = "animation"
     icon = "male"
 

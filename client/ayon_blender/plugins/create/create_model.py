@@ -6,10 +6,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateModel(plugin.BlenderCreator):
-    """Polygonal static geometry."""
+    """Polygonal static geometry"""
 
     identifier = "io.ayon.creators.blender.model"
     label = "Model"
+    description = __doc__
     product_type = "model"
     icon = "cube"
 
