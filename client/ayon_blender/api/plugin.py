@@ -350,34 +350,35 @@ class BlenderCreator(Creator):
     def remove_instances(self, instances: List[CreatedInstance]):
         for instance in instances:
             node = instance.transient_data["instance_node"]
-            if isinstance(node, bpy.types.Collection):
-                if node.children_recursive:
-                    for children in node.children_recursive:
-                        if isinstance(children, bpy.types.Collection):
-                            if len(children.users_collection) == 1:
 
-                                bpy.context.scene.collection.children.link(children)
-                            else:
-                                bpy.data.collections.remove(children)
-                        else:
-                            if len(children.users_collection) == 1:
-                                self.log.debug(f"Removing object {children.name}")
-                                bpy.context.scene.collection.objects.link(children)
-                            else:
-                                bpy.data.objects.remove(children)
-                elif node.objects:
-                    for child in node.objects:
+            # Remove collection node and its children
+            if isinstance(node, bpy.types.Collection):
+                # Remove recursively linked child collections and objects
+                for child in node.children_recursive:
+                    if isinstance(child, bpy.types.Collection):
+                        # If only linked to this collection, relink to scene before removal
                         if len(child.users_collection) == 1:
-                            self.log.debug(f"Removing object {child.name}")
-                            bpy.context.scene.collection.objects.link(child)
-                        else:
-                            bpy.data.objects.remove(child)
+                            if child.name not in bpy.context.scene.collection:
+                                bpy.context.scene.collection.children.link(child)
+
+                    elif isinstance(child, bpy.types.Object):
+                        if len(child.users_collection) == 1:
+                            if child.name not in bpy.context.scene.collection:
+                                bpy.context.scene.collection.objects.link(child)
+                # Remove directly linked objects
+                for obj in node.objects:
+                    if len(obj.users_collection) == 1:
+                        if obj.name not in bpy.context.scene.collection.objects:
+                            bpy.context.scene.collection.objects.link(obj)
 
                 bpy.data.collections.remove(node)
+
+            # Remove object node
             elif isinstance(node, bpy.types.Object):
                 bpy.data.objects.remove(node)
+
+            # Remove compositor node
             elif isinstance(node, bpy.types.CompositorNode):
-                # Remove compositor node
                 bpy.context.scene.node_tree.nodes.remove(node)
 
             self._remove_instance_from_context(instance)
