@@ -348,16 +348,30 @@ class BlenderCreator(Creator):
             self.imprint(node, data)
 
     def remove_instances(self, instances: List[CreatedInstance]):
-
         for instance in instances:
             node = instance.transient_data["instance_node"]
-
             if isinstance(node, bpy.types.Collection):
-                for children in node.children_recursive:
-                    if isinstance(children, bpy.types.Collection):
-                        bpy.data.collections.remove(children)
-                    else:
-                        bpy.data.objects.remove(children)
+                if node.children_recursive:
+                    for children in node.children_recursive:
+                        if isinstance(children, bpy.types.Collection):
+                            if len(children.users_collection) == 1:
+
+                                bpy.context.scene.collection.children.link(children)
+                            else:
+                                bpy.data.collections.remove(children)
+                        else:
+                            if len(children.users_collection) == 1:
+                                self.log.debug(f"Removing object {children.name}")
+                                bpy.context.scene.collection.objects.link(children)
+                            else:
+                                bpy.data.objects.remove(children)
+                elif node.objects:
+                    for child in node.objects:
+                        if len(child.users_collection) == 1:
+                            self.log.debug(f"Removing object {child.name}")
+                            bpy.context.scene.collection.objects.link(child)
+                        else:
+                            bpy.data.objects.remove(child)
 
                 bpy.data.collections.remove(node)
             elif isinstance(node, bpy.types.Object):
