@@ -183,6 +183,13 @@ class CreateRender(plugin.BlenderCreator):
 
     def get_instance_attr_defs(self):
         defs = lib.collect_animation_defs(self.create_context)
+        defs.extend([
+            BoolDef("review",
+                    label="Review",
+                    tooltip="Mark as reviewable",
+                    default=True
+            )
+        ])
         return defs
 
     def get_pre_create_attr_defs(self):
@@ -192,7 +199,8 @@ class CreateRender(plugin.BlenderCreator):
                 label="Create Render Setup",
                 default=False,
                 tooltip="Create Render Setup",
-            )
+            ),
+
         ]
 
     def imprint(self, node: bpy.types.CompositorNodeOutputFile, data: dict):
