@@ -1,8 +1,10 @@
 import os
 import pyblish.api
+from ayon_blender.api import plugin
 import bpy
 
-class CollectTemporaryFilesCleanUp(pyblish.api.InstancePlugin):
+
+class CollectTemporaryFilesCleanUp(plugin.BlenderInstancePlugin):
     """Collect Scene Render Temporary Files for the later clean up."""
 
     label = "Collect Scene Render Temporary Files"
