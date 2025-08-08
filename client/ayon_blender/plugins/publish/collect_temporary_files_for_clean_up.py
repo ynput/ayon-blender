@@ -7,6 +7,7 @@ class CollectTemporaryFilesForCleanUp(pyblish.api.InstancePlugin):
 
     label = "Collect Temporary Files for Clean Up"
     order = pyblish.api.CollectorOrder - 0.1
+    hosts = ["blender"]
     targets = ["farm"]
 
 def process(self, instance):
