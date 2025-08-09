@@ -14,6 +14,7 @@ class CollectTemporaryFilesCleanUp(plugin.BlenderInstancePlugin):
 
 def process(self, instance):
     temp_dir = bpy.context.scene.render.filepath
+    temp_dir = os.path.dirname(temp_dir)
     if not os.path.exists(temp_dir):
         self.log.debug(f"Temporary directory does not exist: {temp_dir}")
         return
