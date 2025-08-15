@@ -63,15 +63,12 @@ class FbxModelLoader(plugin.BlenderLoader):
 
         parent = bpy.context.scene.collection
 
-        imported = lib.get_selection()
-
-        empties = [obj for obj in imported if obj.type == 'EMPTY']
-
+        imported_objects = [obj for obj in lib.get_selection()]
         container = None
 
-        for empty in empties:
-            if not empty.parent:
-                container = empty
+        for imported_object in imported_objects:
+            if not imported_object.parent:
+                container = imported_object
                 break
 
         assert container, "No asset group found"
