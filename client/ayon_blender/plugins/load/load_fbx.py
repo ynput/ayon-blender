@@ -63,7 +63,7 @@ class FbxModelLoader(plugin.BlenderLoader):
 
         parent = bpy.context.scene.collection
 
-        imported_objects = [obj for obj in lib.get_selection()]
+        imported_objects = lib.get_selection()
         container = None
 
         for imported_object in imported_objects:
