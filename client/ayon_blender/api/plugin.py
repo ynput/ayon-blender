@@ -30,7 +30,10 @@ from .ops import (
     MainThreadItem,
     execute_in_main_thread
 )
-from .lib import imprint
+from .lib import (
+    imprint,
+    get_blender_version
+)
 
 
 def prepare_scene_name(
@@ -44,7 +47,8 @@ def prepare_scene_name(
 
     # Blender name for a collection or object cannot be longer than 63
     # characters. If the name is longer, it will raise an error.
-    if len(name) > 63:
+    # The truncation will only happen for blender version elder than 5.0
+    if get_blender_version() < (5, 0, 0) and len(name) > 63:
         raise ValueError(f"Scene name '{name}' would be too long.")
 
     return name

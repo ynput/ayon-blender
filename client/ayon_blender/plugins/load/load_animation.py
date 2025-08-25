@@ -6,6 +6,7 @@ import bpy
 
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import AYON_PROPERTY
+from ayon_blender.api.lib import get_blender_version
 
 
 class BlendAnimationLoader(plugin.BlenderLoader):
@@ -63,8 +64,9 @@ class BlendAnimationLoader(plugin.BlenderLoader):
 
         filename = bpy.path.basename(libpath)
         # Blender has a limit of 63 characters for any data name.
-        # If the filename is longer, it will be truncated.
-        if len(filename) > 63:
+        # If the filename is longer, it will be truncated for blender
+        # version elder than 5.0
+        if get_blender_version() < (5, 0, 0) and len(filename) > 63:
             filename = filename[:63]
         library = bpy.data.libraries.get(filename)
         bpy.data.libraries.remove(library)
