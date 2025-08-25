@@ -19,8 +19,13 @@ from ayon_blender.api.pipeline import (
 class BlendLinkLoader(plugin.BlenderLoader):
     """Link assets from a .blend file."""
 
-    product_types = {"model", "camera", "rig",
-        "action", "layout", "blendScene", "animation"}
+    product_types = {
+        "model", "camera", "rig",
+        "action", "layout", "blendScene", 
+        "animation", "workfile", "audio", 
+        "usd", "render", "image", 
+        "plate"
+    }
     representations = {"blend"}
 
     label = "Link Blend"
