@@ -136,8 +136,6 @@ def append_user_scripts():
         "scripts",
     )
     user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS") or default_user_prefs
-    if not user_scripts:
-        return
 
     try:
         load_scripts(user_scripts.split(os.pathsep))
