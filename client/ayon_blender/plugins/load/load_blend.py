@@ -204,6 +204,7 @@ class BlendLoader(plugin.BlenderLoader):
         old_members = old_data.get("members", [])
         parent = asset_group.parent
         users_collection = self.get_users_collection(asset_group)
+        print("users_collection", users_collection)
 
         actions = {}
         objects_with_anim = [
@@ -299,6 +300,9 @@ class BlendLoader(plugin.BlenderLoader):
         Get the users collection for a given asset group.
         """
         for collection in asset_group.users_collection:
-            if collection != bpy.context.scene.collection:
+            if (
+                collection != bpy.context.scene.collection and
+                collection.name != "AYON_CONTAINERS"
+            ):
                 return collection
         return None
