@@ -131,9 +131,11 @@ def load_scripts(paths):
 
 
 def append_user_scripts():
-    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS")
-    if not user_scripts:
-        return
+    default_user_prefs = os.path.join(
+        bpy.utils.resource_path('USER'),
+        "scripts",
+    )
+    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS") or default_user_prefs
 
     try:
         load_scripts(user_scripts.split(os.pathsep))

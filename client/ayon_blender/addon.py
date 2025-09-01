@@ -34,7 +34,11 @@ class BlenderAddon(AYONAddon, IHostAddon):
         # If `AYON_BLENDER_USE_SYSTEM_PATH` is set use `BLENDER_SYSTEM_PATH`
         # to initialize the Blender startup environment, otherwise use the
         # `BLENDER_USER_PATH`.
-        use_system_path = env_value_to_bool("AYON_BLENDER_USE_SYSTEM_PATH")
+        # The launch env is not applied yet, so we pass the env value
+        # from the launch environment
+        use_system_path = env_value_to_bool(
+            value=env.get("AYON_BLENDER_USE_SYSTEM_PATH"),
+        )
         if use_system_path:
             self._configure_blender_system_paths(
                 env, implementation_script_path
