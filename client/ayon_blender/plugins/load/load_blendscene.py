@@ -172,6 +172,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
             if member_parents:
                 collection_parents[member.name] = list(member_parents)
 
+        users_collections = asset_group.users_collection
         old_data = dict(asset_group.get(AYON_PROPERTY))
 
         self.exec_remove(container)
@@ -211,6 +212,14 @@ class BlendSceneLoader(plugin.BlenderLoader):
         }
 
         imprint(asset_group, new_data)
+        all_objects = [asset_group] + list(asset_group.children_recursive)
+        for users_collection in users_collections:
+            if asset_group.name not in users_collection.objects:
+                for obj in all_objects:
+                    users_collection.objects.link(obj)
+        if bpy.context.scene.collection not in users_collections:
+            for obj in all_objects:
+                bpy.context.scene.collection.objects.unlink(obj)
 
     def exec_remove(self, container: dict) -> bool:
         """
