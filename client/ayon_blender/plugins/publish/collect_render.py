@@ -120,7 +120,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "byFrameStep": frame_step,
             "review": instance.data.get("review", False),
             "multipartExr": is_multilayer,
-            "farm": True,
+            "farm": False,
             "expectedFiles": [expected_files],
             "renderProducts": colorspace.ARenderProduct(
                 frame_start=frame_start,
