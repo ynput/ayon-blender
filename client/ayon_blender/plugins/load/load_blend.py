@@ -207,6 +207,7 @@ class BlendLoader(plugin.BlenderLoader):
         old_data = dict(asset_group.get(AYON_PROPERTY))
         old_members = old_data.get("members", [])
         parent = asset_group.parent
+        users_collections = asset_group.users_collection
 
         actions = {}
         objects_with_anim = [
@@ -250,6 +251,15 @@ class BlendLoader(plugin.BlenderLoader):
         }
 
         imprint(asset_group, new_data)
+
+        all_objects = [asset_group] + list(asset_group.children_recursive)
+        for users_collection in users_collections:
+            if asset_group.name not in users_collection.objects:
+                for obj in all_objects:
+                    users_collection.objects.link(obj)
+        if bpy.context.scene.collection not in users_collections:
+            for obj in all_objects:
+                bpy.context.scene.collection.objects.unlink(obj)
 
         # We need to update all the parent container members
         parent_containers = self.get_all_container_parents(asset_group)

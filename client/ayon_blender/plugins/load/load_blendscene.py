@@ -215,6 +215,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
         }
 
         imprint(asset_group, new_data)
+        if bpy.context.scene.collection not in loaded_collections:
+            bpy.context.scene.collection.children.unlink(asset_group)
 
     def exec_remove(self, container: dict) -> bool:
         """
