@@ -616,7 +616,13 @@ def strip_container_data(containers):
 @contextlib.contextmanager
 def strip_namespace(containers):
     """Strip namespace during context
+    This context manager is only valid for blender version elder than 5.0.
+    This would be deprecated after the blender 5.0.
     """
+    if get_blender_version() >= (5, 0, 0):
+        yield
+        return
+
     nodes = [
         container["node"] for container in containers
     ]
