@@ -187,8 +187,8 @@ class CreateRender(plugin.BlenderCreator):
         # Default farm value from project settings
         project_settings = self.create_context.get_current_project_settings()
         farm_default = project_settings.get("RenderSettings", {}).get(
-                "farm_default", False
-            )
+            "farm_default", True
+        )
 
         defs.append(
             BoolDef(

@@ -106,9 +106,9 @@ class CustomPassesModel(BaseSettingsModel):
 
 class RenderSettingsModel(BaseSettingsModel):
     farm_default: bool = SettingsField(
-        False,
+        True,
         title="Render on Farm",
-        description="When enabled, newly created render instances default to farm rendering.",
+        description="When enabled, newly created render instances default to farm rendering. (Default: True)",
     )
     default_render_image_folder: str = SettingsField(
         title="Default Render Image Folder",
@@ -153,7 +153,7 @@ class RenderSettingsModel(BaseSettingsModel):
 
 
 DEFAULT_RENDER_SETTINGS = {
-    "farm_default": False,
+    "farm_default": True,
     "default_render_image_folder": "renders/blender",
     "aov_separator": "underscore",
     "image_format": "exr",
