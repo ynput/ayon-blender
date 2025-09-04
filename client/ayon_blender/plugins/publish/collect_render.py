@@ -114,13 +114,22 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             self.log.debug(f"Expected frames: {files}")
 
         context = instance.context
+
+        # Read desired farm setting from creator attributes; default False
+        creator_attrs = instance.data.get("creator_attributes", {})
+        farm_enabled = bool(creator_attrs.get("farm", False))
+
+        families = ["render"]
+        if farm_enabled:
+            families.append("render.farm")
+
         instance.data.update({
-            "families": ["render", "render.farm"],
+            "families": families,
             "fps": context.data["fps"],
             "byFrameStep": frame_step,
             "review": instance.data.get("review", False),
             "multipartExr": is_multilayer,
-            "farm": False,
+            "farm": farm_enabled,
             "expectedFiles": [expected_files],
             "renderProducts": colorspace.ARenderProduct(
                 frame_start=frame_start,

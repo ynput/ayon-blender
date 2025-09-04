@@ -183,6 +183,25 @@ class CreateRender(plugin.BlenderCreator):
 
     def get_instance_attr_defs(self):
         defs = lib.collect_animation_defs(self.create_context)
+
+        # Default farm value from project settings
+        project_settings = self.create_context.get_current_project_settings()
+        farm_default = project_settings.get("RenderSettings", {}).get(
+                "farm_default", False
+            )
+
+        defs.append(
+            BoolDef(
+                "farm",
+                label="Render on Farm",
+                default=farm_default,
+                tooltip=(
+                    "If enabled, publishing targets farm submission. "
+                    "If disabled, render locally during publish."
+                ),
+            )
+        )
+
         return defs
 
     def get_pre_create_attr_defs(self):
