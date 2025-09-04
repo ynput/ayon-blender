@@ -6,7 +6,10 @@ import bpy
 
 from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
-from ayon_blender.api.lib import imprint
+from ayon_blender.api.lib import (
+    imprint,
+    get_blender_version
+)
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,
     AYON_PROPERTY,
@@ -70,8 +73,9 @@ class BlendSceneLoader(plugin.BlenderLoader):
         # Remove the library from the blend file
         filepath = bpy.path.basename(libpath)
         # Blender has a limit of 63 characters for any data name.
-        # If the filepath is longer, it will be truncated.
-        if len(filepath) > 63:
+        # If the filepath is longer, it will be truncated for blender
+        # version elder than 5.0
+        if get_blender_version() < (5, 0, 0) and len(filepath) > 63:
             filepath = filepath[:63]
         library = bpy.data.libraries.get(filepath)
         bpy.data.libraries.remove(library)
@@ -211,6 +215,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
         }
 
         imprint(asset_group, new_data)
+        if bpy.context.scene.collection not in loaded_collections:
+            bpy.context.scene.collection.children.unlink(asset_group)
 
     def exec_remove(self, container: dict) -> bool:
         """

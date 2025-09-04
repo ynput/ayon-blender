@@ -131,9 +131,11 @@ def load_scripts(paths):
 
 
 def append_user_scripts():
-    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS")
-    if not user_scripts:
-        return
+    default_user_prefs = os.path.join(
+        bpy.utils.resource_path('USER'),
+        "scripts",
+    )
+    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS") or default_user_prefs
 
     try:
         load_scripts(user_scripts.split(os.pathsep))
@@ -614,7 +616,13 @@ def strip_container_data(containers):
 @contextlib.contextmanager
 def strip_namespace(containers):
     """Strip namespace during context
+    This context manager is only valid for blender version elder than 5.0.
+    This would be deprecated after the blender 5.0.
     """
+    if get_blender_version() >= (5, 0, 0):
+        yield
+        return
+
     nodes = [
         container["node"] for container in containers
     ]
