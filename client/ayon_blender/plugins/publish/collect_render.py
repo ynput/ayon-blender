@@ -79,6 +79,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
         frame_step: int = instance.data["creator_attributes"].get("step", 1)
+        review: bool = instance.data["creator_attributes"].get("review", False)
 
         expected_files: dict[str, list[str]] = {}
         output_paths = self.get_expected_outputs(comp_output_node)
@@ -127,7 +128,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "families": families,
             "fps": context.data["fps"],
             "byFrameStep": frame_step,
-            "review": instance.data.get("review", False),
+            "review": review,
             "multipartExr": is_multilayer,
             "farm": farm_enabled,
             "expectedFiles": [expected_files],
@@ -136,7 +137,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_end=frame_end
             ),
         })
-
         colorspace_data = self.get_colorspace_data(comp_output_node)
         self.log.debug(f"Collected colorspace data: {colorspace_data}")
         instance.data.update(colorspace_data)

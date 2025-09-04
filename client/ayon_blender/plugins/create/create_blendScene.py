@@ -1,7 +1,4 @@
 """Create a Blender scene asset."""
-
-import bpy
-
 from ayon_blender.api import plugin, lib
 
 
@@ -10,7 +7,6 @@ class CreateBlendScene(plugin.BlenderCreator):
 
     identifier = "io.ayon.creators.blender.blendscene"
     label = "Blender Scene"
-    description = __doc__
     product_type = "blendScene"
     icon = "cubes"
 
@@ -32,11 +28,3 @@ class CreateBlendScene(plugin.BlenderCreator):
                 instance_node.children.link(selected_collection)
 
         return instance_node
-
-    def remove_instances(self, instances):
-
-        for instance in instances:
-            node = instance.transient_data["instance_node"]
-            bpy.data.collections.remove(node)
-
-            self._remove_instance_from_context(instance)

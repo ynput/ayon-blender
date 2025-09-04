@@ -19,7 +19,11 @@ from ayon_blender.api.pipeline import (
 class BlendLinkLoader(plugin.BlenderLoader):
     """Link assets from a .blend file."""
 
-    product_types = {"*"}
+    product_types = {
+        "model", "camera", "rig",
+        "action", "layout", "blendScene", 
+        "animation", "workfile"
+    }
     representations = {"blend"}
 
     label = "Link Blend"
@@ -101,13 +105,14 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Update the loaded asset. """
         repre = context["representation"]
         collection = container["node"]
-        library = self._get_library_from_collection(collection.children[0])
-        filepath = self.filepath_from_context(context)
-        filename = os.path.basename(filepath)
-        if library:
-            library.name = filename
-            library.filepath = filepath
-            library.reload()
+        if collection.children:
+            library = self._get_library_from_collection(collection.children[0])
+            filepath = self.filepath_from_context(context)
+            filename = os.path.basename(filepath)
+            if library:
+                library.name = filename
+                library.filepath = filepath
+                library.reload()
         # refresh UI
         bpy.context.view_layer.update()
 
@@ -120,14 +125,15 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Remove existing container from the Blender scene."""
 
         collection = container["node"]
-        library = self._get_library_from_collection(collection.children[0])
-        if library:
-            bpy.data.libraries.remove(library)
-        else:
-            # Ensure the collection is linked to the scene's master collection
-            scene_collection = bpy.context.scene.collection
-            for col in collection.children:
-                scene_collection.children.unlink(col)
+        if collection.children:
+            library = self._get_library_from_collection(collection.children[0])
+            if library:
+                bpy.data.libraries.remove(library)
+            else:
+                # Ensure the collection is linked to the scene's master collection
+                scene_collection = bpy.context.scene.collection
+                for col in collection.children:
+                    scene_collection.children.unlink(col)
         # remove the container collection
         bpy.data.collections.remove(collection)
 
