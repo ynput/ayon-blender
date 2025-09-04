@@ -218,8 +218,7 @@ class CreateRender(plugin.BlenderCreator):
                 label="Create Render Setup",
                 default=False,
                 tooltip="Create Render Setup",
-            ),
-
+            )
         ]
 
     def imprint(self, node: bpy.types.CompositorNodeOutputFile, data: dict):
