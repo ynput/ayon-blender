@@ -35,7 +35,7 @@ class ExtractLocalRender(
             return
 
         # Expected files were precomputed by the collector
-        expected = instance.data.get("expectedFiles", [{}])
+        expected = instance.data.get("expectedFiles", [])
         expected = expected[0] if expected else {}
 
         # Ensure output directories exist
