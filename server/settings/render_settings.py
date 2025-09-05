@@ -106,7 +106,7 @@ class CustomPassesModel(BaseSettingsModel):
 
 class RenderSettingsModel(BaseSettingsModel):
     farm_default: bool = SettingsField(
-        True,
+        False,
         title="Render on Farm",
         description="When enabled, newly created render instances default to farm rendering. (Default: True)",
     )
