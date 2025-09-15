@@ -22,7 +22,7 @@ from ayon_blender.api.constants import AYON_PROPERTY
 class BlendLoader(plugin.BlenderLoader):
     """Load assets from a .blend file."""
 
-    product_types = {"model", "rig", "layout", "camera"}
+    product_types = {"model", "rig", "layout", "camera", "animation"}
     representations = {"blend"}
 
     label = "Append Blend"

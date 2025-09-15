@@ -39,6 +39,7 @@ class ExtractBlendAnimation(
         data_blocks = set()
 
         for obj in instance:
+            data_blocks.add(obj)
             if isinstance(obj, bpy.types.Object) and obj.type == 'EMPTY':
                 child = obj.children[0]
                 if child and child.type == 'ARMATURE':
@@ -48,8 +49,12 @@ class ExtractBlendAnimation(
                         obj.animation_data.action = child.animation_data.action
                         obj.animation_data_clear()
                         data_blocks.add(child.animation_data.action)
-                        data_blocks.add(obj)
+            if not (
+                isinstance(obj, bpy.types.Object) and obj.type == 'MESH'
+            ):
+                continue
 
+        self.log.debug(f"Data blocks to be written: {data_blocks}")
         bpy.data.libraries.write(filepath, data_blocks, compress=self.compress)
 
         if "representations" not in instance.data:
@@ -65,3 +70,36 @@ class ExtractBlendAnimation(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
+
+    def _imprint_data(self, context, container):
+        folder_name = context["folder"]["name"]
+        product_name = context["product"]["name"]
+
+        try:
+            product_type = context["product"]["productType"]
+        except ValueError:
+            product_type = "model"
+
+        asset_name = plugin.prepare_scene_name(folder_name, product_name)
+        unique_number = plugin.get_unique_number(folder_name, product_name)
+        group_name = plugin.prepare_scene_name(
+            folder_name, product_name, unique_number
+        )
+        add_to_ayon_container(container)
+
+        data = {
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
+            "name": name,
+            "namespace": namespace or '',
+            "loader": str(self.__class__.__name__),
+            "representation": context["representation"]["id"],
+            "libpath": libpath,
+            "asset_name": asset_name,
+            "parent": context["representation"]["versionId"],
+            "productType": context["product"]["productType"],
+            "objectName": group_name,
+            "project_name": context["project"]["name"],
+        }
+
+        container[AYON_PROPERTY] = data

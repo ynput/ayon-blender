@@ -5,7 +5,9 @@ from typing import Dict, List, Optional
 import bpy
 
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import AYON_PROPERTY
+from ayon_core.pipeline import AYON_CONTAINER_ID
+from ayon_blender.api.constants import AYON_PROPERTY
+from ayon_blender.api.pipeline import add_to_ayon_container
 
 
 class BlendAnimationLoader(plugin.BlenderLoader):
@@ -46,6 +48,32 @@ class BlendAnimationLoader(plugin.BlenderLoader):
 
         assert container, "No asset group found"
 
+        add_to_ayon_container(container)
+        folder_name = context["folder"]["name"]
+        product_name = context["product"]["name"]
+
+        asset_name = plugin.prepare_scene_name(folder_name, product_name)
+        unique_number = plugin.get_unique_number(folder_name, product_name)
+        group_name = plugin.prepare_scene_name(
+            folder_name, product_name, unique_number
+        )
+        data = {
+            "schema": "ayon:container-3.0",
+            "id": AYON_CONTAINER_ID,
+            "name": name,
+            "namespace": namespace or '',
+            "loader": str(self.__class__.__name__),
+            "representation": context["representation"]["id"],
+            "libpath": libpath,
+            "asset_name": asset_name,
+            "parent": context["representation"]["versionId"],
+            "productType": context["product"]["productType"],
+            "objectName": group_name,
+            "project_name": context["project"]["name"],
+        }
+
+        container[AYON_PROPERTY] = data
+
         target_namespace = container.get(AYON_PROPERTY).get('namespace', namespace)
 
         action = data_to.actions[0].make_local().copy()
@@ -58,8 +86,6 @@ class BlendAnimationLoader(plugin.BlenderLoader):
                         obj.children[0].animation_data_create()
                     obj.children[0].animation_data.action = action
                 break
-
-        bpy.data.objects.remove(container)
 
         filename = bpy.path.basename(libpath)
         # Blender has a limit of 63 characters for any data name.
