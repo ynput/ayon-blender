@@ -39,7 +39,6 @@ class ExtractBlendAnimation(
         data_blocks = set()
 
         for obj in instance:
-            data_blocks.add(obj)
             if isinstance(obj, bpy.types.Object) and obj.type == 'EMPTY':
                 child = obj.children[0]
                 if child and child.type == 'ARMATURE':
@@ -53,6 +52,7 @@ class ExtractBlendAnimation(
                 isinstance(obj, bpy.types.Object) and obj.type in {'MESH', 'EMPTY', 'ARMATURE'}
             ):
                 continue
+            data_blocks.add(obj)
 
         self.log.debug(f"Data blocks to be written: {data_blocks}")
         bpy.data.libraries.write(filepath, data_blocks, compress=self.compress)
