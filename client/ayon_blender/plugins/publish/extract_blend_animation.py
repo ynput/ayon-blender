@@ -70,36 +70,3 @@ class ExtractBlendAnimation(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
-
-    def _imprint_data(self, context, container):
-        folder_name = context["folder"]["name"]
-        product_name = context["product"]["name"]
-
-        try:
-            product_type = context["product"]["productType"]
-        except ValueError:
-            product_type = "model"
-
-        asset_name = plugin.prepare_scene_name(folder_name, product_name)
-        unique_number = plugin.get_unique_number(folder_name, product_name)
-        group_name = plugin.prepare_scene_name(
-            folder_name, product_name, unique_number
-        )
-        add_to_ayon_container(container)
-
-        data = {
-            "schema": "ayon:container-3.0",
-            "id": AYON_CONTAINER_ID,
-            "name": name,
-            "namespace": namespace or '',
-            "loader": str(self.__class__.__name__),
-            "representation": context["representation"]["id"],
-            "libpath": libpath,
-            "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
-            "objectName": group_name,
-            "project_name": context["project"]["name"],
-        }
-
-        container[AYON_PROPERTY] = data
