@@ -50,7 +50,7 @@ class ExtractBlendAnimation(
                         obj.animation_data_clear()
                         data_blocks.add(child.animation_data.action)
             if not (
-                isinstance(obj, bpy.types.Object) and obj.type == 'MESH'
+                isinstance(obj, bpy.types.Object) and obj.type in {'MESH', 'EMPTY', 'ARMATURE'}
             ):
                 continue
 
