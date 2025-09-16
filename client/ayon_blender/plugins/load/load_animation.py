@@ -47,7 +47,7 @@ class BlendAnimationLoader(plugin.BlenderLoader):
 
         assert container, "No asset group found"
 
-        target_namespace = container.get(AYON_PROPERTY).get('namespace', namespace)
+        target_namespace = container.get(AYON_PROPERTY, {}).get('namespace', namespace)
 
         action = data_to.actions[0].make_local().copy()
 
