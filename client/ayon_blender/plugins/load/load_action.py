@@ -51,12 +51,8 @@ class BlendActionLoader(plugin.BlenderLoader):
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
         lib_container = plugin.prepare_scene_name(folder_name, product_name)
-        container_name = plugin.prepare_scene_name(
-            folder_name, product_name, namespace
-        )
 
         container = bpy.data.collections.new(lib_container)
-        container.name = container_name
         containerise_existing(
             container,
             name,
@@ -73,12 +69,10 @@ class BlendActionLoader(plugin.BlenderLoader):
         relative = bpy.context.preferences.filepaths.use_relative_paths
         with bpy.data.libraries.load(
             libpath, link=True, relative=relative
-        ) as (_, data_to):
-            data_to.collections = [lib_container]
-
+        ) as (data_from, data_to):
+            data_to.actions = data_from.actions
+        container = data_to.actions[0]
         collection = bpy.context.scene.collection
-
-        collection.children.link(bpy.data.collections[lib_container])
 
         animation_container = collection.children[lib_container].make_local()
 
@@ -102,7 +96,7 @@ class BlendActionLoader(plugin.BlenderLoader):
                 obj[AYON_PROPERTY] = dict()
 
             ayon_info = obj[AYON_PROPERTY]
-            ayon_info.update({"container_name": container_name})
+            ayon_info.update({"container_name": lib_container})
 
             objects_list.append(obj)
 

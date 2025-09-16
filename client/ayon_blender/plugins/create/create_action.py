@@ -38,5 +38,9 @@ class CreateAction(plugin.BlenderCreator):
                     empty_obj.animation_data.action = obj.animation_data.action
                     empty_obj.animation_data.action.name = name
                     collection.objects.link(empty_obj)
+                else:
+                    if isinstance(obj, bpy.types.Object):
+                        collection.objects.link(obj)
+
 
         return collection

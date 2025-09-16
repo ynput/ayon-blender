@@ -2,6 +2,7 @@ import os
 import contextlib
 
 import bpy
+import pyblish.api
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
@@ -36,7 +37,7 @@ class ExtractBlend(
 
     label = "Extract Blend"
     hosts = ["blender"]
-    families = ["model", "camera", "rig", "action", "layout", "blendScene"]
+    families = ["model", "camera", "rig", "layout", "blendScene"]
     optional = True
 
     # From settings
@@ -58,29 +59,7 @@ class ExtractBlend(
         # Perform extraction
         self.log.debug("Performing extraction..")
 
-        data_blocks = set()
-
-        for data in instance:
-            data_blocks.add(data)
-            # Pack used images in the blend files.
-            if not (
-                isinstance(data, bpy.types.Object) and data.type == 'MESH'
-            ):
-                continue
-            for material_slot in data.material_slots:
-                mat = material_slot.material
-                if not (mat and mat.use_nodes):
-                    continue
-                tree = mat.node_tree
-                if tree.type != 'SHADER':
-                    continue
-                for node in tree.nodes:
-                    if node.bl_idname != 'ShaderNodeTexImage':
-                        continue
-                    # Check if image is not packed already
-                    # and pack it if not.
-                    if node.image and node.image.packed_file is None:
-                        node.image.pack()
+        data_blocks = self.add_datablock(instance)
 
         containers = list(ls())
         with contextlib.ExitStack() as stack:
@@ -123,3 +102,74 @@ class ExtractBlend(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
+
+    def add_datablock(self, instance:pyblish.api.Instance) -> set:
+        """Add a data block to the blend file.
+
+        Args:
+            instance (pyblish.api.Instance): The instance to add.
+
+        Returns:
+            set: A set of data blocks added.
+        """
+        data_blocks = set()
+
+        for data in instance:
+            data_blocks.add(data)
+            # Pack used images in the blend files.
+            if not (
+                isinstance(data, bpy.types.Object) and data.type == 'MESH'
+            ):
+                continue
+            for material_slot in data.material_slots:
+                mat = material_slot.material
+                if not (mat and mat.use_nodes):
+                    continue
+                tree = mat.node_tree
+                if tree.type != 'SHADER':
+                    continue
+                for node in tree.nodes:
+                    if node.bl_idname != 'ShaderNodeTexImage':
+                        continue
+                    # Check if image is not packed already
+                    # and pack it if not.
+                    if node.image and node.image.packed_file is None:
+                        node.image.pack()
+        return data_blocks
+
+
+class ExtractBlendAction(ExtractBlend):
+    """Extract a blend file from the current scene.
+    """
+    families = ["action"]
+    label = "Extract Blend (Action)"
+    optional = False
+    # From settings
+    compress = False
+
+    def add_datablock(self, instance:pyblish.api.Instance) -> set:
+        """Add a data block to the blend file.
+
+        Args:
+            instance (pyblish.api.Instance): The instance to add.
+
+        Returns:
+            set: A set of data blocks added.
+        """
+        data_blocks = set()
+
+        for data in instance:
+            if not (
+                isinstance(data, bpy.types.Object) and data.type == 'EMPTY'
+            ):
+                continue
+            child = data.children[0]
+            if child and child.type == 'ARMATURE':
+                if child.animation_data and child.animation_data.action:
+                    if not data.animation_data:
+                        data.animation_data_create()
+                    data.animation_data.action = child.animation_data.action
+                    data.animation_data_clear()
+                    data_blocks.add(child.animation_data.action)
+
+        return data_blocks
