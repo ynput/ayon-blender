@@ -4,6 +4,8 @@ import bpy
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
+from ayon_blender.api.pipeline import ls
+from ayon_blender.api.lib import strip_container_data
 
 
 class ExtractBlendAnimation(
@@ -54,8 +56,11 @@ class ExtractBlendAnimation(
                 continue
             data_blocks.add(obj)
 
-        self.log.debug(f"Data blocks to be written: {data_blocks}")
-        bpy.data.libraries.write(filepath, data_blocks, compress=self.compress)
+        containers = list(ls())
+
+        with strip_container_data(containers):
+            self.log.debug(f"Data blocks to be written: {data_blocks}")
+            bpy.data.libraries.write(filepath, data_blocks, compress=self.compress)
 
         if "representations" not in instance.data:
             instance.data["representations"] = []
