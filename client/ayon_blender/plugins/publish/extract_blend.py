@@ -103,7 +103,7 @@ class ExtractBlend(
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
 
-    def add_datablock(self, instance:pyblish.api.Instance) -> set:
+    def add_datablock(self, instance: pyblish.api.Instance) -> set:
         """Add a data block to the blend file.
 
         Args:
@@ -147,7 +147,7 @@ class ExtractBlendAction(ExtractBlend):
     # From settings
     compress = False
 
-    def add_datablock(self, instance:pyblish.api.Instance) -> set:
+    def add_datablock(self, instance: pyblish.api.Instance) -> set:
         """Add a data block to the blend file.
 
         Args:

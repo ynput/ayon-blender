@@ -12,6 +12,8 @@ from ayon_blender.api.pipeline import (
 )
 from ayon_blender.api.constants import AYON_PROPERTY
 
+from ayon_core.pipeline.load import LoadError
+
 
 logger = logging.getLogger("ayon").getChild("blender").getChild("load_action")
 
@@ -65,6 +67,12 @@ class BlendActionLoader(plugin.BlenderLoader):
             libpath, link=True, relative=relative
         ) as (data_from, data_to):
             data_to.actions = data_from.actions
+        if not data_to.actions:
+            raise LoadError(
+                f"No actions found in loaded file '{libpath}'."
+                " Cannot proceed with loading."
+            )
+
         container = data_to.actions[0]
 
         empty_obj = bpy.data.objects.new(name=name, object_data=None)
