@@ -160,10 +160,12 @@ class ExtractBlendAction(ExtractBlend):
 
         for data in instance:
             if not (
-                isinstance(data, bpy.types.Object) and data.type == 'EMPTY'
+                isinstance(data, bpy.types.Object) and data.type in
+                {'MESH', 'EMPTY', 'ARMATURE'}
             ):
                 continue
-            child = data.children[0]
+            # just in case the instance node contains either Armature or top empty
+            child = data.children[0] if data.children else data
             if child and child.type == 'ARMATURE':
                 if child.animation_data and child.animation_data.action:
                     if not data.animation_data:
