@@ -75,8 +75,6 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
     def get_app_information(self):
         from ayon_core.host import ApplicationInformation
 
-        version = cmds.about(version=True)
-
         return ApplicationInformation(
             app_name="Blender",
             app_version=bpy.app.version_string,
