@@ -66,15 +66,14 @@ class BlendActionLoader(plugin.BlenderLoader):
         with bpy.data.libraries.load(
             libpath, link=True, relative=relative
         ) as (data_from, data_to):
+            if not data_from.actions:
+                raise LoadError(
+                    f"No actions found in loaded file '{libpath}'."
+                    " Cannot proceed with loading."
+                )
             data_to.actions = data_from.actions
 
         container = data_to.actions[0]
-        if not container:
-            raise LoadError(
-                f"No actions found in loaded file '{libpath}'."
-                " Cannot proceed with loading."
-            )
-
         empty_obj = bpy.data.objects.new(name=name, object_data=None)
         empty_obj.animation_data_create()
         empty_obj.animation_data.action = container
