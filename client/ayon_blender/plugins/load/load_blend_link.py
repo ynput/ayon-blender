@@ -21,7 +21,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     product_types = {
         "model", "camera", "rig",
-        "action", "layout", "blendScene", 
+        "layout", "blendScene",
         "animation", "workfile"
     }
     representations = {"blend"}
