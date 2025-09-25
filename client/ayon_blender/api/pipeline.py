@@ -72,6 +72,14 @@ log = Logger.get_logger(__name__)
 class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
     name = "blender"
 
+    def get_app_information(self):
+        from ayon_core.host import ApplicationInformation
+
+        return ApplicationInformation(
+            app_name="Blender",
+            app_version=bpy.app.version_string,
+        )
+
     def install(self):
         """Override install method from HostBase.
         Install Blender host functionality."""
