@@ -57,28 +57,3 @@ class AppendBlendLoader(plugin.BlenderLoader):
 
         # We do not containerize imported content, it remains unmanaged
         return
-
-
-class ImportBlendLoader(plugin.BlenderLoader):
-    """Import workfile in the current Blender scene (unmanaged)
-
-    Warning:
-        The loaded content will be unmanaged and is *not* visible in the
-        scene inventory. It's purely intended to merge content into your scene
-        so you could also use it as a new base.
-    """
-
-    representations = {"blend"}
-    product_types = {"workfile"}
-
-    label = "Import Workfile"
-    order = 9
-    icon = "arrow-circle-down"
-    color = "#775555"
-
-    def load(self, context, name=None, namespace=None, data=None):
-        path = self.filepath_from_context(context)
-        append_workfile(context, path, True)
-
-        # We do not containerize imported content, it remains unmanaged
-        return
