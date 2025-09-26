@@ -12,8 +12,6 @@ from ayon_blender.api.pipeline import (
 )
 from ayon_blender.api.constants import AYON_PROPERTY
 
-from ayon_core.pipeline.load import LoadError
-
 
 logger = logging.getLogger("ayon").getChild("blender").getChild("load_action")
 
