@@ -85,6 +85,7 @@ class ExtractBlend(
 
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_namespace(containers))
+            self.log.debug("Datablocks: %s", data_blocks)
             bpy.data.libraries.write(
                 filepath, data_blocks, compress=self.compress
             )
@@ -168,7 +169,7 @@ class ExtractBlendAction(ExtractBlend):
             child = data.children[0] if data.children else data
             if child and child.type == 'ARMATURE':
                 if child.animation_data and child.animation_data.action:
-                    if not data.animation_data:
+                    if not child.animation_data :
                         data.animation_data_create()
                     data.animation_data.action = child.animation_data.action
                     data.animation_data_clear()

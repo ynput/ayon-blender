@@ -66,11 +66,6 @@ class BlendActionLoader(plugin.BlenderLoader):
         with bpy.data.libraries.load(
             libpath, link=True, relative=relative
         ) as (data_from, data_to):
-            if not data_from.actions:
-                raise LoadError(
-                    f"No actions found in loaded file '{libpath}'."
-                    " Cannot proceed with loading."
-                )
             data_to.actions = data_from.actions
 
         container = data_to.actions[0]
