@@ -5,6 +5,8 @@ import logging
 from typing import Dict, List, Optional
 
 import bpy
+from ayon_core.pipeline.load import LoadError
+
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import (
     containerise_existing,
@@ -67,6 +69,12 @@ class BlendActionLoader(plugin.BlenderLoader):
             data_to.actions = data_from.actions
 
         container = data_to.actions[0]
+        if not container:
+            raise LoadError(
+                "No action found in the file, please check if "
+                "there is any action datablock in blend file"
+            )
+
         empty_obj = bpy.data.objects.new(name=name, object_data=None)
         empty_obj.animation_data_create()
         empty_obj.animation_data.action = container
