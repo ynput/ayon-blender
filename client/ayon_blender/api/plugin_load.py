@@ -118,19 +118,8 @@ def load_collection(
         data_from,
         data_to,
     ):
-        # Validate source collections
-        if data_from.collections:
-            if lib_container_name is None:
-                lib_container_name = data_from.collections[0]
-
-            elif lib_container_name not in data_from.collections:
-                raise LoadError(
-                    f"Collection '{lib_container_name}' not found in: {filepath}"
-                )
-            data_to.collections = [lib_container_name]
-
-        elif data_from.objects:
-            data_to.objects = data_from.objects
+        for attr in dir(data_to):
+            setattr(data_to, attr, getattr(data_from, attr))
 
     for coll in data_to.collections:
         if coll is not None and coll.name not in asset_container.children:
