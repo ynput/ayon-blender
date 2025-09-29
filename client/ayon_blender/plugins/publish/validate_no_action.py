@@ -26,7 +26,7 @@ class ValidateNoAction(
 
     @classmethod
     def get_invalid(cls, instance):
-        invalid =[]
+        invalid = []
         for data in instance:
             if not (
                 isinstance(data, bpy.types.Object) and data.type in
@@ -38,6 +38,7 @@ class ValidateNoAction(
             if child and child.type == 'ARMATURE':
                 if not child.animation_data:
                     invalid.append(child)
+                else:
                     if not child.animation_data.action:
                         invalid.append(child)
 
