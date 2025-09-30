@@ -20,7 +20,7 @@ class ValidateNoAction(
 
     order = ValidateContentsOrder
     hosts = ["blender"]
-    families = ["blendScene", "model", "rig"]
+    families = ["action"]
     label = "No Action"
     actions = [SelectInvalidAction, RepairAction]
 
@@ -37,16 +37,23 @@ class ValidateNoAction(
             child = data.children[0] if data.children else data
             if child and child.type == 'ARMATURE':
                 if not child.animation_data:
+                    cls.log.error(f"No animation data: {child.name}")
                     invalid.append(child)
                 else:
+                    product_name = instance.data["productName"]
                     if not child.animation_data.action:
+                        cls.log.error(f"No action data: {child.name}")
                         invalid.append(child)
-
+                    elif child.animation_data.action.name != product_name:
+                        cls.log.error(
+                            f"Action name mismatch: {product_name} ({child.animation_data.action.name})"
+                        )
+                        invalid.append(child)
         return invalid
 
     def process(self, instance):
         if not self.is_active(instance.data):
-            self.log.debug("Skipping Validate No Animation...")
+            self.log.debug("Skipping Validate No Action...")
             return
 
         invalid = self.get_invalid(instance)
@@ -68,6 +75,14 @@ class ValidateNoAction(
 
     @classmethod
     def repair(cls, instance):
-        for data in instance:
-            data.animation_data_create()
+        product_name = instance.data["productName"]
+        invalid_object = cls.get_invalid(instance)
+        for obj in invalid_object:
+            if not obj.animation_data:
+                obj.animation_data_create()
+            if not obj.animation_data.action:
+                action = bpy.data.actions.new(name=product_name)
+                obj.animation_data.action = action
+            else:
+                obj.animation_data.action.name = product_name
         cls.log.info("Created action data for objects in instance.")
