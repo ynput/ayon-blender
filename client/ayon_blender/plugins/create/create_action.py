@@ -3,7 +3,6 @@
 import bpy
 
 from ayon_blender.api import lib, plugin
-from ayon_core.pipeline import CreatorError
 
 
 class CreateAction(plugin.BlenderCreator):
