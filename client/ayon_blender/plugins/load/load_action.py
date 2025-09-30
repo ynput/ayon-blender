@@ -5,12 +5,14 @@ import logging
 from typing import Dict, List, Optional
 
 import bpy
+from ayon_core.lib import BoolDef
 from ayon_core.pipeline.load import LoadError
 
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import (
     containerise_existing,
     metadata_update,
+    show_message_info
 )
 from ayon_blender.api.constants import AYON_PROPERTY
 
@@ -32,6 +34,15 @@ class BlendActionLoader(plugin.BlenderLoader):
     label = "Link Action"
     icon = "code-fork"
     color = "orange"
+
+    options = [
+        BoolDef(
+            "use_fake_user",
+            label="Use Fake User",
+            default=True,
+            tooltip="Set the fake user for the loaded asset.",
+        )
+    ]
 
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
@@ -77,7 +88,9 @@ class BlendActionLoader(plugin.BlenderLoader):
         empty_obj = bpy.data.objects.new(name=name, object_data=None)
         empty_obj.animation_data_create()
         empty_obj.animation_data.action = container
-        empty_obj.animation_data.action.use_fake_user = True
+        empty_obj.animation_data.action.use_fake_user = options.get(
+            "use_fake_user", True
+        )
         # Save the list of objects in the metadata container
         container_metadata["libpath"] = libpath
         container_metadata["lib_container"] = lib_container
@@ -87,6 +100,9 @@ class BlendActionLoader(plugin.BlenderLoader):
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
         self[:] = [empty_obj]
+
+        # show message dialog to notify the users the action is loaded
+        show_message_info("Action loaded", f"Action {container.name} loaded successfully.")
 
         return container
 

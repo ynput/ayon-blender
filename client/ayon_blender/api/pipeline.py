@@ -213,6 +213,19 @@ def uninstall():
         ops.unregister()
 
 
+def show_message_info(title, message):
+    from ayon_core.tools.utils import show_message_dialog
+    from .ops import BlenderApplication
+
+    BlenderApplication.get_app()
+
+    show_message_dialog(
+        title=title,
+        message=message
+    )
+
+
+
 def show_message(title, message):
     from ayon_core.tools.utils import show_message_dialog
     from .ops import BlenderApplication
