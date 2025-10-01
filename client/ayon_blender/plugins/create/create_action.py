@@ -23,18 +23,21 @@ class CreateAction(plugin.BlenderCreator):
         )
         if pre_create_data.get("use_selection"):
             for obj in lib.get_selection():
-                if (obj.animation_data is not None
-                        and obj.animation_data.action is not None):
+                if (
+                    obj.animation_data is not None
+                    and obj.animation_data.action is not None
+                    and obj.animation_data.action.name != product_name
+                ):
 
                     empty_obj = bpy.data.objects.new(name=product_name,
                                                      object_data=None)
                     empty_obj.animation_data_create()
                     empty_obj.animation_data.action = obj.animation_data.action
                     empty_obj.animation_data.action.name = product_name
-                    collection.objects.link(empty_obj)
-                else:
-                    if isinstance(obj, bpy.types.Object):
-                        collection.objects.link(obj)
+                    obj.animation_data.action.name = product_name
+
+                if isinstance(obj, bpy.types.Object):
+                    collection.objects.link(obj)
 
 
         return collection
