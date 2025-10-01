@@ -12,7 +12,7 @@ from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import (
     containerise_existing,
     metadata_update,
-    show_message_info
+    show_message
 )
 from ayon_blender.api.constants import AYON_PROPERTY
 
@@ -102,7 +102,7 @@ class BlendActionLoader(plugin.BlenderLoader):
         self[:] = [empty_obj]
 
         # show message dialog to notify the users the action is loaded
-        show_message_info("Action loaded", f"Action {container.name} loaded successfully.")
+        show_message("Action loaded", f"Action {container.name} loaded successfully.")
 
         return container
 
