@@ -172,7 +172,9 @@ class ExtractBlendAction(ExtractBlend):
                     if not data.animation_data:
                         data.animation_data_create()
                     data.animation_data.action = child.animation_data.action
-                    if child.animation_data.action.name == instance.data["productName"]:
+                    if child.animation_data.action.name.startswith(
+                        instance.data["productName"]
+                    ):
                         data_blocks.add(child.animation_data.action)
                     data.animation_data_clear()
 

@@ -44,7 +44,7 @@ class ValidateNoAction(
                     if not child.animation_data.action:
                         cls.log.error(f"No action data: {child.name}")
                         invalid.append(child)
-                    elif child.animation_data.action.name != product_name:
+                    elif not child.animation_data.action.name.startswith(product_name):
                         cls.log.error(
                             f"Action name mismatch: {product_name} ({child.animation_data.action.name})"
                         )
