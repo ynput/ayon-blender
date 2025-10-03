@@ -29,7 +29,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         At least for now it only supports Alembic files.
     """
     product_types = {"model", "pointcache", "animation", "usd"}
-    representations = {"abc", "usd"}
+    representations = {"abc", "usd", "obj"}
 
     label = "Load Cache"
     icon = "code-fork"
@@ -101,7 +101,9 @@ class CacheModelLoader(plugin.BlenderLoader):
                 filepath=libpath,
                 relative_path=relative
             )
-
+        elif libpath.lower().endswith(".obj"):
+            # OBJ
+            bpy.ops.wm.obj_import(filepath=libpath)
         else:
             # Alembic
             bpy.ops.wm.alembic_import(
