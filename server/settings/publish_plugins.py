@@ -32,6 +32,13 @@ class ValidateFileSavedModel(BaseSettingsModel):
     active: bool = SettingsField(title="Active")
 
 
+class ExtractBlendActionModel(BaseSettingsModel):
+    enabled: bool = SettingsField(True)
+    optional: bool = SettingsField(title="Optional")
+    active: bool = SettingsField(title="Active")
+    compress: bool = SettingsField(True, title="Compress")
+
+
 class ExtractBlendModel(BaseSettingsModel):
     enabled: bool = SettingsField(True)
     optional: bool = SettingsField(title="Optional")
@@ -148,6 +155,10 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ExtractBlendAnimationModel,
         title="Extract Blend Animation"
     )
+    ExtractBlendAction: ExtractBlendActionModel = SettingsField(
+        default_factory=ExtractBlendActionModel,
+        title="Extract Blend (Action)"
+    )
     ExtractAnimationFBX: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Extract Animation FBX"
@@ -252,7 +263,6 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             "model",
             "camera",
             "rig",
-            "action",
             "layout",
             "blendScene"
         ],
@@ -271,6 +281,12 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
     "ExtractBlendAnimation": {
         "enabled": True,
         "optional": True,
+        "active": True,
+        "compress": False
+    },
+    "ExtractBlendAction": {
+        "enabled": True,
+        "optional": False,
         "active": True,
         "compress": False
     },
