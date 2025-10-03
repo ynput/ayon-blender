@@ -157,22 +157,7 @@ class ExtractBlendAction(ExtractBlend):
         Returns:
             set: A set of data blocks added.
         """
-        data_blocks = set()
-
-        for data in instance:
-            if not (
-                isinstance(data, bpy.types.Object) and data.type in
-                {'MESH', 'EMPTY', 'ARMATURE'}
-            ):
-                continue
-            # just in case the instance node contains either Armature or top empty
-            child = data.children[0] if data.children else data
-            if child and child.type == 'ARMATURE':
-                if child.animation_data and child.animation_data.action:
-                    if not data.animation_data:
-                        data.animation_data_create()
-                    data.animation_data.action = child.animation_data.action
-                    data.animation_data_clear()
-                    data_blocks.add(child.animation_data.action)
-
-        return data_blocks
+        return {
+            action for action in bpy.data.actions
+            if action.name == instance.data["productName"]
+        }

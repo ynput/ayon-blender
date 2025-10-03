@@ -3,7 +3,6 @@ import bpy
 import inspect
 from ayon_core.pipeline.publish import (
     ValidateContentsOrder,
-    OptionalPyblishPluginMixin,
     PublishValidationError,
     RepairAction,
 )
@@ -12,10 +11,7 @@ from ayon_blender.api.action import SelectInvalidAction
 from ayon_blender.api import plugin
 
 
-class ValidateNoAction(
-    plugin.BlenderInstancePlugin,
-    OptionalPyblishPluginMixin
-):
+class ValidateNoAction(plugin.BlenderInstancePlugin):
     """Ensure that objects have action with animation data."""
 
     order = ValidateContentsOrder
@@ -44,7 +40,7 @@ class ValidateNoAction(
                     if not child.animation_data.action:
                         cls.log.error(f"No action data: {child.name}")
                         invalid.append(child)
-                    elif not child.animation_data.action.name.startswith(product_name):
+                    elif child.animation_data.action.name != product_name:
                         cls.log.error(
                             f"Action name mismatch: {product_name} ({child.animation_data.action.name})"
                         )
@@ -52,10 +48,6 @@ class ValidateNoAction(
         return invalid
 
     def process(self, instance):
-        if not self.is_active(instance.data):
-            self.log.debug("Skipping Validate No Action...")
-            return
-
         invalid = self.get_invalid(instance)
         if invalid:
             names = ", ".join(obj.name for obj in invalid)
