@@ -69,7 +69,6 @@ DEFAULT_CREATORS_SETTINGS = {
     "CreateModel": {"default_variants": ["Main"], "enabled": True},
     "CreatePointCache": {"default_variants": ["Main"], "enabled": True},
     "CreateRender": {"default_variants": ["Main"], "enabled": True},
-    "CreateRender": {"default_variants": ["Main"], "enabled": True},
     "CreateReview": {"default_variants": ["Main"], "enabled": True},
     "CreateRig": {"default_variants": ["Main"], "enabled": True},
     "CreateUSD": {"default_variants": ["Main"], "enabled": True},
