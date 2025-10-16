@@ -1,6 +1,5 @@
 import os
 import json
-import contextlib
 
 import clique
 import pyblish.api
