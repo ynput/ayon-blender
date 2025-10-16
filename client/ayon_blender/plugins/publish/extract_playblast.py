@@ -1,5 +1,6 @@
 import os
 import json
+import contextlib
 
 import clique
 import pyblish.api
@@ -89,6 +90,7 @@ class ExtractPlayblast(
             path = capture(**preset)
 
         self.log.debug(f"playblast path {path}")
+        self._maintain_publisher_focus()
 
         collected_files = os.listdir(stagingdir)
         collections, remainder = clique.assemble(
@@ -131,3 +133,18 @@ class ExtractPlayblast(
             "camera_name": camera
         }
         instance.data.setdefault("representations", []).append(representation)
+
+    def _maintain_publisher_focus(self):
+        """Restore publisher at the top widget by using bpy.app.timers."""
+        def delayed_publisher_restore():
+            """Delayed call to bring publisher window back to front."""
+            # Double-check availability before calling
+            if not hasattr(bpy.ops.wm, 'ayon_publisher'):
+                return
+            bpy.ops.wm.ayon_publisher()
+
+        self.log.debug("Publisher focus restoration setup completed")
+        bpy.app.timers.register(
+            delayed_publisher_restore,
+            first_interval=0.1
+        )
