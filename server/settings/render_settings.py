@@ -32,7 +32,6 @@ def renderers_enum():
 
 def aov_list_enum():
     return [
-        {"value": "empty", "label": "< none >"},
         {"value": "combined", "label": "Combined"},
         {"value": "z", "label": "Z"},
         {"value": "mist", "label": "Mist"},

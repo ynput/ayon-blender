@@ -4,18 +4,18 @@ from pathlib import Path
 
 import bpy
 
-from ayon_core.pipeline import (
-    get_representation_path,
-    AYON_CONTAINER_ID,
-)
+from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
-from ayon_blender.api.lib import imprint
+from ayon_blender.api.lib import (
+    imprint,
+    get_blender_version
+)
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,
     AYON_PROPERTY,
 )
 from ayon_blender.api.pipeline import (
-    convert_avalon_containers,
+    add_to_ayon_container,
     get_ayon_property
 )
 
@@ -73,8 +73,9 @@ class BlendSceneLoader(plugin.BlenderLoader):
         # Remove the library from the blend file
         filepath = bpy.path.basename(libpath)
         # Blender has a limit of 63 characters for any data name.
-        # If the filepath is longer, it will be truncated.
-        if len(filepath) > 63:
+        # If the filepath is longer, it will be truncated for blender
+        # version elder than 5.0
+        if get_blender_version() < (5, 0, 0) and len(filepath) > 63:
             filepath = filepath[:63]
         library = bpy.data.libraries.get(filepath)
         bpy.data.libraries.remove(library)
@@ -108,17 +109,11 @@ class BlendSceneLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        convert_avalon_containers()
-        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-        if not ayon_container:
-            ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
-            bpy.context.scene.collection.children.link(ayon_container)
-
         container, members = self._process_data(
             libpath, group_name, product_type
         )
 
-        ayon_container.children.link(container)
+        add_to_ayon_container(container)
 
         data = {
             "schema": "ayon:container-3.0",
@@ -153,7 +148,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         group_name = container["objectName"]
         asset_group = bpy.data.collections.get(group_name)
-        libpath = Path(get_representation_path(repre_entity)).as_posix()
+        libpath = Path(self.filepath_from_context(context)).as_posix()
 
         assert asset_group, (
             f"The asset is not loaded: {container['objectName']}"
@@ -166,7 +161,6 @@ class BlendSceneLoader(plugin.BlenderLoader):
         member_transforms = {}
         members = asset_group.get(AYON_PROPERTY).get("members", [])
         loaded_collections = {c for c in bpy.data.collections if c in members}
-        convert_avalon_containers()
         loaded_collections.add(bpy.data.collections.get(AYON_CONTAINERS))
         for member in members:
             if isinstance(member, bpy.types.Object):
@@ -205,10 +199,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
             ):
                 member.matrix_basis = member_transforms[member.name]
 
-        convert_avalon_containers()
-        ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-        ayon_container.children.link(asset_group)
-
+        add_to_ayon_container(asset_group)
         # Restore the old data, but reset members, as they don't exist anymore
         # This avoids a crash, because the memory addresses of those members
         # are not valid anymore
@@ -224,6 +215,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
         }
 
         imprint(asset_group, new_data)
+        if bpy.context.scene.collection not in loaded_collections:
+            bpy.context.scene.collection.children.unlink(asset_group)
 
     def exec_remove(self, container: dict) -> bool:
         """

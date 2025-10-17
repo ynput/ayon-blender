@@ -4,10 +4,11 @@ from ayon_blender.api import plugin, lib
 
 
 class CreateAnimation(plugin.BlenderCreator):
-    """Animation output for character rigs."""
+    """Animation output for character rig"""
 
     identifier = "io.ayon.creators.blender.animation"
     label = "Animation"
+    description = __doc__
     product_type = "animation"
     icon = "male"
 
@@ -20,9 +21,13 @@ class CreateAnimation(plugin.BlenderCreator):
         )
 
         if pre_create_data.get("use_selection"):
-            selected = lib.get_selection()
-            for obj in selected:
-                collection.objects.link(obj)
+            selected_objects = lib.get_selection()
+            for selected_object in selected_objects:
+                collection.objects.link(selected_object)
+
+            selected_collections = lib.get_selected_collections()
+            for selected_collection in selected_collections:
+                collection.children.link(selected_collection)
         elif pre_create_data.get("asset_group"):
             # Use for Load Blend automated creation of animation instances
             # upon loading rig files

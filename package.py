@@ -1,8 +1,9 @@
 name = "blender"
 title = "Blender"
-version = "0.2.12+dev"
+version = "1.0.7+dev"
 app_host_name = "blender"
 client_dir = "ayon_blender"
+project_can_override_addon_version = True
 
 ayon_server_version = ">=1.1.2"
 ayon_required_addons = {

@@ -7,18 +7,17 @@ from typing import Dict, List, Optional
 import bpy
 import os
 
-from ayon_core.pipeline import (
-    get_representation_path,
-    AYON_CONTAINER_ID,
-)
+from ayon_core.pipeline import AYON_CONTAINER_ID
 
 from ayon_blender.api.constants import (
-    AYON_CONTAINERS,
     AYON_PROPERTY,
     VALID_EXTENSIONS,
 )
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.pipeline import convert_avalon_containers
+from ayon_blender.api.pipeline import (
+    add_to_ayon_container,
+    get_ayon_container
+)
 
 
 class CacheModelLoader(plugin.BlenderLoader):
@@ -30,7 +29,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         At least for now it only supports Alembic files.
     """
     product_types = {"model", "pointcache", "animation", "usd"}
-    representations = {"abc", "usd"}
+    representations = {"abc", "usd", "obj"}
 
     label = "Load Cache"
     icon = "code-fork"
@@ -102,7 +101,9 @@ class CacheModelLoader(plugin.BlenderLoader):
                 filepath=libpath,
                 relative_path=relative
             )
-
+        elif libpath.lower().endswith(".obj"):
+            # OBJ
+            bpy.ops.wm.obj_import(filepath=libpath)
         else:
             # Alembic
             bpy.ops.wm.alembic_import(
@@ -141,13 +142,13 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         return objects
 
-    def _link_objects(self, objects, collection, containers, asset_group):
+    def _link_objects(self, objects, collection, container):
         # Link the imported objects to any collection where the asset group is
         # linked to, except the AYON_CONTAINERS collection
         group_collections = [
             collection
-            for collection in asset_group.users_collection
-            if collection != containers]
+            for collection in collection.users_collection
+            if collection != container]
 
         for obj in objects:
             for collection in group_collections:
@@ -176,24 +177,16 @@ class CacheModelLoader(plugin.BlenderLoader):
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
 
-        convert_avalon_containers()
-        containers = bpy.data.collections.get(AYON_CONTAINERS)
-
-        if not containers:
-            containers = bpy.data.collections.new(name=AYON_CONTAINERS)
-            bpy.context.scene.collection.children.link(containers)
-
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         asset_group.empty_display_type = 'SINGLE_ARROW'
-        containers.objects.link(asset_group)
-
+        add_to_ayon_container(asset_group)
         objects = self._process(libpath, asset_group, group_name)
 
         # Link the asset group to the active collection
         collection = bpy.context.view_layer.active_layer_collection.collection
         collection.objects.link(asset_group)
-
-        self._link_objects(objects, asset_group, containers, asset_group)
+        container = get_ayon_container()
+        self._link_objects(objects, asset_group, container)
 
         product_type = context["product"]["productType"]
         asset_group[AYON_PROPERTY] = {
@@ -229,7 +222,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         object_name = container["objectName"]
         asset_group = bpy.data.objects.get(object_name)
-        libpath = Path(get_representation_path(repre_entity))
+        libpath = Path(self.filepath_from_context(context))
         extension = libpath.suffix.lower()
 
         self.log.info(
@@ -276,9 +269,8 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             objects = self._process(str(libpath), asset_group, object_name)
 
-            convert_avalon_containers()
-            containers = bpy.data.collections.get(AYON_CONTAINERS)
-            self._link_objects(objects, asset_group, containers, asset_group)
+            container = get_ayon_container()
+            self._link_objects(objects, asset_group, container)
 
             asset_group.matrix_basis = mat
         else:

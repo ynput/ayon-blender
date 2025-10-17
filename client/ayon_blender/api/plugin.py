@@ -20,17 +20,20 @@ from ayon_core.lib import BoolDef
 from .pipeline import (
     get_ayon_property,
     convert_avalon_instances,
+    get_ayon_container,
 )
 from .constants import (
-    AYON_CONTAINERS,
     AYON_INSTANCES,
-    AYON_PROPERTY,
+    AYON_PROPERTY
 )
 from .ops import (
     MainThreadItem,
     execute_in_main_thread
 )
-from .lib import imprint
+from .lib import (
+    imprint,
+    get_blender_version
+)
 
 
 def prepare_scene_name(
@@ -44,7 +47,8 @@ def prepare_scene_name(
 
     # Blender name for a collection or object cannot be longer than 63
     # characters. If the name is longer, it will raise an error.
-    if len(name) > 63:
+    # The truncation will only happen for blender version elder than 5.0
+    if get_blender_version() < (5, 0, 0) and len(name) > 63:
         raise ValueError(f"Scene name '{name}' would be too long.")
 
     return name
@@ -54,9 +58,7 @@ def get_unique_number(
     folder_name: str, product_name: str
 ) -> str:
     """Return a unique number based on the folder name."""
-    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        return "01"
+    ayon_container = get_ayon_container()
     # Check the names of both object and collection containers
     obj_asset_groups = ayon_container.objects
     obj_group_names = {
@@ -208,9 +210,15 @@ class BlenderCreator(Creator):
                 ayon_instances.objects if ayon_instances else []
             )
 
+            # Consider any node tree objects as well
+            node_tree_objects = []
+            if bpy.context.scene.node_tree:
+                node_tree_objects = bpy.context.scene.node_tree.nodes
+
             for obj_or_col in itertools.chain(
-                ayon_instance_objs,
-                bpy.data.collections
+                    ayon_instance_objs,
+                    bpy.data.collections,
+                    node_tree_objects
             ):
                 ayon_prop = get_ayon_property(obj_or_col)
                 if not ayon_prop:
@@ -251,10 +259,7 @@ class BlenderCreator(Creator):
                 Those may affect how creator works.
         """
         # Get Instance Container or create it if it does not exist
-        instances = bpy.data.collections.get(AYON_INSTANCES)
-        if not instances:
-            instances = bpy.data.collections.new(name=AYON_INSTANCES)
-            bpy.context.scene.collection.children.link(instances)
+        ayon_instances = self._ensure_ayon_instances_collection()
 
         # Create asset group
         folder_name = instance_data["folderPath"].split("/")[-1]
@@ -264,21 +269,21 @@ class BlenderCreator(Creator):
             # Create instance as empty
             instance_node = bpy.data.objects.new(name=name, object_data=None)
             instance_node.empty_display_type = 'SINGLE_ARROW'
-            instances.objects.link(instance_node)
+            ayon_instances.objects.link(instance_node)
         else:
             # Create instance collection
             instance_node = bpy.data.collections.new(name=name)
-            instances.children.link(instance_node)
+            ayon_instances.children.link(instance_node)
 
         self.set_instance_data(product_name, instance_data)
 
         instance = CreatedInstance(
-            self.product_type, product_name, instance_data, self
+            self.product_type, product_name, instance_data, self,
+            transient_data={"instance_node": instance_node}
         )
-        instance.transient_data["instance_node"] = instance_node
         self._add_instance_to_context(instance)
 
-        imprint(instance_node, instance_data)
+        self.imprint(instance_node, instance_data)
 
         return instance_node
 
@@ -298,13 +303,14 @@ class BlenderCreator(Creator):
 
         # Process only instances that were created by this creator
         for instance_node in cached_instances.get(self.identifier, []):
-            property = instance_node.get(AYON_PROPERTY)
+            instance_data = self.read(instance_node)
+
             # Create instance object from existing data
             instance = CreatedInstance.from_existing(
-                instance_data=property.to_dict(),
-                creator=self
+                instance_data=instance_data,
+                creator=self,
+                transient_data={"instance_node": instance_node}
             )
-            instance.transient_data["instance_node"] = instance_node
 
             # Add instance to create context
             self._add_instance_to_context(instance)
@@ -343,23 +349,41 @@ class BlenderCreator(Creator):
                 )
                 node.name = name
 
-            imprint(node, data)
+            self.imprint(node, data)
 
     def remove_instances(self, instances: List[CreatedInstance]):
-
         for instance in instances:
             node = instance.transient_data["instance_node"]
 
+            # Remove collection node and its children
             if isinstance(node, bpy.types.Collection):
-                for children in node.children_recursive:
-                    if isinstance(children, bpy.types.Collection):
-                        bpy.data.collections.remove(children)
-                    else:
-                        bpy.data.objects.remove(children)
+                # Remove recursively linked child collections and objects
+                for child in node.children_recursive:
+                    if isinstance(child, bpy.types.Collection):
+                        # If only linked to this collection, relink to scene before removal
+                        if len(child.users_collection) == 1:
+                            if child.name not in bpy.context.scene.collection:
+                                bpy.context.scene.collection.children.link(child)
+
+                    elif isinstance(child, bpy.types.Object):
+                        if len(child.users_collection) == 1:
+                            if child.name not in bpy.context.scene.collection:
+                                bpy.context.scene.collection.objects.link(child)
+                # Remove directly linked objects
+                for obj in node.objects:
+                    if len(obj.users_collection) == 1:
+                        if obj.name not in bpy.context.scene.collection.objects:
+                            bpy.context.scene.collection.objects.link(obj)
 
                 bpy.data.collections.remove(node)
+
+            # Remove object node
             elif isinstance(node, bpy.types.Object):
                 bpy.data.objects.remove(node)
+
+            # Remove compositor node
+            elif isinstance(node, bpy.types.CompositorNode):
+                bpy.context.scene.node_tree.nodes.remove(node)
 
             self._remove_instance_from_context(instance)
 
@@ -371,9 +395,9 @@ class BlenderCreator(Creator):
         """Fill instance data with required items.
 
         Args:
-            product_name(str): Product name of created instance.
-            instance_data(dict): Instance base data.
-            instance_node(bpy.types.ID): Instance node in blender scene.
+            product_name (str): Product name of created instance.
+            instance_data (dict): Instance base data.
+            instance_node (bpy.types.ID): Instance node in blender scene.
         """
         if not instance_data:
             instance_data = {}
@@ -386,12 +410,49 @@ class BlenderCreator(Creator):
             }
         )
 
+    def _ensure_ayon_instances_collection(self) -> bpy.types.Collection:
+        """Create AYON Instances collections that contains created instances.
+
+        Returns:
+            bpy.types.Collection: AYON Instances collection
+        """
+        node = bpy.data.collections.get(AYON_INSTANCES)
+        if node:
+            # Already exists, return it
+            return node
+
+        node = bpy.data.collections.new(AYON_INSTANCES)
+        node.color_tag = "COLOR_04"
+        node.use_fake_user = True
+        bpy.context.scene.collection.children.link(node)
+        return node
+
     def get_pre_create_attr_defs(self):
         return [
             BoolDef("use_selection",
                     label="Use selection",
                     default=True)
         ]
+
+    def imprint(self, node, data: dict):
+        """Imprint data to the instance node.
+
+        This can be overridden by a sub-class to store certain data of the
+        instance in a different way, e.g. in a custom property or the 'mute'
+        state of a node.
+        """
+        imprint(node, data)
+
+    def read(self, node) -> dict:
+        """Read data from the instance node.
+
+        The `data` dictionary is the readily stored
+        """
+        ayon_property = node.get(AYON_PROPERTY)
+        if not ayon_property:
+            return {}
+
+        return ayon_property.to_dict()
 
 
 class BlenderLoader(LoaderPlugin):
@@ -400,7 +461,7 @@ class BlenderLoader(LoaderPlugin):
     This will implement the basic logic for linking/appending assets
     into another Blender scene.
 
-    The `update` method should be implemented by a sub-class, because
+    The `update` method should be implemented by a subclass, because
     it's different for different types (e.g. model, rig, animation,
     etc.).
     """
@@ -454,8 +515,8 @@ class BlenderLoader(LoaderPlugin):
                       name: str,
                       namespace: Optional[str] = None,
                       options: Optional[Dict] = None):
-        """Must be implemented by a sub-class"""
-        raise NotImplementedError("Must be implemented by a sub-class")
+        """Must be implemented by a subclass"""
+        raise NotImplementedError("Must be implemented by a subclass")
 
     def load(self,
              context: dict,
@@ -527,8 +588,8 @@ class BlenderLoader(LoaderPlugin):
         # return self._get_instance_collection(instance_name, nodes)
 
     def exec_update(self, container: Dict, context: Dict):
-        """Must be implemented by a sub-class"""
-        raise NotImplementedError("Must be implemented by a sub-class")
+        """Must be implemented by a subclass"""
+        raise NotImplementedError("Must be implemented by a subclass")
 
     def update(self, container: Dict, context: Dict):
         """ Run the update on Blender main thread"""
@@ -536,8 +597,8 @@ class BlenderLoader(LoaderPlugin):
         execute_in_main_thread(mti)
 
     def exec_remove(self, container: Dict) -> bool:
-        """Must be implemented by a sub-class"""
-        raise NotImplementedError("Must be implemented by a sub-class")
+        """Must be implemented by a subclass"""
+        raise NotImplementedError("Must be implemented by a subclass")
 
     def remove(self, container: Dict) -> bool:
         """ Run the remove on Blender main thread"""

@@ -1,12 +1,11 @@
 import os
 import sys
 import traceback
-from typing import Callable, Dict, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import bpy
 
 import pyblish.api
-from typing import Union
 
 from ayon_core.host import (
     HostBase,
@@ -48,6 +47,7 @@ from .constants import (
     AYON_PROPERTY,
     IS_HEADLESS
 )
+from .lib import search_replace_render_paths
 
 from .workio import (
     open_file,
@@ -71,6 +71,14 @@ log = Logger.get_logger(__name__)
 
 class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
     name = "blender"
+
+    def get_app_information(self):
+        from ayon_core.host import ApplicationInformation
+
+        return ApplicationInformation(
+            app_name="Blender",
+            app_version=bpy.app.version_string,
+        )
 
     def install(self):
         """Override install method from HostBase.
@@ -183,6 +191,7 @@ def install():
 
     register_event_callback("new", on_new)
     register_event_callback("open", on_open)
+    register_event_callback("before.save", on_before_save)
 
     _register_callbacks()
 
@@ -379,9 +388,42 @@ def on_open():
                 "Base file unit scale changed to match the project settings.")
 
 
+def on_before_save(event):
+    """Handle the event before saving a Blender file.
+
+    When saving to a new scene name, e.g. on incrementing the workfile then
+    update the render paths to match the new scene name by replacing the old
+    scene name with the new one in all render paths.
+    """
+    blend_path_before: str = bpy.data.filepath
+    blend_path_after: str = event.get("filename")
+
+    if not blend_path_before:
+        # Saving from a new unsaved file, no need to check for changes.
+        return
+
+    blend_name_before: str = os.path.splitext(
+        os.path.basename(blend_path_before))[0]
+    blend_name_after: str = os.path.splitext(
+        os.path.basename(blend_path_after))[0]
+    if blend_name_before != blend_name_after:
+        print(f"Detected scene name change from {blend_name_before} to "
+              f"{blend_name_after}")
+        # TODO: We may want to allow disabling this feature, especially after
+        #  Blender 4.5+ supporting the `{blend_name}` in templates in render
+        #  paths to avoid needing to hardcode the blender scene filename into
+        #  those paths.
+        # Update any render paths if they previously contained the scene name
+        # Warning: if the scene name is `a` before and now `helloworld` then
+        #  this may easily get out of hand by turning `asset` into
+        #  `helloworldsset`, but since filenames tend to be longer and
+        #  contain version numbers, this is not expected to happen often.
+        search_replace_render_paths(blend_name_before, blend_name_after)
+
+
 @bpy.app.handlers.persistent
-def _on_save_pre(*args):
-    emit_event("before.save")
+def _on_save_pre(filename: str):
+    emit_event("before.save", data={"filename": filename})
 
 
 @bpy.app.handlers.persistent
@@ -486,32 +528,54 @@ def convert_avalon_instances():
         avalon_instances.name = AYON_INSTANCES
 
 
-def convert_avalon_containers():
-    avalon_containers = bpy.data.collections.get(AVALON_CONTAINERS)
-    if avalon_containers:
-        avalon_containers.name = AYON_CONTAINERS
+def add_to_ayon_container(
+    container: Union[bpy.types.Collection, bpy.types.Object]
+):
+    """Add the container (object or collection) to the AYON container."""
+    ayon_container = get_ayon_container()
+    if isinstance(container, bpy.types.Collection):
+        ayon_container.children.link(container)
+    elif isinstance(container, bpy.types.Object):
+        ayon_container.objects.link(container)
 
 
-def add_to_ayon_container(container: bpy.types.Collection):
-    """Add the container to the AYON container."""
+def get_ayon_container() -> bpy.types.Collection:
+    """Get Ayon Container
 
+    Returns:
+         bpy.types.Collection: Ayon containers collection
+    """
     ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
-    if not ayon_container:
-        ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+    if ayon_container:
+        return ayon_container
 
-        # Link the container to the scene so it's easily visible to the artist
-        # and can be managed easily. Otherwise it's only found in "Blender
-        # File" view and it will be removed by Blenders garbage collection,
-        # unless you set a 'fake user'.
-        bpy.context.scene.collection.children.link(ayon_container)
+    # Backwards compatibility, check for legacy Avalon container
+    avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
+    if avalon_container:
+        # Convert legacy Avalon container to Ayon container
+        log.debug(
+            "Converting legacy Avalon container to AYON container."
+        )
+        # Rename the collection
+        avalon_container.name = AYON_CONTAINERS
+        return avalon_container
 
-    ayon_container.children.link(container)
+    # Create a new AYON container if it does not exist
+    return ensure_ayon_container()
 
-    # Disable AYON containers for the view layers.
-    for view_layer in bpy.context.scene.view_layers:
-        for child in view_layer.layer_collection.children:
-            if child.collection == ayon_container:
-                child.exclude = True
+
+def ensure_ayon_container() -> bpy.types.Collection:
+    """Ensure AYON_CONTAINERS exists and is ready for use."""
+    ayon_container = bpy.data.collections.get(AYON_CONTAINERS)
+    if ayon_container:
+        return ayon_container
+
+    # Create and configure container
+    ayon_container = bpy.data.collections.new(name=AYON_CONTAINERS)
+    bpy.context.scene.collection.children.link(ayon_container)
+    ayon_container.color_tag = "COLOR_02"
+    ayon_container.use_fake_user = True
+    return ayon_container
 
 
 def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):

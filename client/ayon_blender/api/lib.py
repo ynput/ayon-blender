@@ -131,9 +131,11 @@ def load_scripts(paths):
 
 
 def append_user_scripts():
-    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS")
-    if not user_scripts:
-        return
+    default_user_prefs = os.path.join(
+        bpy.utils.resource_path('USER'),
+        "scripts",
+    )
+    user_scripts = os.environ.get("AYON_BLENDER_USER_SCRIPTS") or default_user_prefs
 
     try:
         load_scripts(user_scripts.split(os.pathsep))
@@ -614,7 +616,13 @@ def strip_container_data(containers):
 @contextlib.contextmanager
 def strip_namespace(containers):
     """Strip namespace during context
+    This context manager is only valid for blender version elder than 5.0.
+    This would be deprecated after the blender 5.0.
     """
+    if get_blender_version() >= (5, 0, 0):
+        yield
+        return
+
     nodes = [
         container["node"] for container in containers
     ]
@@ -642,3 +650,49 @@ def strip_namespace(containers):
     finally:
         for node, original_namespace in original_namespaces.items():
             node.name = f"{original_namespace}:{name}"
+
+
+def search_replace_render_paths(src: str, dest: str) -> bool:
+    """Search and replace render paths in the current scene.
+
+    This function searches for all render paths in the current scene and
+    replaces them with a new path defined by the user.
+
+    Arguments:
+        src (str): Search text to replace.
+        dest (str): Replacement text for the search.
+
+    Returns:
+        bool: True if any changes were made, False otherwise.
+
+    """
+    changes = False
+
+    # Scene
+    path: str = bpy.context.scene.render.filepath
+    new_path: str = path.replace(src, dest)
+    if new_path != path:
+        log.info(f"Updating scene render path from '{path}' to '{new_path}'")
+        bpy.context.scene.render.filepath = new_path
+        changes = True
+
+    # Base paths for Compositor File Output Nodes
+    node_tree = bpy.context.scene.node_tree
+    if node_tree:
+        for node in node_tree.nodes:
+            if node.bl_idname != "CompositorNodeOutputFile":
+                continue
+
+            path: str = node.base_path
+            new_path: str = path.replace(src, dest)
+            if new_path == path:
+                continue
+
+            log.info(
+                "Updating compositor output file node base render path from "
+                f"'{path}' to '{new_path}'"
+            )
+            node.base_path = new_path
+            changes = True
+
+    return changes

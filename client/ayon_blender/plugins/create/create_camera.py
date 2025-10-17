@@ -7,10 +7,11 @@ from ayon_blender.api.constants import AYON_INSTANCES
 
 
 class CreateCamera(plugin.BlenderCreator):
-    """Polygonal static geometry."""
+    """Single baked camera"""
 
     identifier = "io.ayon.creators.blender.camera"
     label = "Camera"
+    description = __doc__
     product_type = "camera"
     icon = "video-camera"
 
