@@ -428,9 +428,10 @@ def prepare_rendering(
     # each view layer so we retrieve all of them.
     node_tree = bpy.context.scene.node_tree
     selected_renderlayer_nodes = []
-    for node in node_tree.nodes:
-        if node.bl_idname == "CompositorNodeRLayers" and node.select:
-            selected_renderlayer_nodes.append(node)
+    if hasattr(node_tree, "nodes"):
+        for node in node_tree.nodes:
+            if node.bl_idname == "CompositorNodeRLayers" and node.select:
+                selected_renderlayer_nodes.append(node)
 
     if selected_renderlayer_nodes:
         render_layer_nodes = selected_renderlayer_nodes
