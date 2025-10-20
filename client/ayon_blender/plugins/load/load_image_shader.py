@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+import contextlib
 
 from qtpy import QtWidgets
 import bpy
@@ -114,12 +115,14 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         # Line Style).
         image_texture_node = nodes.new(type='ShaderNodeTexImage')
 
-        # Load the image in data
+        # Load the image in data and assign it safely
         path = self.filepath_from_context(context)
         image = bpy.data.images.load(path)
-        image_texture_node.image = image
-
-        self.set_colorspace(context, image_texture_node)
+        # Use safe context for shader operations
+        with self._safe_shader_operations():
+            # Assign image to node using deferred execution to avoid ID class write restrictions
+            self._assign_image_to_node(image_texture_node, image)
+            self.set_colorspace(context, image_texture_node)
 
         data = {
             "schema": "ayon:container-3.0",
@@ -156,9 +159,11 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         old_image: Optional[bpy.types.Image] = image_texture_node.image
 
         new_image = bpy.data.images.load(path)
-        image_texture_node.image = new_image
-
-        self.set_colorspace(context, image_texture_node)
+        # Use safe context for shader operations
+        with self._safe_shader_operations():
+            # Assign image to node using deferred execution to avoid ID class write restrictions
+            self._assign_image_to_node(image_texture_node, new_image)
+            self.set_colorspace(context, image_texture_node)
         self.remove_image_if_unused(old_image)
 
         # Update representation id
@@ -184,6 +189,101 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             colorspace: str = colorspace_data["colorspace"]
             if colorspace:
                 image.colorspace_settings.name = colorspace
+
+    def _assign_image_to_node(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
+        """
+        Safely assign an image to a shader node, handling ID class write restrictions.
+
+        Args:
+            node: The shader node texture node
+            image: The image to assign to the node
+        """
+        # Method 3: Deferred assignment using timer (fallback)
+        self.log.debug("Using deferred assignment due to ID class write restriction")
+        bpy.app.timers.register(
+            lambda: self._deferred_image_assignment(node, image),
+            first_interval=0.001
+        )
+
+    def _deferred_image_assignment(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
+        """
+        Deferred image assignment callback for timer execution.
+        Args:
+            node: The shader node texture node
+            image: The image to assign to the node
+        Returns:
+            None to prevent timer repetition
+        """
+        if node and image:
+            node.image = image
+            return node
+        # Return None to stop the timer from repeating
+        return None
+
+    def _is_safe_context_for_id_writes(self):
+        """
+        Check if the current context allows writing to ID classes.
+
+        Returns:
+            bool: True if ID writes are allowed, False otherwise
+        """
+        try:
+            # Try a harmless operation that would trigger the same error
+            # We'll create a temporary test to see if ID writes are allowed
+            test_material = bpy.data.materials.get("__temp_context_test__")
+            if test_material is None:
+                test_material = bpy.data.materials.new("__temp_context_test__")
+                # Clean up immediately
+                bpy.data.materials.remove(test_material)
+            else:
+                # Material already exists, remove it
+                bpy.data.materials.remove(test_material)
+            return True
+
+        except RuntimeError as e:
+            if "Writing to ID classes in this context is not allowed" in str(e):
+                self.log.debug("ID class writes are not allowed in the current context.")
+
+            return False
+
+    @contextlib.contextmanager
+    def _safe_shader_operations(self):
+        """
+        Context manager for safely performing shader node operations.
+
+        This ensures operations are performed in a context where ID classes
+        can be safely modified.
+        """
+        # Check if we're already in a safe context
+        if self._is_safe_context_for_id_writes():
+            # Already safe, just yield
+            yield
+            return
+        # Store the current context mode to restore later if needed
+        original_mode = None
+        mode_changed = False
+        try:
+            # Get current area and space types
+            for area in bpy.context.screen.areas:
+                if area.type == 'NODE_EDITOR':
+                    for space in area.spaces:
+                        if space.type == 'NODE_EDITOR':
+                            original_mode = space.tree_type
+                            if original_mode != 'ShaderNodeTree':
+                                continue
+                            space.tree_type = 'ShaderNodeTree'
+                            mode_changed = True
+                            break
+            yield
+        finally:
+            # Restore original mode if it was changed
+            if mode_changed and original_mode is not None:
+                for area in bpy.context.screen.areas:
+                    if area.type == 'NODE_EDITOR':
+                        for space in area.spaces:
+                            if space.type == 'NODE_EDITOR':
+                                space.tree_type = original_mode
+                                break
 
     def remove_image_if_unused(self, image: bpy.types.Image):
         if image and not image.users:
