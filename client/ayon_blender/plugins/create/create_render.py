@@ -54,7 +54,8 @@ class CreateRender(plugin.BlenderCreator):
         self, product_name: str, instance_data: dict, pre_create_data: dict
     ):
         # Force enable compositor
-        bpy.context.scene.use_nodes = True
+        if not bpy.context.scene.use_nodes:
+            bpy.context.scene.use_nodes = True
 
         variant: str = instance_data.get("variant", self.default_variant)
 
