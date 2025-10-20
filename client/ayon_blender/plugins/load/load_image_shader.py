@@ -198,7 +198,6 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             node: The shader node texture node
             image: The image to assign to the node
         """
-        # Method 3: Deferred assignment using timer (fallback)
         self.log.debug("Using deferred assignment due to ID class write restriction")
         bpy.app.timers.register(
             lambda: self._deferred_image_assignment(node, image),
