@@ -38,7 +38,7 @@ class CreatorsModel(BaseSettingsModel):
         default_factory=BasicCreatorModel,
         title="Create Model"
     )
-    CreatePointCache: BasicCreatorModel = SettingsField(
+    CreatePointcache: BasicCreatorModel = SettingsField(
         default_factory=BasicCreatorModel,
         title="Create Point Cache"
     )
