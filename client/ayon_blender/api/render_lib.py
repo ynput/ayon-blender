@@ -304,9 +304,6 @@ def create_render_node_tree(
             create render layer nodes for.
         project_settings (dict): The project settings dictionary.
     """
-    # Set the scene to use the compositor node tree to render
-    bpy.context.scene.use_nodes = True
-
     aov_sep = get_aov_separator(project_settings)
     ext = get_image_format(project_settings)
     multilayer = get_multilayer(project_settings)
