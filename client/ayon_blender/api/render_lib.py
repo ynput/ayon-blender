@@ -424,11 +424,17 @@ def prepare_rendering(
     view_layers = bpy.context.scene.view_layers
     set_render_passes(project_settings, renderer, view_layers)
 
+    # Ensure compositor nodes are enabled before accessing node tree
+    if not bpy.context.scene.use_nodes:
+        bpy.context.scene.use_nodes = True
+
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
     node_tree = bpy.context.scene.node_tree
     selected_renderlayer_nodes = []
-    if hasattr(node_tree, "nodes"):
+    
+    # Check if node_tree is available before accessing nodes
+    if node_tree is not None:
         for node in node_tree.nodes:
             if node.bl_idname == "CompositorNodeRLayers" and node.select:
                 selected_renderlayer_nodes.append(node)
@@ -504,29 +510,28 @@ def get_or_create_render_layer_nodes(
     # Find existing render layer nodes for each view layer
     render_layer_nodes: set[bpy.types.CompositorNodeRLayers] = set()
     found_view_layer_names: set[str] = set()
-    if hasattr(tree, "nodes"):
-        for node in tree.nodes:
-            if node.bl_idname != "CompositorNodeRLayers":
-                continue
+    for node in tree.nodes:
+        if node.bl_idname != "CompositorNodeRLayers":
+            continue
 
-            # Skip if already found a render layer node for this view layer.
-            if node.layer in found_view_layer_names:
-                continue
+        # Skip if already found a render layer node for this view layer.
+        if node.layer in found_view_layer_names:
+            continue
 
-            # Skip if the view layer is not meant to be included.
-            if node.layer not in view_layer_names:
-                continue
+        # Skip if the view layer is not meant to be included.
+        if node.layer not in view_layer_names:
+            continue
 
-            found_view_layer_names.add(node.layer)
-            render_layer_nodes.add(node)
+        found_view_layer_names.add(node.layer)
+        render_layer_nodes.add(node)
 
-        # Generate the missing render layer nodes
-        missing_view_layer_names: set[str] = (
-            view_layer_names - found_view_layer_names
-        )
-        for view_layer_name in missing_view_layer_names:
-            render_layer_node = tree.nodes.new("CompositorNodeRLayers")
-            render_layer_node.layer = view_layer_name
-            render_layer_nodes.add(render_layer_node)
+    # Generate the missing render layer nodes
+    missing_view_layer_names: set[str] = (
+        view_layer_names - found_view_layer_names
+    )
+    for view_layer_name in missing_view_layer_names:
+        render_layer_node = tree.nodes.new("CompositorNodeRLayers")
+        render_layer_node.layer = view_layer_name
+        render_layer_nodes.add(render_layer_node)
 
     return render_layer_nodes
