@@ -504,28 +504,29 @@ def get_or_create_render_layer_nodes(
     # Find existing render layer nodes for each view layer
     render_layer_nodes: set[bpy.types.CompositorNodeRLayers] = set()
     found_view_layer_names: set[str] = set()
-    for node in tree.nodes:
-        if node.bl_idname != "CompositorNodeRLayers":
-            continue
+    if hasattr(tree, "nodes"):
+        for node in tree.nodes:
+            if node.bl_idname != "CompositorNodeRLayers":
+                continue
 
-        # Skip if already found a render layer node for this view layer.
-        if node.layer in found_view_layer_names:
-            continue
+            # Skip if already found a render layer node for this view layer.
+            if node.layer in found_view_layer_names:
+                continue
 
-        # Skip if the view layer is not meant to be included.
-        if node.layer not in view_layer_names:
-            continue
+            # Skip if the view layer is not meant to be included.
+            if node.layer not in view_layer_names:
+                continue
 
-        found_view_layer_names.add(node.layer)
-        render_layer_nodes.add(node)
+            found_view_layer_names.add(node.layer)
+            render_layer_nodes.add(node)
 
-    # Generate the missing render layer nodes
-    missing_view_layer_names: set[str] = (
-        view_layer_names - found_view_layer_names
-    )
-    for view_layer_name in missing_view_layer_names:
-        render_layer_node = tree.nodes.new("CompositorNodeRLayers")
-        render_layer_node.layer = view_layer_name
-        render_layer_nodes.add(render_layer_node)
+        # Generate the missing render layer nodes
+        missing_view_layer_names: set[str] = (
+            view_layer_names - found_view_layer_names
+        )
+        for view_layer_name in missing_view_layer_names:
+            render_layer_node = tree.nodes.new("CompositorNodeRLayers")
+            render_layer_node.layer = view_layer_name
+            render_layer_nodes.add(render_layer_node)
 
     return render_layer_nodes
