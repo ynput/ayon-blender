@@ -187,7 +187,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             "colorspaceData", {})
         if colorspace_data:
             colorspace: str = colorspace_data["colorspace"]
-            if colorspace:
+            if colorspace and hasattr(image, "colorspace_settings"):
                 image.colorspace_settings.name = colorspace
 
     def _assign_image_to_node(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
