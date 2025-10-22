@@ -4,6 +4,10 @@ from ayon_server.settings import (
     TemplateWorkfileBaseOptions,
     task_types_enum,
 )
+from .creators import (
+    CreatorsModel,
+    DEFAULT_CREATORS_SETTINGS
+)
 from .imageio import BlenderImageIOModel
 from .publish_plugins import (
     PublishPluginsModel,
@@ -85,6 +89,12 @@ class BlenderSettings(BaseSettingsModel):
         title="Workfile Builder",
         description="Configures startup workfile blend scene.",
     )
+
+    create: CreatorsModel = SettingsField(
+        default_factory=CreatorsModel,
+        title="Creator Plugins",
+        description="Configure various creators.",
+    )
     publish: PublishPluginsModel = SettingsField(
         default_factory=PublishPluginsModel,
         title="Publish Plugins",
@@ -105,6 +115,7 @@ DEFAULT_VALUES = {
         "profiles": []
     },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
+    "create": DEFAULT_CREATORS_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
     "workfile_builder": {
         "create_first_version": False,
