@@ -15,7 +15,6 @@ from qtpy import QtWidgets, QtCore
 import bpy
 import bpy.utils.previews
 
-from ayon_core import style
 from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import (
     get_current_folder_path,
@@ -71,7 +70,6 @@ class BlenderApplication:
     @classmethod
     def _prepare_qapplication(cls, application: QtWidgets.QApplication):
         application.setQuitOnLastWindowClosed(False)
-        application.setStyleSheet(style.load_stylesheet())
         application.lastWindowClosed.connect(cls.reset)
 
     @classmethod
