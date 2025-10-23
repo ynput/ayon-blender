@@ -188,6 +188,9 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if colorspace_data:
             colorspace: str = colorspace_data["colorspace"]
             if colorspace and hasattr(image, "colorspace_settings"):
+                # Map ACES colorspace names to Blender's expected names
+                if image.file_format.startswith('OPEN_EXR'):
+                    colorspace = lib.map_colorspace_name(colorspace)
                 image.colorspace_settings.name = colorspace
 
     def _assign_image_to_node(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
