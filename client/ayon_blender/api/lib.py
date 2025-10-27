@@ -617,15 +617,13 @@ def strip_container_data(containers):
 def strip_instance_data(node):
     """Remove instance data during context
     """
-    previous_data = node.pop(AYON_PROPERTY, None)
-    if not previous_data:
-        return
-
+    previous_data = dict(node.get(AYON_PROPERTY, {}))
     try:
+        node[AYON_PROPERTY]["active"] = False
         yield
-
     finally:
         node[AYON_PROPERTY] = previous_data
+
 
 @contextlib.contextmanager
 def strip_namespace(containers):
