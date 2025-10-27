@@ -1,4 +1,5 @@
 import os
+from platform import node
 import traceback
 import importlib
 import contextlib
@@ -617,18 +618,15 @@ def strip_container_data(containers):
 def strip_instance_data(node):
     """Remove instance data during context
     """
-    instance_data = {}
-    instance_data[node] = dict(
-        node.get(AYON_PROPERTY)
-    )
-    del node[AYON_PROPERTY]
+    previous_data = node.pop(AYON_PROPERTY, None)
+    if not previous_data:
+        return
+
     try:
         yield
 
     finally:
-        for key, item in instance_data.items():
-            key[AYON_PROPERTY] = item
-
+        node[AYON_PROPERTY] = previous_data
 
 @contextlib.contextmanager
 def strip_namespace(containers):
