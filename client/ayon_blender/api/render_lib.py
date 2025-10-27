@@ -344,8 +344,8 @@ def create_render_node_tree(
     slots = output.layer_slots if multi_exr else output.file_slots
     slots.clear()
 
-    # Create a new socket for the beauty output
-    pass_name = "beauty"
+    # Create a new socket for the Beauty output
+    pass_name = "Beauty"
     for render_layer_node in render_layer_nodes:
         render_layer = render_layer_node.layer
         slot = _create_aov_slot(
@@ -357,9 +357,9 @@ def create_render_node_tree(
         (node for node in reversed(list(render_layer_nodes))), None
     )
     if compositing and last_found_renderlayer_node:
-        # Create a new socket for the composite output
+        # Create a new socket for the Composite output
         # with only the one view layer
-        pass_name = "composite"
+        pass_name = "Composite"
         render_layer = last_found_renderlayer_node.layer
         slot = _create_aov_slot(
             slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
