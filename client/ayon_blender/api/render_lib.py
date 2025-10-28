@@ -274,7 +274,6 @@ def get_base_render_output_path(
     assert workfile_filepath, "Workfile not saved. Please save the file first."
 
     render_folder = get_default_render_folder(project_settings)
-    aov_sep = get_aov_separator(project_settings)
     if multi_exr is None:
         multi_exr = get_multilayer(project_settings)
 
@@ -285,7 +284,7 @@ def get_base_render_output_path(
         # If not multi-exr, we only supply the root folder to render to.
         return str(base_folder)
 
-    filename = f"{variant_name}{aov_sep}beauty.####"
+    filename = f"{variant_name}.####"
     filepath = base_folder / filename
     return str(filepath)
 
