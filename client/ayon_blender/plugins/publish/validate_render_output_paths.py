@@ -92,7 +92,10 @@ class ValidateSceneRenderFilePath(
     order = ValidateContentsOrder
     families = ["render"]
     hosts = ["blender"]
-    label = "Validate Scene Render Filepath"
+    label = "Validate Scene Output"
+    optional_tooltip = (
+        "Validate whether the scene-wide render filepath is set as required."
+    )
     optional = True
     actions = [RepairAction]
 
