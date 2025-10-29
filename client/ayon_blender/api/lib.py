@@ -614,6 +614,18 @@ def strip_container_data(containers):
 
 
 @contextlib.contextmanager
+def strip_instance_data(node):
+    """Remove instance data during context
+    """
+    previous_data = dict(node.get(AYON_PROPERTY, {}))
+    try:
+        node[AYON_PROPERTY]["active"] = False
+        yield
+    finally:
+        node[AYON_PROPERTY] = previous_data
+
+
+@contextlib.contextmanager
 def strip_namespace(containers):
     """Strip namespace during context
     This context manager is only valid for blender version elder than 5.0.
