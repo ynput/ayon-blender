@@ -192,7 +192,11 @@ class ValidateCompositorNodeFileOutputPaths(
     order = ValidateContentsOrder
     families = ["render"]
     hosts = ["blender"]
-    label = "Validate Compositor Node File Output Paths"
+    label = "Validate Output Paths"
+    optional_tooltip = (
+        "Validate whether Compositor Node Output File nodes "
+        "have correct filepaths set."
+    )
     optional = True
     actions = [RepairAction]
 
