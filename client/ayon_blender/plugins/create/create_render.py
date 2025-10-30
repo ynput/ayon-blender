@@ -54,7 +54,8 @@ class CreateRender(plugin.BlenderCreator):
         self, product_name: str, instance_data: dict, pre_create_data: dict
     ):
         # Force enable compositor
-        bpy.context.scene.use_nodes = True
+        if not bpy.context.scene.use_nodes:
+            bpy.context.scene.use_nodes = True
 
         variant: str = instance_data.get("variant", self.default_variant)
 
@@ -150,6 +151,7 @@ class CreateRender(plugin.BlenderCreator):
             return
 
         project_name = self.create_context.get_current_project_name()
+        project_entity = self.create_context.get_current_project_entity()
         folder_entity = self.create_context.get_current_folder_entity()
         task_entity = self.create_context.get_current_task_entity()
         for node in unregistered_output_nodes:
@@ -158,9 +160,11 @@ class CreateRender(plugin.BlenderCreator):
             variant = clean_name(node.name)
             product_name = self.get_product_name(
                 project_name=project_name,
+                project_entity=project_entity,
                 folder_entity=folder_entity,
                 task_entity=task_entity,
-                variant=variant
+                variant=variant,
+                host_name=self.create_context.host_name,
             )
             instance_data = self.read(node)
             instance_data.update({

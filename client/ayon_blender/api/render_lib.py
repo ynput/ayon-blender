@@ -274,7 +274,6 @@ def get_base_render_output_path(
     assert workfile_filepath, "Workfile not saved. Please save the file first."
 
     render_folder = get_default_render_folder(project_settings)
-    aov_sep = get_aov_separator(project_settings)
     if multi_exr is None:
         multi_exr = get_multilayer(project_settings)
 
@@ -285,7 +284,7 @@ def get_base_render_output_path(
         # If not multi-exr, we only supply the root folder to render to.
         return str(base_folder)
 
-    filename = f"{variant_name}{aov_sep}beauty.####"
+    filename = f"{variant_name}.####"
     filepath = base_folder / filename
     return str(filepath)
 
@@ -305,7 +304,8 @@ def create_render_node_tree(
         project_settings (dict): The project settings dictionary.
     """
     # Set the scene to use the compositor node tree to render
-    bpy.context.scene.use_nodes = True
+    if not bpy.context.scene.use_nodes:
+        bpy.context.scene.use_nodes = True
 
     aov_sep = get_aov_separator(project_settings)
     ext = get_image_format(project_settings)
@@ -343,8 +343,8 @@ def create_render_node_tree(
     slots = output.layer_slots if multi_exr else output.file_slots
     slots.clear()
 
-    # Create a new socket for the beauty output
-    pass_name = "beauty"
+    # Create a new socket for the Beauty output
+    pass_name = "Beauty"
     for render_layer_node in render_layer_nodes:
         render_layer = render_layer_node.layer
         slot = _create_aov_slot(
@@ -356,9 +356,9 @@ def create_render_node_tree(
         (node for node in reversed(list(render_layer_nodes))), None
     )
     if compositing and last_found_renderlayer_node:
-        # Create a new socket for the composite output
+        # Create a new socket for the Composite output
         # with only the one view layer
-        pass_name = "composite"
+        pass_name = "Composite"
         render_layer = last_found_renderlayer_node.layer
         slot = _create_aov_slot(
             slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
@@ -423,13 +423,20 @@ def prepare_rendering(
     view_layers = bpy.context.scene.view_layers
     set_render_passes(project_settings, renderer, view_layers)
 
+    # Ensure compositor nodes are enabled before accessing node tree
+    if not bpy.context.scene.use_nodes:
+        bpy.context.scene.use_nodes = True
+
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
     node_tree = bpy.context.scene.node_tree
     selected_renderlayer_nodes = []
-    for node in node_tree.nodes:
-        if node.bl_idname == "CompositorNodeRLayers" and node.select:
-            selected_renderlayer_nodes.append(node)
+    
+    # Check if node_tree is available before accessing nodes
+    if node_tree is not None:
+        for node in node_tree.nodes:
+            if node.bl_idname == "CompositorNodeRLayers" and node.select:
+                selected_renderlayer_nodes.append(node)
 
     if selected_renderlayer_nodes:
         render_layer_nodes = selected_renderlayer_nodes

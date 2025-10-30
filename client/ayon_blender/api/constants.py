@@ -11,4 +11,5 @@ IS_HEADLESS = bpy.app.background
 
 
 VALID_EXTENSIONS = [".blend", ".json", ".abc", ".fbx",
-                    ".usd", ".usdc", ".usda"]
+                    ".usd", ".usdc", ".usda", ".obj",
+                    ".mtl"]
