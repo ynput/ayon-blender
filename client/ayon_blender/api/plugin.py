@@ -359,13 +359,7 @@ class BlenderCreator(Creator):
             if isinstance(node, bpy.types.Collection):
                 # Remove recursively linked child collections and objects
                 for child in node.children_recursive:
-                    if isinstance(child, bpy.types.Collection):
-                        # If only linked to this collection, relink to scene before removal
-                        if len(child.users_collection) == 1:
-                            if child.name not in bpy.context.scene.collection:
-                                bpy.context.scene.collection.children.link(child)
-
-                    elif isinstance(child, bpy.types.Object):
+                     if isinstance(child, bpy.types.Object):
                         if len(child.users_collection) == 1:
                             if child.name not in bpy.context.scene.collection:
                                 bpy.context.scene.collection.objects.link(child)
