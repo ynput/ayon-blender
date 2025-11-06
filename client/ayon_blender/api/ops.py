@@ -189,7 +189,7 @@ def _process_app_events() -> Optional[float]:
             dialog.setMinimumWidth(500)
             dialog.setDetailedText(detail)
             dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            dialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            dialog.activateWindow()
             try:
                 dialog.exec_()
             finally:
