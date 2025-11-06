@@ -188,7 +188,12 @@ def _process_app_events() -> Optional[float]:
                 msg)
             dialog.setMinimumWidth(500)
             dialog.setDetailedText(detail)
-            dialog.exec_()
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            dialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            try:
+                dialog.exec_()
+            finally:
+                dialog.deleteLater()
 
         # Refresh Manager
         if GlobalClass.app:
