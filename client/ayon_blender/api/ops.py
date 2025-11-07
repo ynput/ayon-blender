@@ -197,14 +197,9 @@ def _process_app_events() -> Optional[float]:
                 QtCore.Qt.WindowStaysOnTopHint |
                 QtCore.Qt.Dialog
             )
-
-            try:
-                dialog.show()
-                dialog.raise_()
-                dialog.activateWindow()
-                dialog.exec_()
-            finally:
-                dialog.deleteLater()
+            dialog.raise_()
+            dialog.activateWindow()
+            dialog.open()
 
         # Refresh Manager
         if GlobalClass.app:
