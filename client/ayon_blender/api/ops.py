@@ -26,6 +26,7 @@ from ayon_core.pipeline.context_tools import (
     version_up_current_workfile
 )
 from ayon_core.tools.utils import host_tools
+from ayon_core.style import load_stylesheet
 
 from .workio import OpenFileCacher
 from . import pipeline
@@ -179,7 +180,6 @@ def _process_app_events() -> Optional[float]:
         main_thread_item = GlobalClass.main_thread_callbacks.popleft()
         main_thread_item.execute()
         if main_thread_item.exception is not MainThreadItem.not_set:
-            from ayon_core.style import load_stylesheet
             _clc, val, tb = main_thread_item.exception
             msg = str(val)
             detail = "\n".join(traceback.format_exception(_clc, val, tb))
