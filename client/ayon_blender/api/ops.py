@@ -179,6 +179,7 @@ def _process_app_events() -> Optional[float]:
         main_thread_item = GlobalClass.main_thread_callbacks.popleft()
         main_thread_item.execute()
         if main_thread_item.exception is not MainThreadItem.not_set:
+            from ayon_core.style import load_stylesheet
             _clc, val, tb = main_thread_item.exception
             msg = str(val)
             detail = "\n".join(traceback.format_exception(_clc, val, tb))
@@ -189,8 +190,18 @@ def _process_app_events() -> Optional[float]:
             dialog.setMinimumWidth(500)
             dialog.setDetailedText(detail)
             dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            dialog.activateWindow()
+            dialog.setStyleSheet(load_stylesheet())
+            # Ensure the dialog stays on top and is properly focused
+            dialog.setWindowFlags(
+                dialog.windowFlags() |
+                QtCore.Qt.WindowStaysOnTopHint |
+                QtCore.Qt.Dialog
+            )
+
             try:
+                dialog.show()
+                dialog.raise_()
+                dialog.activateWindow()
                 dialog.exec_()
             finally:
                 dialog.deleteLater()
