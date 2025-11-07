@@ -26,6 +26,7 @@ from ayon_core.pipeline.context_tools import (
     version_up_current_workfile
 )
 from ayon_core.tools.utils import host_tools
+from ayon_core.style import load_stylesheet
 
 from .workio import OpenFileCacher
 from . import pipeline
@@ -188,7 +189,17 @@ def _process_app_events() -> Optional[float]:
                 msg)
             dialog.setMinimumWidth(500)
             dialog.setDetailedText(detail)
-            dialog.exec_()
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            dialog.setStyleSheet(load_stylesheet())
+            # Ensure the dialog stays on top and is properly focused
+            dialog.setWindowFlags(
+                dialog.windowFlags() |
+                QtCore.Qt.WindowStaysOnTopHint |
+                QtCore.Qt.Dialog
+            )
+            dialog.raise_()
+            dialog.activateWindow()
+            dialog.open()
 
         # Refresh Manager
         if GlobalClass.app:
