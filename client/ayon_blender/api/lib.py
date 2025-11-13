@@ -698,9 +698,8 @@ def unpacked_images(datablocks):
         yield
 
     finally:
-        if unpacked_node_images:
-            for image in unpacked_node_images:
-                image.unpack()
+        for image in unpacked_node_images:
+            image.unpack()
 
 
 def search_replace_render_paths(src: str, dest: str) -> bool:
