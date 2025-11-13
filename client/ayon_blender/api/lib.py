@@ -671,7 +671,7 @@ def unpacked_images(datablocks):
     and unpack them back when exiting the context.
 
     Args:
-        datablocks (Set): List of datablocks to search for
+        datablocks (set): Datablocks to search for
             unpacked images.
 
     """
