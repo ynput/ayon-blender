@@ -11,7 +11,7 @@ from ayon_blender.api.lib import (
     strip_container_data,
     strip_instance_data,
     strip_namespace,
-    unpacked_images,
+    packed_images,
 )
 
 
@@ -88,7 +88,7 @@ class ExtractBlend(
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_instance_data(asset_group))
             stack.enter_context(strip_namespace(containers))
-            stack.enter_context(unpacked_images(data_blocks))
+            stack.enter_context(packed_images(data_blocks))
             self.log.debug("Datablocks: %s", data_blocks)
             bpy.data.libraries.write(
                 filepath, data_blocks, compress=self.compress
@@ -117,9 +117,7 @@ class ExtractBlend(
         Returns:
             set: A set of data blocks added.
         """
-        return {
-            data for data in instance
-        }
+        return set(instance)
 
 class ExtractBlendAction(ExtractBlend):
     """Extract a blend file from the current scene.

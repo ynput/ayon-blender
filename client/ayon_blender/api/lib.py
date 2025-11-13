@@ -665,7 +665,7 @@ def strip_namespace(containers):
 
 
 @contextlib.contextmanager
-def unpacked_images(datablocks):
+def packed_images(datablocks):
     """Unpack packed images during context
     This will pack all unpacked images found in the given datablocks,
     and unpack them back when exiting the context.
@@ -746,4 +746,3 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
             changes = True
 
     return changes
-
