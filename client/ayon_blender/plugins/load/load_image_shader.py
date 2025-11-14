@@ -116,7 +116,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         # Load the image in data
         path = self.filepath_from_context(context)
-        image = bpy.data.images.load(path)
+        image = bpy.data.images.load(path, check_existing=True)
         image_texture_node.image = image
 
         self.set_colorspace(context, image_texture_node)
@@ -155,7 +155,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         old_image: Optional[bpy.types.Image] = image_texture_node.image
 
-        new_image = bpy.data.images.load(path)
+        new_image = bpy.data.images.load(path, check_existing=True)
         image_texture_node.image = new_image
 
         self.set_colorspace(context, image_texture_node)
