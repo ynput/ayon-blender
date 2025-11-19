@@ -9,6 +9,7 @@ from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import ls
 from ayon_blender.api.lib import (
     strip_container_data,
+    strip_instance_data,
     strip_namespace
 )
 
@@ -60,7 +61,7 @@ class ExtractBlend(
         self.log.debug("Performing extraction..")
 
         data_blocks = self.add_datablock(instance)
-
+        asset_group = instance.data["transientData"]["instance_node"]
         containers = list(ls())
         with contextlib.ExitStack() as stack:
             # If the instance node is a Collection, we want to enforce the
@@ -84,6 +85,7 @@ class ExtractBlend(
                             collection, list(missing_child_hierarchy)))
 
             stack.enter_context(strip_container_data(containers))
+            stack.enter_context(strip_instance_data(asset_group))
             stack.enter_context(strip_namespace(containers))
             self.log.debug("Datablocks: %s", data_blocks)
             bpy.data.libraries.write(
