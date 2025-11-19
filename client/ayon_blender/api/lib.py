@@ -664,6 +664,44 @@ def strip_namespace(containers):
             node.name = f"{original_namespace}:{name}"
 
 
+@contextlib.contextmanager
+def packed_images(datablocks):
+    """Unpack packed images during context
+    This will pack all unpacked images found in the given datablocks,
+    and unpack them back when exiting the context.
+
+    Args:
+        datablocks (set): Datablocks to search for
+            unpacked images.
+
+    """
+    unpacked_node_images = set()
+    for data in datablocks:
+        if not (
+            isinstance(data, bpy.types.Object) and data.type == 'MESH'
+        ):
+            continue
+        for material_slot in data.material_slots:
+            mat = material_slot.material
+            if not (mat and mat.use_nodes):
+                continue
+            tree = mat.node_tree
+            if tree.type != 'SHADER':
+                continue
+            for node in tree.nodes:
+                if node.bl_idname != 'ShaderNodeTexImage':
+                    continue
+                if node.image and node.image.packed_file is None:
+                    unpacked_node_images.add(node.image)
+                    node.image.pack()
+    try:
+        yield
+
+    finally:
+        for image in unpacked_node_images:
+            image.unpack()
+
+
 def search_replace_render_paths(src: str, dest: str) -> bool:
     """Search and replace render paths in the current scene.
 

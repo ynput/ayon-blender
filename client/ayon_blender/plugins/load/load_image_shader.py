@@ -117,7 +117,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         # Load the image in data and assign it safely
         path = self.filepath_from_context(context)
-        image = bpy.data.images.load(path)
+        image = bpy.data.images.load(path, check_existing=True)
         # Use safe context for shader operations
         with self._safe_shader_operations():
             # Assign image to node using deferred execution to avoid ID class write restrictions
@@ -158,7 +158,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
 
         old_image: Optional[bpy.types.Image] = image_texture_node.image
 
-        new_image = bpy.data.images.load(path)
+        new_image = bpy.data.images.load(path, check_existing=True)
         # Use safe context for shader operations
         with self._safe_shader_operations():
             # Assign image to node using deferred execution to avoid ID class write restrictions
