@@ -751,6 +751,8 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
 def map_colorspace_name(colorspace: str) -> str:
     """
     Map ACES or other colorspace names to Blender's expected colorspace names.
+    DECPRECATED: This function is deprecated and will be removed in future
+    versions. Blender 5.0 natively supports ACES colorspaces.
 
     Args:
         colorspace: The original colorspace name
