@@ -192,7 +192,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             if colorspace and hasattr(image, "colorspace_settings"):
                 # Map ACES colorspace names to Blender's expected names
                 if image.file_format.startswith('OPEN_EXR') and (
-                    lib.get_blender_version() >= (5, 0, 0)
+                    lib.get_blender_version() < (5, 0, 0)
                 ):
                     colorspace = lib.map_colorspace_name(colorspace)
                 image.colorspace_settings.name = colorspace
@@ -250,6 +250,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         if material:
             material.use_nodes = True
+            return material
         # Return None to stop the timer from repeating
         return None
 
