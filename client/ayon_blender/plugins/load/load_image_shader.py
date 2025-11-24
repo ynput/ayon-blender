@@ -242,7 +242,6 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
     def _deferred_enable_nodes(self, material: bpy.types.Material):
         """
         Deferred material nodes enabling callback for timer execution.
-        
         Args:
             material: The material to enable nodes for
         Returns:
