@@ -13,7 +13,7 @@ from ayon_core.pipeline.publish import (
     PublishValidationError,
     OptionalPyblishPluginMixin
 )
-from ayon_blender.api import plugin, render_lib
+from ayon_blender.api import plugin, lib, render_lib
 
 
 def fix_filename(path: str, extension: Optional[str] = None) -> str:
@@ -280,7 +280,19 @@ class ValidateCompositorNodeFileOutputPaths(
         output_node: "bpy.types.CompositorNodeOutputFile" = (
             instance.data["transientData"]["instance_node"]
         )
+        if lib.get_blender_version() >= (5, 0, 0):
+            # TODO: Implement. See Blender 5 API changes for nodes:
+            #   https://developer.blender.org/docs/release_notes/5.0/python_api/#nodes  # noqa
+            raise NotImplementedError("Repair not implemented for Blender 5+")
+        else:
+            cls._repair_blender_4(output_node)
 
+
+    @classmethod
+    def _repair_blender_4(
+        cls,
+        output_node: "bpy.types.CompositorNodeOutputFile"
+    ):
         # Check whether CompositorNodeOutputFile is rendering to multilayer EXR
         file_format: str = output_node.format.file_format
         is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
