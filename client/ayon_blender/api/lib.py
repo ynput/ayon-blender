@@ -727,7 +727,7 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
         changes = True
 
     # Base paths for Compositor File Output Nodes
-    node_tree = bpy.context.scene.node_tree
+    node_tree = get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
             if node.bl_idname != "CompositorNodeOutputFile":
@@ -771,3 +771,13 @@ def map_colorspace_name(colorspace: str) -> str:
     }
 
     return colorspace_mapping.get(colorspace, colorspace)
+
+
+def get_scene_node_tree():
+    """Return the node tree"""
+    try:
+        # Blender 5.0+
+        return bpy.context.scene.compositing_node_group
+    except AttributeError:
+        # Blender 4.0 and below
+        return bpy.context.scene.node_tree

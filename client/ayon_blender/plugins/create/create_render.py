@@ -41,7 +41,7 @@ class CreateRender(plugin.BlenderCreator):
     icon = "eye"
 
     def _find_compositor_node_from_create_render_setup(self) -> Optional["bpy.types.CompositorNodeOutputFile"]:
-        tree = bpy.context.scene.node_tree
+        tree = lib.get_scene_node_tree()
         for node in tree.nodes:
             if (
                     node.bl_idname == "CompositorNodeOutputFile"
@@ -66,7 +66,7 @@ class CreateRender(plugin.BlenderCreator):
             node = render_lib.prepare_rendering(variant_name=variant)
         else:
             # Create a Compositor node
-            tree = bpy.context.scene.node_tree
+            tree = lib.get_scene_node_tree()
             node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
                 "CompositorNodeOutputFile"
             )
@@ -143,7 +143,7 @@ class CreateRender(plugin.BlenderCreator):
 
         # Collect all remaining compositor output nodes
         unregistered_output_nodes = [
-            node for node in bpy.context.scene.node_tree.nodes
+            node for node in lib.get_scene_node_tree()
             if node.bl_idname == "CompositorNodeOutputFile"
             and node not in collected_nodes
         ]

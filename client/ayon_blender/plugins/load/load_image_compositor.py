@@ -40,7 +40,7 @@ class LoadImageCompositor(plugin.BlenderLoader):
         image = bpy.data.images.load(path, check_existing=True)
 
         # Get the current scene's compositor node tree
-        node_tree = bpy.context.scene.node_tree
+        node_tree = lib.get_scene_node_tree()
 
         # Create a new image node
         img_comp_node = node_tree.nodes.new(type='CompositorNodeImage')
@@ -66,7 +66,8 @@ class LoadImageCompositor(plugin.BlenderLoader):
         image: Optional[bpy.types.Image] = img_comp_node.image
 
         # Delete the compositor node
-        bpy.context.scene.node_tree.nodes.remove(img_comp_node)
+        node_tree = lib.get_scene_node_tree()
+        node_tree.nodes.remove(img_comp_node)
 
         # Delete the image if it remains unused
         self.remove_image_if_unused(image)
