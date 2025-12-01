@@ -8,7 +8,10 @@ import clique
 
 import bpy
 
-from ayon_blender.api import colorspace, plugin, render_lib
+from ayon_blender.api import colorspace, plugin, lib, render_lib
+import importlib
+importlib.reload(lib)
+importlib.reload(render_lib)
 
 
 def files_as_sequence(files) -> list[str]:
@@ -187,6 +190,46 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             list[str]: The full output image or sequence paths.
 
         """
+        if lib.get_blender_version() >= (5, 0, 0):
+            return self._get_expected_outputs_blender_5(node)
+        else:
+            return self._get_expected_outputs_blender_4(node)
+
+    def _get_expected_outputs_blender_5(
+        self,
+        node: "bpy.types.CompositorNodeOutputFile"
+    ) -> list[str]:
+        directory: str = node.directory
+        file_name: str = node.file_name
+        outputs: list[str] = []
+        base_path: str = os.path.join(directory, file_name)
+
+        if self.is_multilayer_exr(node):
+            file_path = self._resolve_full_render_path(
+                path=base_path,
+                file_format=node.format.file_format
+            )
+            outputs.append(file_path)
+        else:
+            # Separate images
+            for output_item in node.file_output_items:
+                if output_item.override_node_format:
+                    output_format = output_item.format.file_format
+                else:
+                    output_format = node.format.file_format
+
+                # Resolve the full render path for the output path
+                file_path = self._resolve_full_render_path(
+                    path=f"{base_path}{output_item.name}",
+                    file_format=output_format
+                )
+                outputs.append(file_path)
+        return outputs
+
+    def _get_expected_outputs_blender_4(
+        self,
+        node: "bpy.types.CompositorNodeOutputFile"
+    ) -> list[str]:
         outputs: list[str] = []
         base_path: str = node.base_path
 
@@ -225,7 +268,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 )
 
                 outputs.append(file_path)
-
         return outputs
 
     def _resolve_full_render_path(
