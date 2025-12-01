@@ -143,7 +143,13 @@ class LoadImageCompositor(plugin.BlenderLoader):
         if colorspace_data:
             colorspace: str = colorspace_data["colorspace"]
             if colorspace:
-                image.colorspace_settings.name = colorspace
+                try:
+                    image.colorspace_settings.name = colorspace
+                except TypeError as exc:
+                    self.log.warning(
+                        f"Colorspace '{colorspace}' not found in "
+                        f"current color management. See:\n{exc}"
+                    )
 
     def remove_image_if_unused(self, image: bpy.types.Image):
         if image and not image.users:
