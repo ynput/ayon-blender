@@ -189,7 +189,12 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             colorspace: str = colorspace_data["colorspace"]
             if colorspace and hasattr(image, "colorspace_settings"):
                 # Map ACES colorspace names to Blender's expected names
-                if image.file_format.startswith('OPEN_EXR'):
+                # for Blender versions below 5.0 because that's when full OCIO
+                # support came in.
+                if (
+                    bpy.app.version >= (5, 0, 0)
+                    and image.file_format.startswith('OPEN_EXR')
+                ):
                     colorspace = lib.map_colorspace_name(colorspace)
                 image.colorspace_settings.name = colorspace
 
