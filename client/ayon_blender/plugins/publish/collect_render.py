@@ -9,6 +9,9 @@ import clique
 import bpy
 
 from ayon_blender.api import colorspace, plugin, lib, render_lib
+import importlib
+importlib.reload(lib)
+importlib.reload(render_lib)
 
 
 def files_as_sequence(files) -> list[str]:

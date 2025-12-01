@@ -1,4 +1,5 @@
 """Create render."""
+import os
 import re
 
 import bpy
@@ -7,6 +8,8 @@ from typing import Optional
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline.create import CreatedInstance
 from ayon_blender.api import plugin, lib, render_lib
+
+BLENDER_VERSION = lib.get_blender_version()
 
 
 def clean_name(name: str) -> str:
@@ -53,9 +56,16 @@ class CreateRender(plugin.BlenderCreator):
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict
     ):
-        # Force enable compositor
-        if not bpy.context.scene.use_nodes:
-            bpy.context.scene.use_nodes = True
+        if BLENDER_VERSION >= (5, 0, 0):
+            # In Blender 5 if no comp node tree is set, create one
+            if not lib.get_scene_node_tree():
+                tree = bpy.data.node_groups.new("Compositor Nodes",
+                                                "CompositorNodeTree")
+                bpy.context.scene.compositing_node_group = tree
+        else:
+            # Force enable compositor in Blender 4
+            if not bpy.context.scene.use_nodes:
+                bpy.context.scene.use_nodes = True
 
         variant: str = instance_data.get("variant", self.default_variant)
 
@@ -73,14 +83,20 @@ class CreateRender(plugin.BlenderCreator):
             project_settings = (
                 self.create_context.get_current_project_settings()
             )
-            node.format.file_format = "OPEN_EXR_MULTILAYER"
-            node.base_path = render_lib.get_base_render_output_path(
+            base_path = render_lib.get_base_render_output_path(
                 variant_name=variant,
                 # For now enforce multi-exr here since we are not connecting
                 # any inputs and it at least ensures a full path is set.
                 multi_exr=True,
                 project_settings=project_settings,
             )
+            node.format.file_format = "OPEN_EXR_MULTILAYER"
+            if BLENDER_VERSION >= (5, 0, 0):
+                directory, filename = os.path.split(base_path)
+                node.directory = directory
+                node.file_name = filename
+            else:
+                node.base_path = base_path
 
         node.name = variant
         node.label = variant
@@ -99,6 +115,11 @@ class CreateRender(plugin.BlenderCreator):
     def collect_instances(self):
         if not bpy.context.scene.use_nodes:
             # Compositor is not enabled, so no render instances should be found
+            return
+
+        node_tree = lib.get_scene_node_tree()
+        if not node_tree:
+            # Blender 5.0 may not have created and set a compositor group
             return
 
         super().collect_instances()
