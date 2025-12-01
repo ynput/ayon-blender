@@ -143,7 +143,7 @@ class CreateRender(plugin.BlenderCreator):
 
         # Collect all remaining compositor output nodes
         unregistered_output_nodes = [
-            node for node in lib.get_scene_node_tree()
+            node for node in lib.get_scene_node_tree().nodes
             if node.bl_idname == "CompositorNodeOutputFile"
             and node not in collected_nodes
         ]
