@@ -142,7 +142,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         # settings are required by the schema, so it is hardcoded.
         ocio_path = os.getenv("OCIO")
         if not ocio_path:
-            # assume not color-managed, return fallback placeholder DATA
+            # assume not color-managed, return fallback placeholder data
             return {
                 "colorspaceConfig": "",
                 "colorspaceDisplay": "sRGB",
