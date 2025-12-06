@@ -139,18 +139,21 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         # OCIO not currently implemented in Blender, but the following
         # settings are required by the schema, so it is hardcoded.
         ocio_path = os.getenv("OCIO")
+        colorspace = "ACEScg"
         if not ocio_path:
             # assume not color-managed, return fallback placeholder data
             return {
                 "colorspaceConfig": "",
                 "colorspaceDisplay": "sRGB",
                 "colorspaceView": "ACES 1.0 SDR-video",
+                "colorspace": colorspace
             }
 
         # Get from node or scene
         if node.format.color_management == "OVERRIDE":
-            display: str = node.display_settings.display_device
-            view: str = node.view_settings.view_transform
+            display: str = node.format.display_settings.display_device
+            view: str = node.format.view_settings.view_transform
+            colorspace: str = node.format.linear_colorspace_settings.name
             # look: str = node.view_settings.look
         else:
             display: str = bpy.context.scene.display_settings.display_device
@@ -161,6 +164,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "colorspaceConfig": ocio_path,
             "colorspaceDisplay": display,
             "colorspaceView": view,
+            "colorspace": colorspace
         }
 
     def is_multilayer_exr(
