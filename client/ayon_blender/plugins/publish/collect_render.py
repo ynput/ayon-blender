@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 import re
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 import pyblish.api
 import clique
@@ -132,23 +132,17 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         })
         colorspace_data = self.get_colorspace_data(comp_output_node)
         self.log.debug(f"Collected colorspace data: {colorspace_data}")
-        instance.data.update(colorspace_data)
+        if colorspace_data:
+            instance.data.update(colorspace_data)
 
     def get_colorspace_data(
         self,
         node: "bpy.types.CompositorNodeOutputFile"
-    ) -> RenderColorspaceData:
-        # OCIO not currently implemented in Blender, but the following
-        # settings are required by the schema, so it is hardcoded.
+    ) -> Optional[RenderColorspaceData]:
         ocio_path = os.getenv("OCIO")
         if not ocio_path:
-            # assume not color-managed, return fallback placeholder data
-            return {
-                "colorspaceConfig": "",
-                "colorspaceDisplay": "sRGB",
-                "colorspaceView": "ACES 1.0 SDR-video",
-                "colorspace": ""
-            }
+            # Assume not color-managed
+            return None
 
         # TODO: Technically Blender hides/disabled Display/View versus
         #  Colorspace depending on `node.format.has_linear_colorspace`
