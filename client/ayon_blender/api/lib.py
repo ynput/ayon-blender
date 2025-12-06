@@ -26,6 +26,11 @@ def load_scripts(paths):
 
     It is possible that this function will be changed in future and usage will
     be based on Blender version.
+
+    This does not work in Blender 5+ due to `bpy_types` being unavailable. But
+    usually this is not needed for Blender 5+ anyway, because it does allow
+    better user scripts management through environment variables than older
+    releases of Blender.
     """
     import bpy_types
 
@@ -131,6 +136,16 @@ def load_scripts(paths):
 
 
 def append_user_scripts():
+    """Apply user scripts to Blender.
+
+    This was originally used for early Blender 4 versions due to requiring
+    AYON to be sources from `BLENDER_USER_SCRIPTS` paths which unfortunately
+    allowed only a single path, *and* it had the side effect of not loading the
+    default user scripts anymore.
+
+    In Blender 5+ this is irrelevant and instead additional Script Directories
+    can be configured and used instead.
+    """
     default_user_prefs = os.path.join(
         bpy.utils.resource_path('USER'),
         "scripts",

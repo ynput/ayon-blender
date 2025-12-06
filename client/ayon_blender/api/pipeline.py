@@ -186,7 +186,11 @@ def install():
     register_loader_plugin_path(str(LOAD_PATH))
     register_creator_plugin_path(str(CREATE_PATH))
 
-    lib.append_user_scripts()
+    if lib.get_blender_version() < (5, 0, 0):
+        # User script directories had issues in custom management in older
+        # Blender releases - appending user scripts within AYON was a
+        # workaround only in-place to solve that issue.
+        lib.append_user_scripts()
     lib.set_app_templates_path()
 
     register_event_callback("new", on_new)
