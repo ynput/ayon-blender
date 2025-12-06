@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 import re
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 import pyblish.api
 import clique
@@ -39,10 +39,12 @@ class RenderColorspaceData(TypedDict):
         colorspaceConfig (str): Path to the OCIO configuration file.
         colorspaceDisplay (str): Display device name.
         colorspaceView (str): View transform name.
+        colorspace (str): Colorspace of the output image.
     """
     colorspaceConfig: str
     colorspaceDisplay: str
     colorspaceView: str
+    colorspace: str
 
 
 class CollectBlenderRender(plugin.BlenderInstancePlugin):
@@ -130,37 +132,42 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         })
         colorspace_data = self.get_colorspace_data(comp_output_node)
         self.log.debug(f"Collected colorspace data: {colorspace_data}")
-        instance.data.update(colorspace_data)
+        if colorspace_data:
+            instance.data.update(colorspace_data)
 
     def get_colorspace_data(
         self,
         node: "bpy.types.CompositorNodeOutputFile"
-    ) -> RenderColorspaceData:
-        # OCIO not currently implemented in Blender, but the following
-        # settings are required by the schema, so it is hardcoded.
+    ) -> Optional[RenderColorspaceData]:
         ocio_path = os.getenv("OCIO")
         if not ocio_path:
-            # assume not color-managed, return fallback placeholder data
-            return {
-                "colorspaceConfig": "",
-                "colorspaceDisplay": "sRGB",
-                "colorspaceView": "ACES 1.0 SDR-video",
-            }
+            # Assume not color-managed
+            return None
 
+        # TODO: Technically Blender hides/disabled Display/View versus
+        #  Colorspace depending on `node.format.has_linear_colorspace`
+        #  which may mean it uses one of the two instead of both.
         # Get from node or scene
         if node.format.color_management == "OVERRIDE":
-            display: str = node.display_settings.display_device
-            view: str = node.view_settings.view_transform
-            # look: str = node.view_settings.look
+            display: str = node.format.display_settings.display_device
+            view: str = node.format.view_settings.view_transform
+            colorspace: str = node.format.linear_colorspace_settings.name
+            # look: str = node.format.view_settings.look
         else:
             display: str = bpy.context.scene.display_settings.display_device
             view: str = bpy.context.scene.view_settings.view_transform
+            # TODO: Where do we get colorspace if it doesn't come from node
+            #  override nor scene override? In Blender 5+ there seems to be
+            #  bpy.context.blend_data.colorspace.working_space but similar
+            #  does not exist in Blender 4
+            colorspace: str = ""
             # look: str = bpy.context.scene.view_settings.look
 
         return {
             "colorspaceConfig": ocio_path,
             "colorspaceDisplay": display,
             "colorspaceView": view,
+            "colorspace": colorspace
         }
 
     def is_multilayer_exr(
