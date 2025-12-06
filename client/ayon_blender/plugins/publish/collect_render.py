@@ -39,10 +39,12 @@ class RenderColorspaceData(TypedDict):
         colorspaceConfig (str): Path to the OCIO configuration file.
         colorspaceDisplay (str): Display device name.
         colorspaceView (str): View transform name.
+        colorspace (str): Colorspace of the output image.
     """
     colorspaceConfig: str
     colorspaceDisplay: str
     colorspaceView: str
+    colorspace: str
 
 
 class CollectBlenderRender(plugin.BlenderInstancePlugin):
@@ -139,25 +141,32 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         # OCIO not currently implemented in Blender, but the following
         # settings are required by the schema, so it is hardcoded.
         ocio_path = os.getenv("OCIO")
-        colorspace = "ACEScg"
         if not ocio_path:
-            # assume not color-managed, return fallback placeholder data
+            # assume not color-managed, return fallback placeholder DATA
             return {
                 "colorspaceConfig": "",
                 "colorspaceDisplay": "sRGB",
                 "colorspaceView": "ACES 1.0 SDR-video",
-                "colorspace": colorspace
+                "colorspace": ""
             }
 
+        # TODO: Technically Blender hides/disabled Display/View versus
+        #  Colorspace depending on `node.format.has_linear_colorspace`
+        #  which may mean it uses one of the two instead of both.
         # Get from node or scene
         if node.format.color_management == "OVERRIDE":
             display: str = node.format.display_settings.display_device
             view: str = node.format.view_settings.view_transform
             colorspace: str = node.format.linear_colorspace_settings.name
-            # look: str = node.view_settings.look
+            # look: str = node.format.view_settings.look
         else:
             display: str = bpy.context.scene.display_settings.display_device
             view: str = bpy.context.scene.view_settings.view_transform
+            # TODO: Where do we get colorspace if it doesn't come from node
+            #  override nor scene override? In Blender 5+ there seems to be
+            #  bpy.context.blend_data.colorspace.working_space but similar
+            #  does not exist in Blender 4
+            colorspace: str = ""
             # look: str = bpy.context.scene.view_settings.look
 
         return {
