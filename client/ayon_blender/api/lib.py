@@ -790,9 +790,9 @@ def map_colorspace_name(colorspace: str) -> str:
 
 def get_scene_node_tree():
     """Return the node tree"""
-    try:
+    if get_blender_version() >= (5, 0, 0):
         # Blender 5.0+
         return bpy.context.scene.compositing_node_group
-    except AttributeError:
+    else:
         # Blender 4.0 and below
         return bpy.context.scene.node_tree
