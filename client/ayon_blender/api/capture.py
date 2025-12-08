@@ -125,7 +125,7 @@ def isolate_objects(window, objects):
     # errors that object can't be selected because it is not in View Layer.
     view_layer_objects = window.view_layer.objects
     for obj in objects:
-        if obj in view_layer_objects:
+        if obj.name in view_layer_objects:
             obj.select_set(True)
 
     context = create_blender_context(selected=objects, window=window)
