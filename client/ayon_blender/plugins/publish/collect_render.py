@@ -178,7 +178,16 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             #  override nor scene override? In Blender 5+ there seems to be
             #  bpy.context.blend_data.colorspace.working_space but similar
             #  does not exist in Blender 4
-            colorspace: str = ""
+            # This gets the scene render colorspace, which should technically
+            # only apply when it's set to "Override" on the scene output
+            # settings. But since we can't find the source Follow Scene value
+            # it's the best alternative for now to rely upon, especially
+            # because the default value does match the default render
+            # colorspace.
+            colorspace: str = (
+                bpy.context.scene.render
+                .image_settings.linear_colorspace_settings.name
+            )
             # look: str = bpy.context.scene.view_settings.look
 
         return {
