@@ -179,7 +179,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             #  override nor scene override? In Blender 5+ there seems to be
             #  bpy.context.blend_data.colorspace.working_space but similar
             #  does not exist in Blender 4
-            colorspace: str = "ACEScg"
+            colorspace: str = ""
             # look: str = bpy.context.scene.view_settings.look
 
         return {
