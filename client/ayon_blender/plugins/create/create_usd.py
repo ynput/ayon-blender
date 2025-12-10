@@ -13,6 +13,7 @@ class CreateUSD(plugin.BlenderCreator):
     label = "USD"
     description = __doc__
     product_type = "usd"
+    product_base_type = "usd"
     icon = "gears"
 
     def create(

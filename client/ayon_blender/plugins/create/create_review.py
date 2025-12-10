@@ -10,6 +10,7 @@ class CreateReview(plugin.BlenderCreator):
     label = "Review"
     description = __doc__
     product_type = "review"
+    product_base_type = "review"
     icon = "video-camera"
 
     def create(

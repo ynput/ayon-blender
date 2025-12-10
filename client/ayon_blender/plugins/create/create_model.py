@@ -12,6 +12,7 @@ class CreateModel(plugin.BlenderCreator):
     label = "Model"
     description = __doc__
     product_type = "model"
+    product_base_type = "model"
     icon = "cube"
 
     create_as_asset_group = True

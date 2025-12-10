@@ -12,6 +12,7 @@ class CreateAction(plugin.BlenderCreator):
     label = "Action"
     description = __doc__
     product_type = "action"
+    product_base_type = "action"
     icon = "male"
 
     def create(

@@ -10,6 +10,7 @@ class CreateAnimation(plugin.BlenderCreator):
     label = "Animation"
     description = __doc__
     product_type = "animation"
+    product_base_type = "animation"
     icon = "male"
 
     def create(

@@ -12,6 +12,7 @@ class CreateRig(plugin.BlenderCreator):
     label = "Rig"
     description = __doc__
     product_type = "rig"
+    product_base_type = "rig"
     icon = "wheelchair"
 
     create_as_asset_group = True
