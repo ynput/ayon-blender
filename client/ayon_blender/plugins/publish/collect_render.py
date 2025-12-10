@@ -137,9 +137,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             files = files_as_sequence(expected_files[aov_identifier])
             self.log.debug(f"Expected frames: {files}")
 
-        creator_attribute = instance.data["creator_attributes"]
-
         # Collect Render Target
+        creator_attribute = instance.data["creator_attributes"]
         local_render: bool = creator_attribute.get("render_target") == "local"
 
         context = instance.context
