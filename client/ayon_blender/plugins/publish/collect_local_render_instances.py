@@ -1,6 +1,5 @@
 import pyblish.api
 
-from ayon_core.pipeline.publish import ColormanagedPyblishPluginMixin
 from ayon_blender.api import plugin
 
 from ayon_core.pipeline.farm.pyblish_functions import (
@@ -8,8 +7,7 @@ from ayon_core.pipeline.farm.pyblish_functions import (
     create_instances_for_aov
 )
 
-class CollectLocalRenderInstances(plugin.BlenderInstancePlugin,
-                                  ColormanagedPyblishPluginMixin):
+class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
     """Collect instances for local render.
     """
     order = pyblish.api.CollectorOrder + 0.31
