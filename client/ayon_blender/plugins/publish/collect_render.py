@@ -87,6 +87,16 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         output_paths = self.get_expected_outputs(comp_output_node)
         is_multilayer = self.is_multilayer_exr(comp_output_node)
 
+        colorspace_data = self.get_colorspace_data(comp_output_node)
+        self.log.debug(f"Collected colorspace data: {colorspace_data}")
+        if colorspace_data:
+            instance.data.update(colorspace_data)
+
+        render_products = colorspace.ARenderProduct(
+            frame_start=frame_start,
+            frame_end=frame_end
+        )
+
         for output_path in output_paths:
             if is_multilayer:
                 # Only ever a single output - we enforce the identifier to an
@@ -99,7 +109,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                     instance
                 )
 
-            aov_label = aov_identifier or "<beauty>"
+            aov_label: str = aov_identifier or "<beauty>"
             self.log.debug(
                 f"Expecting outputs for AOV {aov_label}: "
                 f"{output_path}"
@@ -110,6 +120,17 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_start,
                 frame_end,
                 frame_step
+            )
+
+            # We need to have a matching 'renderProduct' entry so that
+            # the logic in core for `_create_instances_for_aov` assigns
+            # the colorspace data to the relevant AOV instance.
+            aov_colorspace: str = (
+                colorspace_data["colorspace"] if colorspace_data else ""
+            )
+            render_products.add_render_product(
+                product_name=aov_identifier,
+                colorspace=aov_colorspace
             )
 
             # Log the expected sequence of frames for the AOV
@@ -130,15 +151,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "multipartExr": is_multilayer,
             "farm": not local_render,
             "expectedFiles": [expected_files],
-            "renderProducts": colorspace.ARenderProduct(
-                frame_start=frame_start,
-                frame_end=frame_end
-            ),
+            "renderProducts": render_products,
         })
-        colorspace_data = self.get_colorspace_data(comp_output_node)
-        self.log.debug(f"Collected colorspace data: {colorspace_data}")
-        if colorspace_data:
-            instance.data.update(colorspace_data)
 
     def get_colorspace_data(
         self,
@@ -165,7 +179,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             #  override nor scene override? In Blender 5+ there seems to be
             #  bpy.context.blend_data.colorspace.working_space but similar
             #  does not exist in Blender 4
-            colorspace: str = ""
+            colorspace: str = "ACEScg"
             # look: str = bpy.context.scene.view_settings.look
 
         return {
