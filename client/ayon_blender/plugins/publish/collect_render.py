@@ -114,6 +114,11 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             files = files_as_sequence(expected_files[aov_identifier])
             self.log.debug(f"Expected frames: {files}")
 
+        creator_attribute = instance.data["creator_attributes"]
+
+        # Collect Render Target
+        local_render: bool = creator_attribute.get("render_target") == "local"
+
         context = instance.context
         instance.data.update({
             "families": ["render", "render.farm"],
@@ -121,7 +126,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "byFrameStep": frame_step,
             "review": review,
             "multipartExr": is_multilayer,
-            "farm": True,
+            "farm": not local_render,
             "expectedFiles": [expected_files],
             "renderProducts": colorspace.ARenderProduct(
                 frame_start=frame_start,
@@ -326,5 +331,5 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
 
-        self.log.info(f"'{aov_identifier}' AOV from filepath: {path}")
+        self.log.debug(f"'{aov_identifier}' AOV from filepath: {path}")
         return aov_identifier

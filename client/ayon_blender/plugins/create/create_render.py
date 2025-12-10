@@ -4,7 +4,7 @@ import re
 import bpy
 from typing import Optional
 
-from ayon_core.lib import BoolDef
+from ayon_core.lib import BoolDef, EnumDef, AbstractAttrDef
 from ayon_core.pipeline.create import CreatedInstance
 from ayon_blender.api import plugin, lib, render_lib
 
@@ -39,6 +39,8 @@ class CreateRender(plugin.BlenderCreator):
     description = __doc__
     product_type = "render"
     icon = "eye"
+
+    render_target = "farm"
 
     def _find_compositor_node_from_create_render_setup(self) -> Optional["bpy.types.CompositorNodeOutputFile"]:
         tree = bpy.context.scene.node_tree
@@ -186,13 +188,26 @@ class CreateRender(plugin.BlenderCreator):
             self._add_instance_to_context(instance)
 
     def get_instance_attr_defs(self):
-        defs = lib.collect_animation_defs(self.create_context)
+
+        render_target_items: dict[str, str] = {
+            "local": "Local machine rendering",
+            # TODO: implement support for locally using existing frames
+            # "local_no_render": "Use existing frames (local)",
+            "farm": "Farm Rendering",
+        }
+
+        defs: list[AbstractAttrDef] = lib.collect_animation_defs(
+            self.create_context
+        )
         defs.extend([
+            EnumDef("render_target",
+                    items=render_target_items,
+                    label="Render target",
+                    default=self.render_target),
             BoolDef("review",
                     label="Review",
                     tooltip="Mark as reviewable",
-                    default=True
-            )
+                    default=True),
         ])
         return defs
 
