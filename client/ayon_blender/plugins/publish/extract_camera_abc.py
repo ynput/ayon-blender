@@ -33,14 +33,26 @@ class ExtractCameraABC(
 
         plugin.deselect_all()
 
-        asset_group = instance.data["transientData"]["instance_node"]
-
-        # Need to cast to list because children is a tuple
-        selected = list(asset_group.children)
-        active = selected[0]
+        instance_node = instance.data["transientData"]["instance_node"]
+        if isinstance(instance_node, bpy.types.Collection):
+            members = list(instance)
+            active = lib.get_highest_root(members)
+            selected = members
+        elif isinstance(instance_node, bpy.types.Object):
+            # Legacy behavior where camera instances were asset groups
+            asset_group = instance_node
+            # Need to cast to list because children is a tuple
+            selected = list(asset_group.children)
+            active = selected[0]
+        else:
+            raise TypeError(
+                "Instance node is of wrong type, expecting object or "
+                f"collection but got: {instance_node}"
+            )
 
         for obj in selected:
-            obj.select_set(True)
+            if isinstance(obj, bpy.types.Object):
+                obj.select_set(True)
 
         context = plugin.create_blender_context(
             active=active, selected=selected)
