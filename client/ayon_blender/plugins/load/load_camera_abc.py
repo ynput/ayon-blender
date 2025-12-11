@@ -196,10 +196,17 @@ class AbcCameraLoader(plugin.BlenderLoader):
             constraint.cache_file.scale = 1.0
             bpy.context.evaluated_depsgraph_get()
 
-            for object_path in constraint.cache_file.object_paths:
-                base_object_name = os.path.basename(object_path.path)
-                if base_object_name.startswith(asset_name):
-                    constraint.object_path = object_path.path
+            # Find the deepest hierarchy level in object paths
+            if constraint.cache_file.object_paths:
+                # Count slashes to determine hierarchy depth
+                object_paths_list = constraint.cache_file.object_paths
+                max_depth = max(
+                    path.path.count('/') for path in object_paths_list
+                )
+                # Assign only the deepest hierarchies
+                for object_path in object_paths_list:
+                    if object_path.path.count('/') == max_depth:
+                        constraint.object_path = object_path.path
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
