@@ -46,6 +46,10 @@ def get_renderer(project_settings) -> str:
 
 def get_compositing(project_settings) -> bool:
     """Get whether 'Composite' render is enabled from blender settings."""
+    # Blender 5+ does not have the "Composite" node, so it's always False
+    if lib.get_blender_version() >= (5, 0, 0):
+        return False
+
     return project_settings["blender"]["RenderSettings"]["compositing"]
 
 

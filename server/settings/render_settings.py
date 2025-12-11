@@ -132,7 +132,11 @@ class RenderSettingsModel(BaseSettingsModel):
     )
     compositing: bool = SettingsField(
         title="Enable Compositing",
-        description="When enabled AYON will output composite AOV beside regular rgba beauty output.",
+        description=(
+            "When enabled AYON will output composite AOV beside regular rgba "
+            "beauty output. This is only supported for Blender 4 and lower "
+            "due to removal of the 'Composite' node in Blender 5."
+        ),
     )
     aov_list: list[str] = SettingsField(
         default_factory=list,
