@@ -2,7 +2,7 @@ import os
 
 import bpy
 
-from ayon_core.lib import BoolDef
+from ayon_core.lib import BoolDef, EnumDef
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
 
@@ -13,6 +13,8 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
     label = "Extract ABC"
     hosts = ["blender"]
     families = ["pointcache"]
+
+    evaluation_mode: str = "RENDER"
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -58,6 +60,8 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
                 selected=True,
                 flatten=False,
                 subdiv_schema=attr_values.get("subdiv_schema", False),
+                evaluation_mode=attr_values.get("evaluation_mode",
+                                                self.evaluation_mode),
                 **kwargs
             )
 
@@ -89,6 +93,20 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
                         "Enabling this usually result in smaller file size "
                         "due to lack of normals.",
                 default=False
+            ),
+            EnumDef(
+                "evaluation_mode",
+                label="Alembic Evaluation Mode",
+                items=[
+                    {"value": "RENDER", "label": "Render"},
+                    {"value": "VIEWPORT", "label": "Viewport"},
+                ],
+                tooltip=(
+                    "For Alembic export determines visibility of objects, "
+                    "modifier settings, and other areas\nwhere there are "
+                    "different settings for viewport and rendering."
+                ),
+                default=cls.evaluation_mode
             )
         ]
 
