@@ -57,7 +57,15 @@ class BlendSceneLoader(plugin.BlenderLoader):
         members = []
         for attr in dir(data_to):
             from_names: list[str] = names_by_attr[attr]
-            for from_name, data in zip(from_names, getattr(data_to, attr)):
+            values = getattr(data_to, attr)
+
+            # Blender 5.0 also has `version` (tuple) and `Done` (bool)
+            # attributes on the data that we do not want to touch
+            # TODO: Find a more reliable way to find the right attributes
+            if not isinstance(values, list):
+                continue
+
+            for from_name, data in zip(from_names, values):
                 data.name = f"{group_name}:{from_name}"
                 members.append(data)
 

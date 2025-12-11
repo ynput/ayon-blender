@@ -64,7 +64,9 @@ class ExtractUSD(plugin.BlenderExtractor,
             "export_global_forward_selection": attribute_values.get("forward_axis", "Z"),
             "export_global_up_selection": attribute_values.get("up_axis", "Y"),
         }
-        if lib.get_blender_version() < (4, 2, 1):
+
+        blender_version = lib.get_blender_version()
+        if blender_version < (4, 2, 1):
             kwargs = {}
             if convert_orientation:
                 self.log.warning(
@@ -72,6 +74,12 @@ class ExtractUSD(plugin.BlenderExtractor,
                     "supported in Blender < \"4.2.1\". Please update to at least Blender "
                     "4.2.1 to support it."
                 )
+
+        # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
+        if blender_version >= (5, 0, 0):
+            kwargs["export_textures_mode"] = "KEEP"
+        else:
+            kwargs["export_textures"] = False
 
         # Export USD
         with bpy.context.temp_override(**context):
@@ -81,7 +89,6 @@ class ExtractUSD(plugin.BlenderExtractor,
                 filepath=filepath,
                 root_prim_path="",  
                 selected_objects_only=True,
-                export_textures=False,
                 relative_paths=False,
                 export_animation=False,
                 export_hair=False,

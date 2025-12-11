@@ -32,7 +32,8 @@ from .ops import (
 )
 from .lib import (
     imprint,
-    get_blender_version
+    get_blender_version,
+    get_scene_node_tree
 )
 
 
@@ -212,8 +213,9 @@ class BlenderCreator(Creator):
 
             # Consider any node tree objects as well
             node_tree_objects = []
-            if bpy.context.scene.node_tree:
-                node_tree_objects = bpy.context.scene.node_tree.nodes
+            node_tree = get_scene_node_tree()
+            if node_tree:
+                node_tree_objects = node_tree.nodes
 
             for obj_or_col in itertools.chain(
                     ayon_instance_objs,
@@ -377,7 +379,8 @@ class BlenderCreator(Creator):
 
             # Remove compositor node
             elif isinstance(node, bpy.types.CompositorNode):
-                bpy.context.scene.node_tree.nodes.remove(node)
+                node_tree = get_scene_node_tree()
+                node_tree.nodes.remove(node)
 
             self._remove_instance_from_context(instance)
 
