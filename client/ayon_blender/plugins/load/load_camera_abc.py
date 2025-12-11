@@ -178,7 +178,6 @@ class AbcCameraLoader(plugin.BlenderLoader):
 
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
         for obj in asset_group.children:
-            asset_name = obj.name.rsplit(":", 1)[-1]
             names = [constraint.name for constraint in obj.constraints
                      if constraint.type == "TRANSFORM_CACHE"]
             file_list = [file for file in bpy.data.cache_files
