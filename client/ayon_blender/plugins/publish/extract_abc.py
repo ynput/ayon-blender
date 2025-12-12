@@ -2,17 +2,24 @@ import os
 
 import bpy
 
-from ayon_core.lib import BoolDef
+from ayon_core.lib import BoolDef, EnumDef
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
 
 
 class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
-    """Extract as ABC."""
+    """Extract as ABC.
+
+    For more details on the export options, see:
+    https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.alembic_export   # noqa
+    """
 
     label = "Extract ABC"
     hosts = ["blender"]
     families = ["pointcache"]
+
+    subdiv_schema: bool = False
+    evaluation_mode: str = "RENDER"
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -57,7 +64,10 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
                 filepath=filepath,
                 selected=True,
                 flatten=False,
-                subdiv_schema=attr_values.get("subdiv_schema", False),
+                subdiv_schema=attr_values.get("subdiv_schema",
+                                              self.subdiv_schema),
+                evaluation_mode=attr_values.get("evaluation_mode",
+                                                self.evaluation_mode),
                 **kwargs
             )
 
@@ -88,7 +98,21 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
                         "excludes the mesh's normals.\n"
                         "Enabling this usually result in smaller file size "
                         "due to lack of normals.",
-                default=False
+                default=cls.subdiv_schema
+            ),
+            EnumDef(
+                "evaluation_mode",
+                label="Alembic Evaluation Mode",
+                items=[
+                    {"value": "RENDER", "label": "Render"},
+                    {"value": "VIEWPORT", "label": "Viewport"},
+                ],
+                tooltip=(
+                    "For Alembic export determines visibility of objects, "
+                    "modifier settings, and other areas\nwhere there are "
+                    "different settings for viewport and rendering."
+                ),
+                default=cls.evaluation_mode
             )
         ]
 
