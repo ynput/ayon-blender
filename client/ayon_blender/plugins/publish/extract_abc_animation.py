@@ -18,6 +18,7 @@ class ExtractAnimationABC(
     families = ["animation"]
     optional = True
 
+    subdiv_schema: bool = False
     evaluation_mode: str = "RENDER"
 
     def process(self, instance):
@@ -67,7 +68,8 @@ class ExtractAnimationABC(
                 flatten=False,
                 start=instance.data["frameStartHandle"],
                 end=instance.data["frameEndHandle"],
-                subdiv_schema=attr_values.get("subdiv_schema", False),
+                subdiv_schema=attr_values.get("subdiv_schema",
+                                              self.subdiv_schema),
                 evaluation_mode=attr_values.get("evaluation_mode",
                                                 self.evaluation_mode),
             )
@@ -99,7 +101,7 @@ class ExtractAnimationABC(
                         "excludes the mesh's normals.\n"
                         "Enabling this usually result in smaller file size "
                         "due to lack of normals.",
-                default=False
+                default=cls.subdiv_schema
             ),
             EnumDef(
                 "evaluation_mode",

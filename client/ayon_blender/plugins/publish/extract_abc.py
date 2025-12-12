@@ -14,6 +14,7 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
     hosts = ["blender"]
     families = ["pointcache"]
 
+    subdiv_schema: bool = False
     evaluation_mode: str = "RENDER"
 
     def process(self, instance):
@@ -59,7 +60,8 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
                 filepath=filepath,
                 selected=True,
                 flatten=False,
-                subdiv_schema=attr_values.get("subdiv_schema", False),
+                subdiv_schema=attr_values.get("subdiv_schema",
+                                              self.subdiv_schema),
                 evaluation_mode=attr_values.get("evaluation_mode",
                                                 self.evaluation_mode),
                 **kwargs
@@ -92,7 +94,7 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
                         "excludes the mesh's normals.\n"
                         "Enabling this usually result in smaller file size "
                         "due to lack of normals.",
-                default=False
+                default=cls.subdiv_schema
             ),
             EnumDef(
                 "evaluation_mode",

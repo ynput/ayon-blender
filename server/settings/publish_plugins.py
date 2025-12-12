@@ -34,6 +34,16 @@ def evaluation_mode_enum():
 
 
 class AlembicEvaluationModeModel(BaseSettingsModel):
+    subdiv_schema: bool = SettingsField(
+        False,
+        title="Alembic Mesh Subdiv Schema",
+        description=(
+            "Export Meshes using Alembic's subdivision schema.\n"
+            "Enabling this includes creases with the export but excludes the"
+            " mesh's normals. Enabling this usually result in smaller file"
+            " size due to lack of normals."
+        )
+    )
     evaluation_mode: str = SettingsField(
         "RENDER",
         enum_resolver=evaluation_mode_enum,
@@ -303,6 +313,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "active": True
     },
     "ExtractABC": {
+        "subdiv_schema": False,
         "evaluation_mode": "RENDER"
     },
     "ExtractModelABC": {
@@ -311,6 +322,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "active": True
     },
     "ExtractAnimationABC": {
+        "subdiv_schema": False,
         "evaluation_mode": "RENDER"
     },
     "ExtractBlendAnimation": {
