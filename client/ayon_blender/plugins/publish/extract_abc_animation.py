@@ -11,7 +11,11 @@ class ExtractAnimationABC(
     plugin.BlenderExtractor,
     publish.OptionalPyblishPluginMixin,
 ):
-    """Extract as ABC."""
+    """Extract as ABC.
+
+    For more details on the export options, see:
+    https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.alembic_export   # noqa
+    """
 
     label = "Extract Animation ABC"
     hosts = ["blender"]
