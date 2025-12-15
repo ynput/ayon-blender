@@ -38,6 +38,7 @@ class CreateRender(plugin.BlenderCreator):
     label = "Render"
     description = __doc__
     product_type = "render"
+    product_base_type = "render"
     icon = "eye"
 
     render_target = "farm"
