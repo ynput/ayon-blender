@@ -3,7 +3,6 @@
 import bpy
 
 from ayon_blender.api import plugin, lib
-from ayon_blender.api.constants import AYON_INSTANCES
 
 
 class CreateCamera(plugin.BlenderCreator):
