@@ -8,6 +8,7 @@ class CreateBlendScene(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.blendscene"
     label = "Blender Scene"
     product_type = "blendScene"
+    product_base_type = "blendScene"
     icon = "cubes"
 
     def create(
