@@ -26,6 +26,37 @@ class ValidatePluginModel(BaseSettingsModel):
     active: bool = SettingsField(title="Active")
 
 
+def evaluation_mode_enum():
+    return [
+        {"label": "Render", "value": "RENDER"},
+        {"label": "Viewport", "value": "VIEWPORT"},
+    ]
+
+
+class AlembicEvaluationModeModel(BaseSettingsModel):
+    subdiv_schema: bool = SettingsField(
+        False,
+        title="Alembic Mesh Subdiv Schema",
+        description=(
+            "Export Meshes using Alembic's subdivision schema.\n"
+            "Enabling this includes creases with the export but excludes the"
+            " mesh's normals. Enabling this usually result in smaller file"
+            " size due to lack of normals."
+        )
+    )
+    evaluation_mode: str = SettingsField(
+        "RENDER",
+        enum_resolver=evaluation_mode_enum,
+        title="Evaluation Mode",
+        description=(
+            "Default evaluation mode for Alembic exports.\n"
+            "For Alembic export determines visibility of objects, "
+            "modifier settings, and other areas where there are "
+            "different settings for viewport and rendering."
+        )
+    )
+
+
 class ValidateFileSavedModel(BaseSettingsModel):
     enabled: bool = SettingsField(title="ValidateFileSaved")
     optional: bool = SettingsField(title="Optional")
@@ -147,9 +178,17 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ValidatePluginModel,
         title="Extract FBX"
     )
+    ExtractABC: AlembicEvaluationModeModel = SettingsField(
+        default_factory=AlembicEvaluationModeModel,
+        title="Extract ABC"
+    )
     ExtractModelABC: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
-        title="Extract ABC"
+        title="Extract Model ABC"
+    )
+    ExtractAnimationABC: AlembicEvaluationModeModel = SettingsField(
+        default_factory=AlembicEvaluationModeModel,
+        title="Extract Animation ABC"
     )
     ExtractBlendAnimation: ExtractBlendAnimationModel = SettingsField(
         default_factory=ExtractBlendAnimationModel,
@@ -273,10 +312,18 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "optional": True,
         "active": True
     },
+    "ExtractABC": {
+        "subdiv_schema": False,
+        "evaluation_mode": "RENDER"
+    },
     "ExtractModelABC": {
         "enabled": True,
         "optional": True,
         "active": True
+    },
+    "ExtractAnimationABC": {
+        "subdiv_schema": False,
+        "evaluation_mode": "RENDER"
     },
     "ExtractBlendAnimation": {
         "enabled": True,
