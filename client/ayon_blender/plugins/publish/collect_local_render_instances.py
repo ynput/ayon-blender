@@ -17,8 +17,7 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
 
     transfer_keys = {
         "creator_attributes",
-        "publish_attributes"
-        "transientData"
+        "publish_attributes",
     }
 
     def process(self, instance):
@@ -56,6 +55,13 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
 
         # Add the instances directly to the current publish context
         for aov_instance_data in aov_instances:
+            # Make a shallow copy of transient data because it'll likely
+            # contain data that can't be deep-copied, e.g. Blender objects.
+            if "transientData" in instance.data:
+                aov_instance_data["transientData"] = dict(
+                    instance.data["transientData"]
+                )
+
             # The `create_instances_for_aov` makes some paths rootless paths,
             # like the "stagingDir" for each representation which we will make
             # absolute again.
@@ -66,7 +72,11 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
                 aov_instance_data["productName"]
             )
             aov_instance.data.update(aov_instance_data)
-            aov_instance.data["families"] = ["render.local"]
+
+            families = ["render.local"]
+            if "review" in aov_instance.data["families"]:
+                families.append("review")
+            aov_instance.data["families"] = families
 
         # Skip integrating original render instance.
         # We are not removing it because it's used to trigger the render.
