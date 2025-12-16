@@ -53,6 +53,10 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
         context = instance.context
         anatomy = context.data["anatomy"]
 
+        render_target: str = instance.data.get("creator_attributes", {}).get(
+            "render_target", "local"
+        )
+
         # Add the instances directly to the current publish context
         for aov_instance_data in aov_instances:
             # Make a shallow copy of transient data because it'll likely
@@ -73,7 +77,7 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
             )
             aov_instance.data.update(aov_instance_data)
 
-            families = ["render.local"]
+            families = [f"render.{render_target}"]
             if "review" in aov_instance.data["families"]:
                 families.append("review")
             aov_instance.data["families"] = families

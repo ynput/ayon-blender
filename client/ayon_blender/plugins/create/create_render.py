@@ -192,8 +192,7 @@ class CreateRender(plugin.BlenderCreator):
 
         render_target_items: dict[str, str] = {
             "local": "Local machine rendering",
-            # TODO: implement support for locally using existing frames
-            # "local_no_render": "Use existing frames (local)",
+            "local_no_render": "Use existing frames (local)",
             "farm": "Farm Rendering",
         }
 

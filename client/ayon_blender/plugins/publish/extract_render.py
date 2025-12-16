@@ -46,6 +46,14 @@ class ExtractLocalRender(
             self.log.debug("Instance marked for farm, skipping local render.")
             return
 
+        if instance.data.get("creator_attributes", {}).get(
+            "render_target"
+        ) != "local":
+            self.log.debug(
+                "Instance render target is not local, skipping local render."
+            )
+            return
+
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
         step: int = int(instance.data.get("step", 1))
