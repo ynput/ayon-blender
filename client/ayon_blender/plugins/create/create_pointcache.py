@@ -10,6 +10,7 @@ class CreatePointcache(plugin.BlenderCreator):
     label = "Point Cache"
     description = __doc__
     product_type = "pointcache"
+    product_base_type = "pointcache"
     icon = "cubes"
 
     def create(
