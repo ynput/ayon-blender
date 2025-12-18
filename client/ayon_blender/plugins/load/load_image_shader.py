@@ -107,8 +107,6 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             cur_obj.data.materials.append(current_material)
         else:
             current_material = cur_obj.data.materials[material_slot]
-            # Enable nodes in a deferred way to avoid ID class write restrictions
-            self._enable_material_nodes(current_material)
 
         nodes = current_material.node_tree.nodes
 
@@ -191,11 +189,6 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if colorspace_data:
             colorspace: str = colorspace_data["colorspace"]
             if colorspace and hasattr(image, "colorspace_settings"):
-                # Map ACES colorspace names to Blender's expected names
-                if image.file_format.startswith('OPEN_EXR') and (
-                    lib.get_blender_version() < (5, 0, 0)
-                ):
-                    colorspace = lib.map_colorspace_name(colorspace)
                 image.colorspace_settings.name = colorspace
 
     def _assign_image_to_node(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
