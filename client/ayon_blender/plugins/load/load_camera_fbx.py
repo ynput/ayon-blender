@@ -53,6 +53,13 @@ class FbxCameraLoader(plugin.BlenderLoader):
             obj.parent = asset_group
 
         for obj in objects:
+            if obj.name in parent.objects:
+                self.log.info(
+                    "Object with name '%s' already exists in the scene. "
+                    "Skipping linking to the scene collection.",
+                    obj.name,
+                )
+                continue
             parent.objects.link(obj)
             collection.objects.unlink(obj)
 
