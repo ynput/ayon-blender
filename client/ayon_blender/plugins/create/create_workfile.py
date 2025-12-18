@@ -20,6 +20,7 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
     identifier = "io.ayon.creators.blender.workfile"
     label = "Workfile"
     product_type = "workfile"
+    product_base_type = "workfile"
     icon = "fa5.file"
 
     def create(self):

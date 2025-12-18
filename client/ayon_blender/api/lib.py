@@ -665,7 +665,7 @@ def strip_namespace(containers):
 
 
 @contextlib.contextmanager
-def packed_images(datablocks):
+def packed_images(datablocks, logger=None):
     """Unpack packed images during context
     This will pack all unpacked images found in the given datablocks,
     and unpack them back when exiting the context.
@@ -673,8 +673,13 @@ def packed_images(datablocks):
     Args:
         datablocks (set): Datablocks to search for
             unpacked images.
+        logger (logging.Logger): Logger to use for warnings if packing fails.
 
     """
+
+    if logger is None:
+        logger = log
+
     unpacked_node_images = set()
     for data in datablocks:
         if not (
@@ -691,9 +696,20 @@ def packed_images(datablocks):
             for node in tree.nodes:
                 if node.bl_idname != 'ShaderNodeTexImage':
                     continue
-                if node.image and node.image.packed_file is None:
-                    unpacked_node_images.add(node.image)
+                if not node.image:
+                    continue
+                if node.image.packed_file is not None:
+                    continue
+
+                try:
                     node.image.pack()
+                except RuntimeError:
+                    logger.warning(
+                        f"Unable to pack node: {node}",
+                        exc_info=True
+                    )
+                    continue
+                unpacked_node_images.add(node.image)
     try:
         yield
 

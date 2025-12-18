@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 import contextlib
 
 from qtpy import QtWidgets
+from functools import partial
 import bpy
 from functools import partial
 

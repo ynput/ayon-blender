@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 """Package declaring AYON addon 'blender' version."""
-__version__ = "1.0.10+dev"
+__version__ = "1.0.12+dev"
