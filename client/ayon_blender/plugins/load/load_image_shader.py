@@ -102,11 +102,13 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if material_slot is None or material_slot == self.CREATE_NEW:
             # Create a new material
             current_material = bpy.data.materials.new(name="material")
-            # Enable nodes in a deferred way to avoid ID class write restrictions
-            self._enable_material_nodes(current_material)
             cur_obj.data.materials.append(current_material)
         else:
             current_material = cur_obj.data.materials[material_slot]
+
+        if not hasattr(current_material, "node_tree"):
+            # Enable nodes in a deferred way to avoid ID class write restrictions
+            self._enable_material_nodes(current_material)
 
         nodes = current_material.node_tree.nodes
 
@@ -243,7 +245,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         if material:
             material.use_nodes = True
-            return material
+            return None
         # Return 0.001 to retry the timer
         return 0.001
 
