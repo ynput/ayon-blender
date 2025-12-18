@@ -88,7 +88,7 @@ class ExtractBlend(
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_instance_data(asset_group))
             stack.enter_context(strip_namespace(containers))
-            stack.enter_context(packed_images(data_blocks))
+            stack.enter_context(packed_images(data_blocks, logger=self.log))
             self.log.debug("Datablocks: %s", data_blocks)
             bpy.data.libraries.write(
                 filepath, data_blocks, compress=self.compress
