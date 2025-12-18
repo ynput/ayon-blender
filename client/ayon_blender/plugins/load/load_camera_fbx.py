@@ -68,7 +68,7 @@ class FbxCameraLoader(plugin.BlenderLoader):
             ayon_info = obj[AYON_PROPERTY]
             ayon_info.update({"container_name": group_name})
 
-            # Link to the AYON container
+            # Link to the scene collection
             if obj.name not in parent.objects:
                 parent.objects.link(obj)
 
