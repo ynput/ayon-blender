@@ -4,7 +4,6 @@ import contextlib
 from qtpy import QtWidgets
 from functools import partial
 import bpy
-from functools import partial
 
 from ayon_core.tools.utils import host_tools
 from ayon_core.lib import EnumDef
