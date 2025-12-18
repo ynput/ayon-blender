@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 import contextlib
 
 from qtpy import QtWidgets
+from functools import partial
 import bpy
 
 from ayon_core.tools.utils import host_tools
@@ -208,7 +209,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         self.log.debug("Using deferred assignment due to ID class write restriction")
         bpy.app.timers.register(
-            lambda: self._deferred_image_assignment(node, image),
+            partial(self._deferred_image_assignment, node, image),
             first_interval=0.001
         )
 
@@ -223,9 +224,9 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         if node and image:
             node.image = image
-            return node
-        # Return None to stop the timer from repeating
-        return None
+            return None
+        # Return 0.001 to retry the timer
+        return 0.001
 
     def _is_safe_context_for_id_writes(self):
         """
