@@ -50,25 +50,27 @@ class FbxCameraLoader(plugin.BlenderLoader):
         objects = lib.get_selection()
 
         for obj in objects:
-            obj.parent = asset_group
+            # Parent root to asset group
+            if not obj.parent:
+                obj.parent = asset_group
 
-        for obj in objects:
-            if obj.name not in parent.objects:
-                parent.objects.link(obj)
-            collection.objects.unlink(obj)
-
-        for obj in objects:
+            # Prefix loaded objects with a namespace
             name = obj.name
             obj.name = f"{group_name}:{name}"
             if obj.type != 'EMPTY':
                 name_data = obj.data.name
                 obj.data.name = f"{group_name}:{name_data}"
 
+            # Store `container_name` on the object in the AYON property
             if not obj.get(AYON_PROPERTY):
                 obj[AYON_PROPERTY] = dict()
 
             ayon_info = obj[AYON_PROPERTY]
             ayon_info.update({"container_name": group_name})
+
+            # Link to the AYON container
+            if obj.name not in parent.objects:
+                parent.objects.link(obj)
 
         plugin.deselect_all()
 
@@ -101,12 +103,8 @@ class FbxCameraLoader(plugin.BlenderLoader):
 
         self._process(libpath, asset_group, group_name)
 
-        objects = []
-        nodes = list(asset_group.children)
-
-        for obj in nodes:
-            objects.append(obj)
-            nodes.extend(list(obj.children))
+        objects = [asset_group]
+        objects.extend(asset_group.children_recursive)
 
         bpy.context.scene.collection.objects.link(asset_group)
 
