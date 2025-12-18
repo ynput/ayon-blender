@@ -3,6 +3,7 @@ import contextlib
 
 from qtpy import QtWidgets
 import bpy
+from functools import partial
 
 from ayon_core.tools.utils import host_tools
 from ayon_core.lib import EnumDef
@@ -207,7 +208,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         self.log.debug("Using deferred assignment due to ID class write restriction")
         bpy.app.timers.register(
-            lambda: self._deferred_image_assignment(node, image),
+            partial(self._deferred_image_assignment, node, image),
             first_interval=0.001
         )
 
@@ -220,7 +221,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         self.log.debug("Using deferred node enabling due to ID class write restriction")
         bpy.app.timers.register(
-            lambda: self._deferred_enable_nodes(material),
+            partial(self._deferred_enable_nodes, material),
             first_interval=0.001
         )
 
@@ -236,8 +237,8 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if node and image:
             node.image = image
             return node
-        # Return None to stop the timer from repeating
-        return None
+        # Return 0.001 to retry the timer
+        return 0.001
 
     def _deferred_enable_nodes(self, material: bpy.types.Material):
         """
@@ -250,8 +251,8 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if material:
             material.use_nodes = True
             return material
-        # Return None to stop the timer from repeating
-        return None
+        # Return 0.001 to retry the timer
+        return 0.001
 
     def _is_safe_context_for_id_writes(self):
         """
