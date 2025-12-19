@@ -561,26 +561,6 @@ class BlenderLoader(LoaderPlugin):
         if not nodes:
             return None
 
-        # Only containerise if it's not already a collection from a .blend file.
-        # representation = context["representation"]["name"]
-        # if representation != "blend":
-        #     from ayon_blender.api.pipeline import containerise
-        #     return containerise(
-        #         name=name,
-        #         namespace=namespace,
-        #         nodes=nodes,
-        #         context=context,
-        #         loader=self.__class__.__name__,
-        #     )
-
-        # folder_name = context["folder"]["name"]
-        # product_name = context["product"]["name"]
-        # instance_name = prepare_scene_name(
-        #     folder_name, product_name, unique_number
-        # ) + '_CON'
-
-        # return self._get_instance_collection(instance_name, nodes)
-
     def exec_update(self, container: Dict, context: Dict):
         """Must be implemented by a subclass"""
         raise NotImplementedError("Must be implemented by a subclass")
