@@ -804,11 +804,27 @@ def map_colorspace_name(colorspace: str) -> str:
     return colorspace_mapping.get(colorspace, colorspace)
 
 
-def get_scene_node_tree():
-    """Return the node tree"""
+def get_scene_node_tree(ensure_exists=False):
+    """Return the node tree
+
+    Arguments:
+        ensure_exists (bool): When enabled, make sure a compositor node tree is
+            enabled and set.
+    """
     if get_blender_version() >= (5, 0, 0):
         # Blender 5.0+
+        if not bpy.context.scene.compositing_node_group and ensure_exists:
+            # In Blender 5 if no comp node tree is set, create one
+            tree = bpy.data.node_groups.new("Compositor Nodes",
+                                            "CompositorNodeTree")
+            bpy.context.scene.compositing_node_group = tree
+            return tree
+
         return bpy.context.scene.compositing_node_group
     else:
         # Blender 4.0 and below
+        if not bpy.context.scene.node_tree and ensure_exists:
+            # Force enable compositor in Blender 4
+            bpy.context.scene.use_nodes = True
+
         return bpy.context.scene.node_tree

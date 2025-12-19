@@ -29,18 +29,12 @@ class LoadImageCompositor(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
-        path = self.filepath_from_context(context)
-
-        # Enable nodes to ensure they can be loaded
-        if not bpy.context.scene.use_nodes:
-            self.log.info("Enabling 'use nodes' for Compositor")
-            bpy.context.scene.use_nodes = True
+        # Get the scene's compositor node tree
+        node_tree = lib.get_scene_node_tree(ensure_exists=True)
 
         # Load the image in data
+        path = self.filepath_from_context(context)
         image = bpy.data.images.load(path, check_existing=True)
-
-        # Get the current scene's compositor node tree
-        node_tree = lib.get_scene_node_tree()
 
         # Create a new image node
         img_comp_node = node_tree.nodes.new(type='CompositorNodeImage')

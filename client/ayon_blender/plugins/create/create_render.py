@@ -57,16 +57,7 @@ class CreateRender(plugin.BlenderCreator):
     def create(
         self, product_name: str, instance_data: dict, pre_create_data: dict
     ):
-        if BLENDER_VERSION >= (5, 0, 0):
-            # In Blender 5 if no comp node tree is set, create one
-            if not lib.get_scene_node_tree():
-                tree = bpy.data.node_groups.new("Compositor Nodes",
-                                                "CompositorNodeTree")
-                bpy.context.scene.compositing_node_group = tree
-        else:
-            # Force enable compositor in Blender 4
-            if not bpy.context.scene.use_nodes:
-                bpy.context.scene.use_nodes = True
+        tree = lib.get_scene_node_tree(ensure_exists=True)
 
         variant: str = instance_data.get("variant", self.default_variant)
 
@@ -77,7 +68,6 @@ class CreateRender(plugin.BlenderCreator):
             node = render_lib.prepare_rendering(variant_name=variant)
         else:
             # Create a Compositor node
-            tree = lib.get_scene_node_tree()
             node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
                 "CompositorNodeOutputFile"
             )
@@ -114,10 +104,6 @@ class CreateRender(plugin.BlenderCreator):
         return instance
 
     def collect_instances(self):
-        if not bpy.context.scene.use_nodes:
-            # Compositor is not enabled, so no render instances should be found
-            return
-
         node_tree = lib.get_scene_node_tree()
         if not node_tree:
             # Blender 5.0 may not have created and set a compositor group
@@ -165,7 +151,7 @@ class CreateRender(plugin.BlenderCreator):
 
         # Collect all remaining compositor output nodes
         unregistered_output_nodes = [
-            node for node in lib.get_scene_node_tree().nodes
+            node for node in node_tree.nodes
             if node.bl_idname == "CompositorNodeOutputFile"
             and node not in collected_nodes
         ]

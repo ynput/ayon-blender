@@ -290,16 +290,12 @@ def create_render_node_tree(
             create render layer nodes for.
         project_settings (dict): The project settings dictionary.
     """
-    # Set the scene to use the compositor node tree to render
-    if not bpy.context.scene.use_nodes:
-        bpy.context.scene.use_nodes = True
-
     aov_sep = get_aov_separator(project_settings)
     ext = get_image_format(project_settings)
     multilayer = get_multilayer(project_settings)
     compositing = get_compositing(project_settings)
 
-    tree = lib.get_scene_node_tree()
+    tree = lib.get_scene_node_tree(ensure_exists=True)
 
     comp_composite_type = "CompositorNodeComposite"
 
@@ -441,13 +437,9 @@ def prepare_rendering(
     view_layers = bpy.context.scene.view_layers
     set_render_passes(project_settings, renderer, view_layers)
 
-    # Ensure compositor nodes are enabled before accessing node tree
-    if not bpy.context.scene.use_nodes:
-        bpy.context.scene.use_nodes = True
-
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
-    node_tree = lib.get_scene_node_tree()
+    node_tree = lib.get_scene_node_tree(ensure_exists=True)
     selected_renderlayer_nodes = []
     
     # Check if node_tree is available before accessing nodes
@@ -519,7 +511,8 @@ def get_or_create_render_layer_nodes(
     view_layers: list["bpy.types.ViewLayer"],
 ) -> set[bpy.types.CompositorNodeRLayers]:
     """Get existing render layer nodes or create new ones."""
-    tree = lib.get_scene_node_tree()
+    tree = lib.get_scene_node_tree(ensure_exists=True)
+
     view_layer_names: set[str] = {
         view_layer.name for view_layer in view_layers
     }
