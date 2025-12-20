@@ -231,7 +231,7 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         if node and image:
             node.image = image
-            return node
+            return None
         # Return 0.001 to retry the timer
         return 0.001
 
