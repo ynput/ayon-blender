@@ -34,6 +34,12 @@ class BlendLoader(plugin.BlenderLoader):
 
     @staticmethod
     def _get_asset_container(objects):
+        """Return the root 'asset' group from the loaded objects.
+
+        If not found, we create an asset group to manage the objects in
+        instead. So that we encapsulate all loaded data under one object that
+        will act as the container.
+        """
         empties = [obj for obj in objects if obj.type == 'EMPTY']
 
         for empty in empties:
@@ -42,7 +48,17 @@ class BlendLoader(plugin.BlenderLoader):
             if empty_ayon_property and empty.parent is None:
                 return empty
 
-        return None
+        # In this case - the loaded objects have no asset group. And we really
+        # want to create an asset group so that we can manage the objects
+        # inside it. So, in this case - we create one and make it the root.
+        root = bpy.data.objects.new("root", None)
+
+        # In this case we reparent all root objects to our root
+        for obj in objects:
+            if not obj.parent:
+                obj.parent = root
+
+        return root
 
     @staticmethod
     def get_all_container_parents(asset_group):
@@ -104,8 +120,6 @@ class BlendLoader(plugin.BlenderLoader):
                 members.append(data)
 
         container = self._get_asset_container(data_to.objects)
-        assert container, "No asset group found"
-
         container.name = group_name
         container.empty_display_type = 'SINGLE_ARROW'
 
