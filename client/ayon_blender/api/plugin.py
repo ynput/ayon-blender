@@ -277,6 +277,9 @@ class BlenderCreator(Creator):
 
         self.set_instance_data(product_name, instance_data)
 
+        # Mimic families override like `self.read` does
+        instance_data["families"] = self.get_publish_families()
+
         instance = CreatedInstance(
             self.product_type, product_name, instance_data, self,
             transient_data={"instance_node": instance_node}
@@ -435,6 +438,7 @@ class BlenderCreator(Creator):
         instance in a different way, e.g. in a custom property or the 'mute'
         state of a node.
         """
+        data.pop("families", None)
         imprint(node, data)
 
     def read(self, node) -> dict:
@@ -446,7 +450,12 @@ class BlenderCreator(Creator):
         if not ayon_property:
             return {}
 
-        return ayon_property.to_dict()
+        data = ayon_property.to_dict()
+        data["families"] = self.get_publish_families()
+        return data
+
+    def get_publish_families(self) -> list[str]:
+        return [self.product_type]
 
 
 class BlenderLoader(LoaderPlugin):

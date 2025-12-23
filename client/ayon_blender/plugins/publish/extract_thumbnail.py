@@ -19,7 +19,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
     label = "Extract Thumbnail"
     hosts = ["blender"]
-    families = ["review"]
+    families = ["review.playblast"]
     order = pyblish.api.ExtractorOrder + 0.01
     presets = "{}"
 

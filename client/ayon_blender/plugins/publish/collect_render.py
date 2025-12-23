@@ -87,6 +87,16 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         output_paths = self.get_expected_outputs(comp_output_node)
         is_multilayer = self.is_multilayer_exr(comp_output_node)
 
+        colorspace_data = self.get_colorspace_data(comp_output_node)
+        self.log.debug(f"Collected colorspace data: {colorspace_data}")
+        if colorspace_data:
+            instance.data.update(colorspace_data)
+
+        render_products = colorspace.ARenderProduct(
+            frame_start=frame_start,
+            frame_end=frame_end
+        )
+
         for output_path in output_paths:
             if is_multilayer:
                 # Only ever a single output - we enforce the identifier to an
@@ -99,7 +109,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                     instance
                 )
 
-            aov_label = aov_identifier or "<beauty>"
+            aov_label: str = aov_identifier or "<beauty>"
             self.log.debug(
                 f"Expecting outputs for AOV {aov_label}: "
                 f"{output_path}"
@@ -112,9 +122,24 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_step
             )
 
+            # We need to have a matching 'renderProduct' entry so that
+            # the logic in core for `_create_instances_for_aov` assigns
+            # the colorspace data to the relevant AOV instance.
+            aov_colorspace: str = (
+                colorspace_data["colorspace"] if colorspace_data else ""
+            )
+            render_products.add_render_product(
+                product_name=aov_identifier,
+                colorspace=aov_colorspace
+            )
+
             # Log the expected sequence of frames for the AOV
             files = files_as_sequence(expected_files[aov_identifier])
             self.log.debug(f"Expected frames: {files}")
+
+        # Collect Render Target
+        creator_attribute = instance.data["creator_attributes"]
+        local_render: bool = creator_attribute.get("render_target") == "local"
 
         context = instance.context
         instance.data.update({
@@ -123,17 +148,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "byFrameStep": frame_step,
             "review": review,
             "multipartExr": is_multilayer,
-            "farm": True,
+            "farm": not local_render,
             "expectedFiles": [expected_files],
-            "renderProducts": colorspace.ARenderProduct(
-                frame_start=frame_start,
-                frame_end=frame_end
-            ),
+            "renderProducts": render_products,
         })
-        colorspace_data = self.get_colorspace_data(comp_output_node)
-        self.log.debug(f"Collected colorspace data: {colorspace_data}")
-        if colorspace_data:
-            instance.data.update(colorspace_data)
 
     def get_colorspace_data(
         self,
@@ -160,7 +178,16 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             #  override nor scene override? In Blender 5+ there seems to be
             #  bpy.context.blend_data.colorspace.working_space but similar
             #  does not exist in Blender 4
-            colorspace: str = ""
+            # This gets the scene render colorspace, which should technically
+            # only apply when it's set to "Override" on the scene output
+            # settings. But since we can't find the source Follow Scene value
+            # it's the best alternative for now to rely upon, especially
+            # because the default value does match the default render
+            # colorspace.
+            colorspace: str = (
+                bpy.context.scene.render
+                .image_settings.linear_colorspace_settings.name
+            )
             # look: str = bpy.context.scene.view_settings.look
 
         return {
@@ -333,5 +360,5 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
 
-        self.log.info(f"'{aov_identifier}' AOV from filepath: {path}")
+        self.log.debug(f"'{aov_identifier}' AOV from filepath: {path}")
         return aov_identifier
