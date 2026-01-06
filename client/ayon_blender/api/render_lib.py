@@ -346,6 +346,7 @@ def create_render_node_tree(
     def _create_aov_slot(
         renderpass_name: str,
         render_layer: str,
+        socket_type: str = "FLOAT",
     ) -> "bpy.types.RenderSlot":
         """Add a new render output slot to the slots.
 
@@ -360,7 +361,7 @@ def create_render_node_tree(
         """
         if lib.get_blender_version() >= (5, 0, 0):
             new_output_item = output.file_output_items.new(
-                "FLOAT", renderpass_name
+                socket_type, renderpass_name
             )
             return output.inputs[new_output_item.name]
 
@@ -409,7 +410,17 @@ def create_render_node_tree(
             if not output_socket.enabled:
                 continue
 
-            slot = _create_aov_slot(output_socket.name, render_layer)
+            socket_type: str = "FLOAT"  # Only relevant for Blender 5+
+            if lib.get_blender_version() >= (5, 0, 0):
+                socket_type = output_socket.type
+                if socket_type == "VALUE":
+                    socket_type = "FLOAT"
+
+            slot = _create_aov_slot(
+                output_socket.name,
+                render_layer,
+                socket_type=socket_type
+            )
             tree.links.new(output_socket, slot)
 
     return output
