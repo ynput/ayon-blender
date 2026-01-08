@@ -186,7 +186,11 @@ def install():
     register_loader_plugin_path(str(LOAD_PATH))
     register_creator_plugin_path(str(CREATE_PATH))
 
-    lib.append_user_scripts()
+    if lib.get_blender_version() < (5, 0, 0):
+        # User script directories had issues in custom management in older
+        # Blender releases - appending user scripts within AYON was a
+        # workaround only in-place to solve that issue.
+        lib.append_user_scripts()
     lib.set_app_templates_path()
 
     register_event_callback("new", on_new)
@@ -751,7 +755,7 @@ def ls() -> Iterator:
             yield parse_container(container)
 
     # Compositor nodes are not in `bpy.data` that `lib.lsattr` looks in.
-    node_tree = bpy.context.scene.node_tree
+    node_tree = lib.get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
             ayon_prop = node.get(AYON_PROPERTY)

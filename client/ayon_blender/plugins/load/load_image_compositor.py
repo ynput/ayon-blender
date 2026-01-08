@@ -29,18 +29,12 @@ class LoadImageCompositor(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
-        path = self.filepath_from_context(context)
-
-        # Enable nodes to ensure they can be loaded
-        if not bpy.context.scene.use_nodes:
-            self.log.info("Enabling 'use nodes' for Compositor")
-            bpy.context.scene.use_nodes = True
+        # Get the scene's compositor node tree
+        node_tree = lib.get_scene_node_tree(ensure_exists=True)
 
         # Load the image in data
+        path = self.filepath_from_context(context)
         image = bpy.data.images.load(path, check_existing=True)
-
-        # Get the current scene's compositor node tree
-        node_tree = bpy.context.scene.node_tree
 
         # Create a new image node
         img_comp_node = node_tree.nodes.new(type='CompositorNodeImage')
@@ -66,7 +60,8 @@ class LoadImageCompositor(plugin.BlenderLoader):
         image: Optional[bpy.types.Image] = img_comp_node.image
 
         # Delete the compositor node
-        bpy.context.scene.node_tree.nodes.remove(img_comp_node)
+        node_tree = lib.get_scene_node_tree()
+        node_tree.nodes.remove(img_comp_node)
 
         # Delete the image if it remains unused
         self.remove_image_if_unused(image)
@@ -142,7 +137,13 @@ class LoadImageCompositor(plugin.BlenderLoader):
         if colorspace_data:
             colorspace: str = colorspace_data["colorspace"]
             if colorspace:
-                image.colorspace_settings.name = colorspace
+                try:
+                    image.colorspace_settings.name = colorspace
+                except TypeError as exc:
+                    self.log.warning(
+                        f"Colorspace '{colorspace}' not found in "
+                        f"current color management. See:\n{exc}"
+                    )
 
     def remove_image_if_unused(self, image: bpy.types.Image):
         if image and not image.users:

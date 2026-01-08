@@ -13,7 +13,7 @@ from ayon_core.pipeline.publish import (
     PublishValidationError,
     OptionalPyblishPluginMixin
 )
-from ayon_blender.api import plugin, render_lib
+from ayon_blender.api import plugin, lib, render_lib
 
 
 def fix_filename(path: str, extension: Optional[str] = None) -> str:
@@ -241,6 +241,19 @@ class ValidateCompositorNodeFileOutputPaths(
         for _aov, output_files in expected_files.items():
             first_file = output_files[0]
 
+            if workfile_filename_no_ext not in first_file:
+                return (
+                    "Render output does not include workfile name: "
+                    f"{workfile_filename_no_ext}.\n\n"
+                    "Use Repair action to fix the render base filepath."
+                )
+
+            # Requirements below are only valid for Blender 4 and below
+            # because Blender 5+ does not have a decent place to put the
+            # frame indicator and extensions for non-multilayer outputs
+            if lib.get_blender_version() >= (5, 0, 0):
+                continue
+
             # Ensure filename ends with `.{frame}.{ext}` by checking whether
             file_no_ext = os.path.splitext(first_file)[0]
             if not file_no_ext[-1].isdigit():
@@ -265,13 +278,6 @@ class ValidateCompositorNodeFileOutputPaths(
                     "frame number."
                 )
 
-            if workfile_filename_no_ext not in first_file:
-                return (
-                    "Render output does not include workfile name: "
-                    f"{workfile_filename_no_ext}.\n\n"
-                    "Use Repair action to fix the render base filepath."
-                )
-
         return None
 
     @classmethod
@@ -280,7 +286,30 @@ class ValidateCompositorNodeFileOutputPaths(
         output_node: "bpy.types.CompositorNodeOutputFile" = (
             instance.data["transientData"]["instance_node"]
         )
+        # See: https://developer.blender.org/docs/release_notes/5.0/python_api/#nodes  # noqa
+        if lib.get_blender_version() >= (5, 0, 0):
+            cls._repair_blender_5(output_node)
+        else:
+            cls._repair_blender_4(output_node)
 
+    @classmethod
+    def _repair_blender_5(
+        cls,
+        output_node: "bpy.types.CompositorNodeOutputFile"
+    ):
+        # Ensure a directory is included that matches the current filename
+        blend_file: str = os.path.basename(bpy.data.filepath)
+        blend_file = os.path.splitext(blend_file)[0]
+        orig_output_path = output_node.directory
+        output_node_dir = os.path.dirname(orig_output_path)
+        new_output_dir = os.path.join(output_node_dir, blend_file)
+        output_node.directory = new_output_dir
+
+    @classmethod
+    def _repair_blender_4(
+        cls,
+        output_node: "bpy.types.CompositorNodeOutputFile"
+    ):
         # Check whether CompositorNodeOutputFile is rendering to multilayer EXR
         file_format: str = output_node.format.file_format
         is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
@@ -325,7 +354,7 @@ class ValidateCompositorNodeFileOutputPaths(
 
     @staticmethod
     def get_description():
-        return inspect.cleandoc("""
+        doc = inspect.cleandoc("""
         ### Compositor Output Filepaths Invalid
         
         The Output File node in the Compositor has invalid output paths.
@@ -334,9 +363,15 @@ class ValidateCompositorNodeFileOutputPaths(
         
         - Include the workfile name in the output path, this is to ensure
           unique render paths for each workfile version.
-          
-        - End with `.####.{ext}`. It is allowed to specify no extension and
-          frame tokens at all. As such, `filename.` is valid, because if frame
-          number and extension are missing Blender will automatically append
-          them.
         """)
+
+        if lib.get_blender_version() < (5, 0, 0):
+            doc += "\n" + inspect.cleandoc("""
+            - End with `.####.{ext}`. It is allowed to specify no extension 
+              and frame tokens at all. As such, `filename.` is valid, because 
+              if frame number and extension are missing Blender will 
+              automatically append them.
+            """)
+
+        return doc
+
