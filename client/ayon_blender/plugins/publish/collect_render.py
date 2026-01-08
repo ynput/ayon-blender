@@ -80,8 +80,9 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             instance.data["transientData"]["instance_node"])
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
-        frame_step: int = instance.data["creator_attributes"].get("step", 1)
-        review: bool = instance.data["creator_attributes"].get("review", False)
+        creator_attributes: dict = instance.data["creator_attributes"]
+        frame_step: int = creator_attributes.get("step", 1)
+        review: bool = creator_attributes.get("review", False)
 
         colorspace_data = self.get_colorspace_data(comp_output_node)
         self.log.debug(f"Collected colorspace data: {colorspace_data}")
@@ -122,8 +123,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             self.log.debug(f"Expected frames: {files}")
 
         # Collect Render Target
-        creator_attribute = instance.data["creator_attributes"]
-        local_render: bool = creator_attribute.get("render_target") == "local"
+        local_render: bool = creator_attributes.get("render_target") == "local"
 
         context = instance.context
         instance.data.update({
