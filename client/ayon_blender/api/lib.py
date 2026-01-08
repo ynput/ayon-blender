@@ -779,33 +779,6 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
     return changes
 
 
-def map_colorspace_name(colorspace: str) -> str:
-    """
-    Map ACES or other colorspace names to Blender's expected colorspace names.
-    DEPRECATED: This function is deprecated and will be removed in future
-    versions. Blender 5.0 natively supports ACES colorspaces.
-
-    Args:
-        colorspace: The original colorspace name
-
-    Returns:
-        str: The mapped colorspace name that Blender expects
-    """
-    colorspace_mapping = {
-        "ACES - ACEScg": "ACEScg",
-        "ACES - ACES2065-1": "ACES2065-1",
-        "ACES - sRGB": "sRGB",
-        "ACES - Rec.709": "Linear Rec.709",
-        "ACES - Rec.2020": "Linear Rec.2020",
-        "Linear": "Linear Rec.709",
-        "sRGB": "sRGB",
-        "Rec.709": "Rec.1886",
-        "Rec.2020": "Rec.2020",
-    }
-
-    return colorspace_mapping.get(colorspace, colorspace)
-
-
 def get_scene_node_tree(ensure_exists=False):
     """Return the node tree
 
