@@ -377,7 +377,7 @@ def create_render_node_tree(
     pass_name = "Beauty"
     for render_layer_node in render_layer_nodes:
         render_layer = render_layer_node.layer
-        slot = _create_aov_slot(pass_name, render_layer)
+        slot = _create_aov_slot(pass_name, render_layer, socket_type="RGBA")
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
     last_found_renderlayer_node = next(
