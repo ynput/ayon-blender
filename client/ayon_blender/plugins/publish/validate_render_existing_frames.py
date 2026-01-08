@@ -34,7 +34,6 @@ class ValidateRenderLocalHasExistingFrames(plugin.BlenderInstancePlugin):
             for path in itertools.chain(collections, remainder):
                 self.log.warning(f"Missing files: {path}")
 
-
             raise PublishValidationError(
                 title="Missing existing frames",
                 message=(
