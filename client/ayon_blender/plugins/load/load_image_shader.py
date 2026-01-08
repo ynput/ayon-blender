@@ -102,11 +102,13 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if material_slot is None or material_slot == self.CREATE_NEW:
             # Create a new material
             current_material = bpy.data.materials.new(name="material")
-            current_material.use_nodes = True
             cur_obj.data.materials.append(current_material)
         else:
             current_material = cur_obj.data.materials[material_slot]
-            current_material.use_nodes = True
+
+        if not hasattr(current_material, "node_tree"):
+            # Enable nodes in a deferred way to avoid ID class write restrictions
+            self._enable_material_nodes(current_material)
 
         nodes = current_material.node_tree.nodes
 
@@ -189,14 +191,6 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         if colorspace_data:
             colorspace: str = colorspace_data["colorspace"]
             if colorspace and hasattr(image, "colorspace_settings"):
-                # Map ACES colorspace names to Blender's expected names
-                # for Blender versions below 5.0 because that's when full OCIO
-                # support came in.
-                if (
-                    bpy.app.version >= (5, 0, 0)
-                    and image.file_format.startswith('OPEN_EXR')
-                ):
-                    colorspace = lib.map_colorspace_name(colorspace)
                 image.colorspace_settings.name = colorspace
 
     def _assign_image_to_node(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
@@ -213,6 +207,19 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
             first_interval=0.001
         )
 
+    def _enable_material_nodes(self, material: bpy.types.Material):
+        """
+        Safely enable nodes on a material, handling ID class write restrictions.
+
+        Args:
+            material: The material to enable nodes for
+        """
+        self.log.debug("Using deferred node enabling due to ID class write restriction")
+        bpy.app.timers.register(
+            partial(self._deferred_enable_nodes, material),
+            first_interval=0.001
+        )
+
     def _deferred_image_assignment(self, node: bpy.types.ShaderNodeTexImage, image: bpy.types.Image):
         """
         Deferred image assignment callback for timer execution.
@@ -224,6 +231,20 @@ class LoadImageShaderEditor(plugin.BlenderLoader):
         """
         if node and image:
             node.image = image
+            return None
+        # Return 0.001 to retry the timer
+        return 0.001
+
+    def _deferred_enable_nodes(self, material: bpy.types.Material):
+        """
+        Deferred material nodes enabling callback for timer execution.
+        Args:
+            material: The material to enable nodes for
+        Returns:
+            None to prevent timer repetition
+        """
+        if material:
+            material.use_nodes = True
             return None
         # Return 0.001 to retry the timer
         return 0.001
