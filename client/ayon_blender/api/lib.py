@@ -26,6 +26,11 @@ def load_scripts(paths):
 
     It is possible that this function will be changed in future and usage will
     be based on Blender version.
+
+    This does not work in Blender 5+ due to `bpy_types` being unavailable. But
+    usually this is not needed for Blender 5+ anyway, because it does allow
+    better user scripts management through environment variables than older
+    releases of Blender.
     """
     import bpy_types
 
@@ -131,6 +136,16 @@ def load_scripts(paths):
 
 
 def append_user_scripts():
+    """Apply user scripts to Blender.
+
+    This was originally used for early Blender 4 versions due to requiring
+    AYON to be sources from `BLENDER_USER_SCRIPTS` paths which unfortunately
+    allowed only a single path, *and* it had the side effect of not loading the
+    default user scripts anymore.
+
+    In Blender 5+ this is irrelevant and instead additional Script Directories
+    can be configured and used instead.
+    """
     default_user_prefs = os.path.join(
         bpy.utils.resource_path('USER'),
         "scripts",
@@ -743,7 +758,7 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
         changes = True
 
     # Base paths for Compositor File Output Nodes
-    node_tree = bpy.context.scene.node_tree
+    node_tree = get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
             if node.bl_idname != "CompositorNodeOutputFile":
@@ -764,28 +779,27 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
     return changes
 
 
-def map_colorspace_name(colorspace: str) -> str:
+def get_scene_node_tree(ensure_exists=False):
+    """Return the node tree
+
+    Arguments:
+        ensure_exists (bool): When enabled, make sure a compositor node tree is
+            enabled and set.
     """
-    Map ACES or other colorspace names to Blender's expected colorspace names.
-    DEPRECATED: This function is deprecated and will be removed in future
-    versions. Blender 5.0 natively supports ACES colorspaces.
+    if get_blender_version() >= (5, 0, 0):
+        # Blender 5.0+
+        if not bpy.context.scene.compositing_node_group and ensure_exists:
+            # In Blender 5 if no comp node tree is set, create one
+            tree = bpy.data.node_groups.new("Compositor Nodes",
+                                            "CompositorNodeTree")
+            bpy.context.scene.compositing_node_group = tree
+            return tree
 
-    Args:
-        colorspace: The original colorspace name
+        return bpy.context.scene.compositing_node_group
+    else:
+        # Blender 4.0 and below
+        if not bpy.context.scene.node_tree and ensure_exists:
+            # Force enable compositor in Blender 4
+            bpy.context.scene.use_nodes = True
 
-    Returns:
-        str: The mapped colorspace name that Blender expects
-    """
-    colorspace_mapping = {
-        "ACES - ACEScg": "ACEScg",
-        "ACES - ACES2065-1": "ACES2065-1",
-        "ACES - sRGB": "sRGB",
-        "ACES - Rec.709": "Linear Rec.709",
-        "ACES - Rec.2020": "Linear Rec.2020",
-        "Linear": "Linear Rec.709",
-        "sRGB": "sRGB",
-        "Rec.709": "Rec.1886",
-        "Rec.2020": "Rec.2020",
-    }
-
-    return colorspace_mapping.get(colorspace, colorspace)
+        return bpy.context.scene.node_tree

@@ -8,7 +8,7 @@ import clique
 
 import bpy
 
-from ayon_blender.api import colorspace, plugin, render_lib
+from ayon_blender.api import colorspace, plugin, lib, render_lib
 
 
 def files_as_sequence(files) -> list[str]:
@@ -83,10 +83,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         frame_step: int = instance.data["creator_attributes"].get("step", 1)
         review: bool = instance.data["creator_attributes"].get("review", False)
 
-        expected_files: dict[str, list[str]] = {}
-        output_paths = self.get_expected_outputs(comp_output_node)
-        is_multilayer = self.is_multilayer_exr(comp_output_node)
-
         colorspace_data = self.get_colorspace_data(comp_output_node)
         self.log.debug(f"Collected colorspace data: {colorspace_data}")
         if colorspace_data:
@@ -97,23 +93,11 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             frame_end=frame_end
         )
 
-        for output_path in output_paths:
-            if is_multilayer:
-                # Only ever a single output - we enforce the identifier to an
-                # empty string to have it considered to not split into a
-                # subname for the product
-                aov_identifier = ""
-            else:
-                aov_identifier = self.get_aov_identifier(
-                    output_path,
-                    instance
-                )
-
-            aov_label: str = aov_identifier or "<beauty>"
-            self.log.debug(
-                f"Expecting outputs for AOV {aov_label}: "
-                f"{output_path}"
-            )
+        expected_files: dict[str, list[str]] = {}
+        outputs = self.get_expected_outputs(comp_output_node, instance)
+        for aov_identifier, output_path in outputs.items():
+            aov_label = aov_identifier or "<beauty>"
+            self.log.debug(f"AOV '{aov_label}': {output_path}")
 
             expected_files[aov_identifier] = self.generate_expected_frames(
                 output_path,
@@ -147,7 +131,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "fps": context.data["fps"],
             "byFrameStep": frame_step,
             "review": review,
-            "multipartExr": is_multilayer,
+            "multipartExr": self.is_multilayer_exr(comp_output_node),
             "farm": not local_render,
             "expectedFiles": [expected_files],
             "renderProducts": render_products,
@@ -205,8 +189,9 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
     def get_expected_outputs(
         self,
-        node: "bpy.types.CompositorNodeOutputFile"
-    ) -> list[str]:
+        node: "bpy.types.CompositorNodeOutputFile",
+        instance: pyblish.api.Instance
+    ) -> dict[str, str]:
         """Return the expected output files from a compositor node output file.
 
         The output paths are **not** converted to individual frames and will
@@ -218,9 +203,72 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         paths do and qualify as a full path with `#` as padding frame tokens.
 
         Returns:
-            list[str]: The full output image or sequence paths.
+            dict[str]: The full output image or sequence paths per identifier.
 
         """
+        # Blender 5
+        if lib.get_blender_version() >= (5, 0, 0):
+            return self._get_expected_outputs_blender_5(node)
+
+        # Blender 4
+        output_paths = self._get_expected_outputs_blender_4(node)
+        is_multilayer = self.is_multilayer_exr(node)
+        outputs_per_aov = {}
+        for output_path in output_paths:
+            if is_multilayer:
+                # Only ever a single output - we enforce the identifier to an
+                # empty string to have it considered to not split into a
+                # subname for the product
+                aov_identifier = ""
+            else:
+                aov_identifier = self.get_aov_identifier(
+                    output_path,
+                    instance
+                )
+            outputs_per_aov[aov_identifier] = output_path
+        return outputs_per_aov
+
+    def _get_expected_outputs_blender_5(
+        self,
+        node: "bpy.types.CompositorNodeOutputFile"
+    ) -> dict[str, str]:
+        """Return output filepaths for CompositorNodeOutputFile in Blender 5"""
+        directory: str = node.directory
+        file_name: str = node.file_name
+        outputs: dict[str, str] = {}
+        base_path: str = os.path.join(directory, file_name)
+
+        if self.is_multilayer_exr(node):
+            file_path = self._resolve_full_render_path(
+                path=base_path,
+                file_format=node.format.file_format
+            )
+            outputs[""] = file_path  # beauty only
+        else:
+            # Separate images
+            for output_item in node.file_output_items:
+                if output_item.override_node_format:
+                    output_format = output_item.format.file_format
+                else:
+                    output_format = node.format.file_format
+
+                # Resolve the full render path for the output path
+                file_path = self._resolve_full_render_path(
+                    path=f"{base_path}{output_item.name}",
+                    file_format=output_format
+                )
+
+                # Use the output item name as AOV identifier but remove any
+                # special characters like `#`, `_`, `.` and spaces.
+                aov_identifier: str = re.sub("[#_. ]", "", output_item.name)
+                outputs[aov_identifier] = file_path
+        return outputs
+
+    def _get_expected_outputs_blender_4(
+        self,
+        node: "bpy.types.CompositorNodeOutputFile"
+    ) -> list[str]:
+        """Return output filepaths for CompositorNodeOutputFile in Blender 4"""
         outputs: list[str] = []
         base_path: str = node.base_path
 
@@ -259,7 +307,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 )
 
                 outputs.append(file_path)
-
         return outputs
 
     def _resolve_full_render_path(
@@ -359,6 +406,4 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 f"{aov_identifier}"
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
-
-        self.log.debug(f"'{aov_identifier}' AOV from filepath: {path}")
         return aov_identifier

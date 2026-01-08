@@ -46,6 +46,10 @@ def get_renderer(project_settings) -> str:
 
 def get_compositing(project_settings) -> bool:
     """Get whether 'Composite' render is enabled from blender settings."""
+    # Blender 5+ does not have the "Composite" node, so it's always False
+    if lib.get_blender_version() >= (5, 0, 0):
+        return False
+
     return project_settings["blender"]["RenderSettings"]["compositing"]
 
 
@@ -54,9 +58,12 @@ def set_render_format(ext: str, multilayer: bool):
     bpy.context.scene.render.use_file_extension = True
     image_settings = bpy.context.scene.render.image_settings
 
+    if multilayer and lib.get_blender_version() >= (5, 0, 0):
+        image_settings.media_type = "MULTI_LAYER_IMAGE"
+
     if ext == "exr":
-        image_settings.file_format = (
-            "OPEN_EXR_MULTILAYER" if multilayer else "OPEN_EXR")
+        file_format = "OPEN_EXR_MULTILAYER" if multilayer else "OPEN_EXR"
+        image_settings.file_format = file_format
     elif ext == "bmp":
         image_settings.file_format = "BMP"
     elif ext == "rgb":
@@ -90,10 +97,19 @@ def get_file_format_extension(file_format: str) -> str:
         return "jpeg"
     elif file_format == "JPEG2000":
         return "jp2"
-    elif file_format == "TARGA":
+    elif file_format == "TARGA" or file_format == "TARGA_RAW":
         return "tga"
     elif file_format == "TIFF":
         return "tif"
+    # Blender 5+
+    elif file_format == "CINEON":
+        return "cin"
+    elif file_format == "DPX":
+        return "dpx"
+    elif file_format == "WEBP":
+        return "webp"
+    elif file_format == "HDR":
+        return "hdr"
     else:
         raise ValueError(f"Unsupported file format: {file_format}")
 
@@ -230,32 +246,6 @@ def existing_aov_options(
     return aov_list
 
 
-def _create_aov_slot(
-    slots: "bpy.types.RenderSlots",
-    variant_name: str,
-    aov_sep: str,
-    renderpass_name: str,
-    is_multi_exr: bool,
-    render_layer: str,
-) -> "bpy.types.RenderSlot":
-    """Add a new render output slot to the slots.
-
-    The slots usually are the file slots of the compositor output node.
-    The filepath is based on the render layer, variant name and render pass.
-
-    If it's multi-exr, the slot will be named after the render pass only.
-
-    Returns:
-        The created slot
-
-    """
-    filename = (
-        f"{render_layer}/"
-        f"{variant_name}_{render_layer}{aov_sep}{renderpass_name}.####"
-    )
-    return slots.new(renderpass_name if is_multi_exr else filename)
-
-
 def get_base_render_output_path(
     variant_name: str,
     multi_exr: Optional[bool] = None,
@@ -303,16 +293,12 @@ def create_render_node_tree(
             create render layer nodes for.
         project_settings (dict): The project settings dictionary.
     """
-    # Set the scene to use the compositor node tree to render
-    if not bpy.context.scene.use_nodes:
-        bpy.context.scene.use_nodes = True
-
     aov_sep = get_aov_separator(project_settings)
     ext = get_image_format(project_settings)
     multilayer = get_multilayer(project_settings)
     compositing = get_compositing(project_settings)
 
-    tree = bpy.context.scene.node_tree
+    tree = lib.get_scene_node_tree(ensure_exists=True)
 
     comp_composite_type = "CompositorNodeComposite"
 
@@ -330,26 +316,68 @@ def create_render_node_tree(
     output.name = variant_name
     output.label = variant_name
 
+    # Multi-exr
+    multi_exr: bool = ext == "exr" and multilayer
+    blender_version = lib.get_blender_version()
+    if blender_version >= (5, 0, 0):
+        output.format.media_type = (
+            "MULTI_LAYER_IMAGE" if multi_exr else "IMAGE"
+        )
     # By default, match output format from scene file format
     image_settings = bpy.context.scene.render.image_settings
     output.format.file_format = image_settings.file_format
-    multi_exr: bool = ext == "exr" and multilayer
 
     # Define the base path for the File Output node.
-    output.base_path = get_base_render_output_path(
+    base_path = get_base_render_output_path(
         variant_name, project_settings=project_settings
     )
+    if blender_version >= (5, 0, 0):
+        base_path_dir, base_path_filename = os.path.split(base_path)
+        if not multi_exr:
+            base_path_filename += aov_sep
 
-    slots = output.layer_slots if multi_exr else output.file_slots
+        output.directory = base_path_dir
+        output.file_name = base_path_filename
+        slots = output.file_output_items
+    else:
+        output.base_path = base_path
+        slots = output.layer_slots if multi_exr else output.file_slots
+
+    def _create_aov_slot(
+        renderpass_name: str,
+        render_layer: str,
+        socket_type: str = "FLOAT",
+    ) -> "bpy.types.RenderSlot":
+        """Add a new render output slot to the slots.
+
+        The slots usually are the file slots of the compositor output node.
+        The filepath is based on the render layer, variant name and render pass.
+
+        If it's multi-exr, the slot will be named after the render pass only.
+
+        Returns:
+            The created slot
+
+        """
+        if lib.get_blender_version() >= (5, 0, 0):
+            new_output_item = output.file_output_items.new(
+                socket_type, renderpass_name
+            )
+            return output.inputs[new_output_item.name]
+
+        filename: str = (
+            f"{render_layer}/"
+            f"{variant_name}_{render_layer}{aov_sep}{renderpass_name}.####"
+        )
+        return slots.new(renderpass_name if multi_exr else filename)
+
     slots.clear()
 
     # Create a new socket for the Beauty output
     pass_name = "Beauty"
     for render_layer_node in render_layer_nodes:
         render_layer = render_layer_node.layer
-        slot = _create_aov_slot(
-            slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
-        )
+        slot = _create_aov_slot(pass_name, render_layer, socket_type="RGBA")
         tree.links.new(render_layer_node.outputs["Image"], slot)
 
     last_found_renderlayer_node = next(
@@ -360,9 +388,7 @@ def create_render_node_tree(
         # with only the one view layer
         pass_name = "Composite"
         render_layer = last_found_renderlayer_node.layer
-        slot = _create_aov_slot(
-            slots, variant_name, aov_sep, pass_name, multi_exr, render_layer
-        )
+        slot = _create_aov_slot(pass_name, render_layer)
         # If there's a composite node, we connect its 'Image' input with the
         # new slot on the output
         if composite_node:
@@ -384,15 +410,17 @@ def create_render_node_tree(
             if not output_socket.enabled:
                 continue
 
-            slot = _create_aov_slot(
-                slots,
-                variant_name,
-                aov_sep,
-                output_socket.name,
-                multi_exr,
-                render_layer,
-            )
+            socket_type: str = "FLOAT"  # Only relevant for Blender 5+
+            if lib.get_blender_version() >= (5, 0, 0):
+                socket_type = output_socket.type
+                if socket_type == "VALUE":
+                    socket_type = "FLOAT"
 
+            slot = _create_aov_slot(
+                output_socket.name,
+                render_layer,
+                socket_type=socket_type
+            )
             tree.links.new(output_socket, slot)
 
     return output
@@ -423,13 +451,9 @@ def prepare_rendering(
     view_layers = bpy.context.scene.view_layers
     set_render_passes(project_settings, renderer, view_layers)
 
-    # Ensure compositor nodes are enabled before accessing node tree
-    if not bpy.context.scene.use_nodes:
-        bpy.context.scene.use_nodes = True
-
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
-    node_tree = bpy.context.scene.node_tree
+    node_tree = lib.get_scene_node_tree(ensure_exists=True)
     selected_renderlayer_nodes = []
     
     # Check if node_tree is available before accessing nodes
@@ -501,7 +525,8 @@ def get_or_create_render_layer_nodes(
     view_layers: list["bpy.types.ViewLayer"],
 ) -> set[bpy.types.CompositorNodeRLayers]:
     """Get existing render layer nodes or create new ones."""
-    tree = bpy.context.scene.node_tree
+    tree = lib.get_scene_node_tree(ensure_exists=True)
+
     view_layer_names: set[str] = {
         view_layer.name for view_layer in view_layers
     }
