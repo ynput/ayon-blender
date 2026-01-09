@@ -91,11 +91,11 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin,
         return [
             BoolDef(
                 "collection_include_object_children_recursive",
-                label="Include Objects Hierarchy",
+                label="Expand to All Children",
                 default=True,
                 tooltip=(
-                    "If enabled, the children of objects in the collection "
-                    "will be included in the instance members.\n"
+                    "Includes all descendant children of the linked objects, "
+                    "even if not manually selected.\n"
                     "If disabled, only objects directly linked to the "
                     "collection will be included."
                 )
