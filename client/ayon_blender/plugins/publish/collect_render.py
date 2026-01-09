@@ -80,17 +80,25 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             instance.data["transientData"]["instance_node"])
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
-        frame_step: int = instance.data["creator_attributes"].get("step", 1)
-        review: bool = instance.data["creator_attributes"].get("review", False)
+        creator_attributes: dict = instance.data["creator_attributes"]
+        frame_step: int = creator_attributes.get("step", 1)
+        review: bool = creator_attributes.get("review", False)
+
+        colorspace_data = self.get_colorspace_data(comp_output_node)
+        self.log.debug(f"Collected colorspace data: {colorspace_data}")
+        if colorspace_data:
+            instance.data.update(colorspace_data)
+
+        render_products = colorspace.ARenderProduct(
+            frame_start=frame_start,
+            frame_end=frame_end
+        )
 
         expected_files: dict[str, list[str]] = {}
         outputs = self.get_expected_outputs(comp_output_node, instance)
         for aov_identifier, output_path in outputs.items():
             aov_label = aov_identifier or "<beauty>"
-            self.log.debug(
-                f"AOV '{aov_label}': "
-                f"{output_path}"
-            )
+            self.log.debug(f"AOV '{aov_label}': {output_path}")
 
             expected_files[aov_identifier] = self.generate_expected_frames(
                 output_path,
@@ -99,9 +107,23 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_step
             )
 
+            # We need to have a matching 'renderProduct' entry so that
+            # the logic in core for `_create_instances_for_aov` assigns
+            # the colorspace data to the relevant AOV instance.
+            aov_colorspace: str = (
+                colorspace_data["colorspace"] if colorspace_data else ""
+            )
+            render_products.add_render_product(
+                product_name=aov_identifier,
+                colorspace=aov_colorspace
+            )
+
             # Log the expected sequence of frames for the AOV
             files = files_as_sequence(expected_files[aov_identifier])
             self.log.debug(f"Expected frames: {files}")
+
+        # Collect Render Target
+        local_render: bool = creator_attributes.get("render_target") == "local"
 
         context = instance.context
         instance.data.update({
@@ -110,17 +132,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "byFrameStep": frame_step,
             "review": review,
             "multipartExr": self.is_multilayer_exr(comp_output_node),
-            "farm": True,
+            "farm": not local_render,
             "expectedFiles": [expected_files],
-            "renderProducts": colorspace.ARenderProduct(
-                frame_start=frame_start,
-                frame_end=frame_end
-            ),
+            "renderProducts": render_products,
         })
-        colorspace_data = self.get_colorspace_data(comp_output_node)
-        self.log.debug(f"Collected colorspace data: {colorspace_data}")
-        if colorspace_data:
-            instance.data.update(colorspace_data)
 
     def get_colorspace_data(
         self,
@@ -147,7 +162,16 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             #  override nor scene override? In Blender 5+ there seems to be
             #  bpy.context.blend_data.colorspace.working_space but similar
             #  does not exist in Blender 4
-            colorspace: str = ""
+            # This gets the scene render colorspace, which should technically
+            # only apply when it's set to "Override" on the scene output
+            # settings. But since we can't find the source Follow Scene value
+            # it's the best alternative for now to rely upon, especially
+            # because the default value does match the default render
+            # colorspace.
+            colorspace: str = (
+                bpy.context.scene.render
+                .image_settings.linear_colorspace_settings.name
+            )
             # look: str = bpy.context.scene.view_settings.look
 
         return {
