@@ -157,8 +157,6 @@ class ValidateSceneRenderFilePath(
         # because a file already exists.
         bpy.context.scene.render.use_overwrite = True
 
-        bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
-
     @staticmethod
     def get_description():
         return inspect.cleandoc("""
