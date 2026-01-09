@@ -1,0 +1,942 @@
+<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel=prev href=collect_local_render_instances.html><link rel=next href=collect_review.html><link rel=icon href=../../../../../img/favicon.ico><meta name=generator content="mkdocs-1.6.1, mkdocs-material-9.7.1"><title>collect_render - ayon-blender</title><link rel=stylesheet href=../../../../../assets/stylesheets/main.484c7ddc.min.css><link rel=stylesheet href=../../../../../assets/stylesheets/palette.ab4e12ef.min.css><script src=https://unpkg.com/iframe-worker/shim></script><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style><link rel=stylesheet href=../../../../../assets/_mkdocstrings.css><link rel=stylesheet href=../../../../../css/custom.css><script>__md_scope=new URL("../../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr data-md-color-scheme=slate data-md-color-primary=indigo data-md-color-accent=indigo> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> <a href=#client.ayon_blender.plugins.publish.collect_render class=md-skip> Skip to content </a> </div> <div data-md-component=announce> </div> <div data-md-color-scheme=default data-md-component=outdated hidden> </div> <header class="md-header md-header--shadow" data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../../../../../index.html title=ayon-blender class="md-header__button md-logo" aria-label=ayon-blender data-md-component=logo> <img src=../../../../../img/ay-symbol-blackw-full.png alt=logo> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> ayon-blender </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> collect_render </span> </div> </div> </div> <form class=md-header__option data-md-component=palette> <input class=md-option data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme=slate data-md-color-primary=indigo data-md-color-accent=indigo aria-label="Switch to light mode" type=radio name=__palette id=__palette_0> <label class="md-header__button md-icon" title="Switch to light mode" for=__palette_1 hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg> </label> <input class=md-option data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme=default data-md-color-primary=indigo data-md-color-accent=indigo aria-label="Switch to dark mode" type=radio name=__palette id=__palette_1> <label class="md-header__button md-icon" title="Switch to dark mode" for=__palette_0 hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg> </label> </form> <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap tabindex=0 data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list role=presentation></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/ynput/ayon-blender title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../../../../../index.html title=ayon-blender class="md-nav__button md-logo" aria-label=ayon-blender data-md-component=logo> <img src=../../../../../img/ay-symbol-blackw-full.png alt=logo> </a> ayon-blender </label> <div class=md-nav__source> <a href=https://github.com/ynput/ayon-blender title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../../../index.html class=md-nav__link> <span class=md-ellipsis> Home </span> </a> </li> <li class=md-nav__item> <a href=../../../../../license.html class=md-nav__link> <span class=md-ellipsis> License </span> </a> </li> <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_3 checked> <label class=md-nav__link for=__nav_3 id=__nav_3_label tabindex> <span class=md-ellipsis> Reference </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_3_label aria-expanded=true> <label class=md-nav__title for=__nav_3> <span class="md-nav__icon md-icon"></span> Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_3_1 checked> <label class=md-nav__link for=__nav_3_1 id=__nav_3_1_label tabindex=0> <span class=md-ellipsis> client </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=2 aria-labelledby=__nav_3_1_label aria-expanded=true> <label class=md-nav__title for=__nav_3_1> <span class="md-nav__icon md-icon"></span> client </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_3_1_1 checked> <label class=md-nav__link for=__nav_3_1_1 id=__nav_3_1_1_label tabindex=0> <span class=md-ellipsis> ayon_blender </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=3 aria-labelledby=__nav_3_1_1_label aria-expanded=true> <label class=md-nav__title for=__nav_3_1_1> <span class="md-nav__icon md-icon"></span> ayon_blender </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../addon.html class=md-nav__link> <span class=md-ellipsis> addon </span> </a> </li> <li class="md-nav__item md-nav__item--pruned md-nav__item--nested"> <a href=../../api/action.html class=md-nav__link> <span class=md-ellipsis> api </span> <span class="md-nav__icon md-icon"></span> </a> </li> <li class="md-nav__item md-nav__item--pruned md-nav__item--nested"> <a href=../../blender_addon/startup/init.html class=md-nav__link> <span class=md-ellipsis> blender_addon </span> <span class="md-nav__icon md-icon"></span> </a> </li> <li class="md-nav__item md-nav__item--pruned md-nav__item--nested"> <a href=../../hooks/pre_add_run_python_script_arg.html class=md-nav__link> <span class=md-ellipsis> hooks </span> <span class="md-nav__icon md-icon"></span> </a> </li> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_3_1_1_5 checked> <label class=md-nav__link for=__nav_3_1_1_5 id=__nav_3_1_1_5_label tabindex=0> <span class=md-ellipsis> plugins </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=4 aria-labelledby=__nav_3_1_1_5_label aria-expanded=true> <label class=md-nav__title for=__nav_3_1_1_5> <span class="md-nav__icon md-icon"></span> plugins </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--pruned md-nav__item--nested"> <a href=../create/convert_legacy.html class=md-nav__link> <span class=md-ellipsis> create </span> <span class="md-nav__icon md-icon"></span> </a> </li> <li class="md-nav__item md-nav__item--pruned md-nav__item--nested"> <a href=../load/import_workfile.html class=md-nav__link> <span class=md-ellipsis> load </span> <span class="md-nav__icon md-icon"></span> </a> </li> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_3_1_1_5_3 checked> <label class=md-nav__link for=__nav_3_1_1_5_3 id=__nav_3_1_1_5_3_label tabindex=0> <span class=md-ellipsis> publish </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=5 aria-labelledby=__nav_3_1_1_5_3_label aria-expanded=true> <label class=md-nav__title for=__nav_3_1_1_5_3> <span class="md-nav__icon md-icon"></span> publish </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=collect_current_file.html class=md-nav__link> <span class=md-ellipsis> collect_current_file </span> </a> </li> <li class=md-nav__item> <a href=collect_file_dependencies.html class=md-nav__link> <span class=md-ellipsis> collect_file_dependencies </span> </a> </li> <li class=md-nav__item> <a href=collect_instance.html class=md-nav__link> <span class=md-ellipsis> collect_instance </span> </a> </li> <li class=md-nav__item> <a href=collect_instance_frame_range.html class=md-nav__link> <span class=md-ellipsis> collect_instance_frame_range </span> </a> </li> <li class=md-nav__item> <a href=collect_local_render_instances.html class=md-nav__link> <span class=md-ellipsis> collect_local_render_instances </span> </a> </li> <li class="md-nav__item md-nav__item--active"> <input class="md-nav__toggle md-toggle" type=checkbox id=__toc> <label class="md-nav__link md-nav__link--active" for=__toc> <span class=md-ellipsis> collect_render </span> <span class="md-nav__icon md-icon"></span> </label> <a href=collect_render.html class="md-nav__link md-nav__link--active"> <span class=md-ellipsis> collect_render </span> </a> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render class=md-nav__link> <span class=md-ellipsis> collect_render </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender class=md-nav__link> <span class=md-ellipsis> CollectBlenderRender </span> </a> <nav class=md-nav aria-label=CollectBlenderRender> <ul class=md-nav__list> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender--aov-identifiers class=md-nav__link> <span class=md-ellipsis> AOV identifiers </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender--requires-enabled-compositing-node-tree class=md-nav__link> <span class=md-ellipsis> Requires enabled compositing node tree </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender.generate_expected_frames class=md-nav__link> <span class=md-ellipsis> generate_expected_frames </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender.get_expected_outputs class=md-nav__link> <span class=md-ellipsis> get_expected_outputs </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData class=md-nav__link> <span class=md-ellipsis> RenderColorspaceData </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.files_as_sequence class=md-nav__link> <span class=md-ellipsis> files_as_sequence </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=collect_review.html class=md-nav__link> <span class=md-ellipsis> collect_review </span> </a> </li> <li class=md-nav__item> <a href=collect_workfile.html class=md-nav__link> <span class=md-ellipsis> collect_workfile </span> </a> </li> <li class=md-nav__item> <a href=extract_abc.html class=md-nav__link> <span class=md-ellipsis> extract_abc </span> </a> </li> <li class=md-nav__item> <a href=extract_abc_animation.html class=md-nav__link> <span class=md-ellipsis> extract_abc_animation </span> </a> </li> <li class=md-nav__item> <a href=extract_blend.html class=md-nav__link> <span class=md-ellipsis> extract_blend </span> </a> </li> <li class=md-nav__item> <a href=extract_blend_animation.html class=md-nav__link> <span class=md-ellipsis> extract_blend_animation </span> </a> </li> <li class=md-nav__item> <a href=extract_camera_abc.html class=md-nav__link> <span class=md-ellipsis> extract_camera_abc </span> </a> </li> <li class=md-nav__item> <a href=extract_camera_fbx.html class=md-nav__link> <span class=md-ellipsis> extract_camera_fbx </span> </a> </li> <li class=md-nav__item> <a href=extract_fbx.html class=md-nav__link> <span class=md-ellipsis> extract_fbx </span> </a> </li> <li class=md-nav__item> <a href=extract_fbx_animation.html class=md-nav__link> <span class=md-ellipsis> extract_fbx_animation </span> </a> </li> <li class=md-nav__item> <a href=extract_layout.html class=md-nav__link> <span class=md-ellipsis> extract_layout </span> </a> </li> <li class=md-nav__item> <a href=extract_playblast.html class=md-nav__link> <span class=md-ellipsis> extract_playblast </span> </a> </li> <li class=md-nav__item> <a href=extract_render.html class=md-nav__link> <span class=md-ellipsis> extract_render </span> </a> </li> <li class=md-nav__item> <a href=extract_thumbnail.html class=md-nav__link> <span class=md-ellipsis> extract_thumbnail </span> </a> </li> <li class=md-nav__item> <a href=extract_usd.html class=md-nav__link> <span class=md-ellipsis> extract_usd </span> </a> </li> <li class=md-nav__item> <a href=increment_workfile_version.html class=md-nav__link> <span class=md-ellipsis> increment_workfile_version </span> </a> </li> <li class=md-nav__item> <a href=integrate_animation.html class=md-nav__link> <span class=md-ellipsis> integrate_animation </span> </a> </li> <li class=md-nav__item> <a href=save_scene.html class=md-nav__link> <span class=md-ellipsis> save_scene </span> </a> </li> <li class=md-nav__item> <a href=validate_absolute_external_data_paths.html class=md-nav__link> <span class=md-ellipsis> validate_absolute_external_data_paths </span> </a> </li> <li class=md-nav__item> <a href=validate_camera_zero_keyframe.html class=md-nav__link> <span class=md-ellipsis> validate_camera_zero_keyframe </span> </a> </li> <li class=md-nav__item> <a href=validate_file_saved.html class=md-nav__link> <span class=md-ellipsis> validate_file_saved </span> </a> </li> <li class=md-nav__item> <a href=validate_frame_range.html class=md-nav__link> <span class=md-ellipsis> validate_frame_range </span> </a> </li> <li class=md-nav__item> <a href=validate_instance_empty.html class=md-nav__link> <span class=md-ellipsis> validate_instance_empty </span> </a> </li> <li class=md-nav__item> <a href=validate_mesh_has_uv.html class=md-nav__link> <span class=md-ellipsis> validate_mesh_has_uv </span> </a> </li> <li class=md-nav__item> <a href=validate_mesh_no_negative_scale.html class=md-nav__link> <span class=md-ellipsis> validate_mesh_no_negative_scale </span> </a> </li> <li class=md-nav__item> <a href=validate_model_uv_map1.html class=md-nav__link> <span class=md-ellipsis> validate_model_uv_map1 </span> </a> </li> <li class=md-nav__item> <a href=validate_no_action.html class=md-nav__link> <span class=md-ellipsis> validate_no_action </span> </a> </li> <li class=md-nav__item> <a href=validate_no_animation.html class=md-nav__link> <span class=md-ellipsis> validate_no_animation </span> </a> </li> <li class=md-nav__item> <a href=validate_no_colons_in_name.html class=md-nav__link> <span class=md-ellipsis> validate_no_colons_in_name </span> </a> </li> <li class=md-nav__item> <a href=validate_object_mode.html class=md-nav__link> <span class=md-ellipsis> validate_object_mode </span> </a> </li> <li class=md-nav__item> <a href=validate_render_camera_is_set.html class=md-nav__link> <span class=md-ellipsis> validate_render_camera_is_set </span> </a> </li> <li class=md-nav__item> <a href=validate_render_existing_frames.html class=md-nav__link> <span class=md-ellipsis> validate_render_existing_frames </span> </a> </li> <li class=md-nav__item> <a href=validate_render_inputs.html class=md-nav__link> <span class=md-ellipsis> validate_render_inputs </span> </a> </li> <li class=md-nav__item> <a href=validate_render_output_paths.html class=md-nav__link> <span class=md-ellipsis> validate_render_output_paths </span> </a> </li> <li class=md-nav__item> <a href=validate_transform_zero.html class=md-nav__link> <span class=md-ellipsis> validate_transform_zero </span> </a> </li> </ul> </nav> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../version.html class=md-nav__link> <span class=md-ellipsis> version </span> </a> </li> </ul> </nav> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--pruned md-nav__item--nested"> <a href=../../../../server/settings/creators.html class=md-nav__link> <span class=md-ellipsis> server </span> <span class="md-nav__icon md-icon"></span> </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class="md-sidebar md-sidebar--secondary" data-md-component=sidebar data-md-type=toc> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render class=md-nav__link> <span class=md-ellipsis> collect_render </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender class=md-nav__link> <span class=md-ellipsis> CollectBlenderRender </span> </a> <nav class=md-nav aria-label=CollectBlenderRender> <ul class=md-nav__list> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender--aov-identifiers class=md-nav__link> <span class=md-ellipsis> AOV identifiers </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender--requires-enabled-compositing-node-tree class=md-nav__link> <span class=md-ellipsis> Requires enabled compositing node tree </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender.generate_expected_frames class=md-nav__link> <span class=md-ellipsis> generate_expected_frames </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender.get_expected_outputs class=md-nav__link> <span class=md-ellipsis> get_expected_outputs </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData class=md-nav__link> <span class=md-ellipsis> RenderColorspaceData </span> </a> </li> <li class=md-nav__item> <a href=#client.ayon_blender.plugins.publish.collect_render.files_as_sequence class=md-nav__link> <span class=md-ellipsis> files_as_sequence </span> </a> </li> </ul> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <nav class=md-path aria-label=Navigation> <ol class=md-path__list> <li class=md-path__item> <a href=../../../../../index.html class=md-path__link> <span class=md-ellipsis> Home </span> </a> </li> <li class=md-path__item> <a href=../../addon.html class=md-path__link> <span class=md-ellipsis> Reference </span> </a> </li> <li class=md-path__item> <a href=../../addon.html class=md-path__link> <span class=md-ellipsis> client </span> </a> </li> <li class=md-path__item> <a href=../../addon.html class=md-path__link> <span class=md-ellipsis> ayon_blender </span> </a> </li> <li class=md-path__item> <a href=../create/convert_legacy.html class=md-path__link> <span class=md-ellipsis> plugins </span> </a> </li> <li class=md-path__item> <a href=collect_current_file.html class=md-path__link> <span class=md-ellipsis> publish </span> </a> </li> </ol> </nav> <article class="md-content__inner md-typeset"> <h1>collect_render</h1> <div class="doc doc-object doc-module"> <a id=client.ayon_blender.plugins.publish.collect_render></a> <div class="doc doc-contents first"> <div class="doc doc-children"> <div class="doc doc-object doc-class"> <h2 id=client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender class="doc doc-heading"> <code>CollectBlenderRender</code> </h2> <div class="doc doc-contents "> <p class="doc doc-class-bases"> Bases: <code><span title=ayon_blender.api.plugin.BlenderInstancePlugin>BlenderInstancePlugin</span></code></p> <p>Gather all publishable render instances.</p> <p>For the instance node (bpy.types.CompositorNodeOutputFile) we collect the configured output paths (FileSlots or LayerSlots) and their colorspaces.</p> <h5 id=client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender--aov-identifiers>AOV identifiers</h5> <p>When multiple outputs are present (only the case when not rendering to multilayer EXR) then we assign each output an 'aov identifier' that will be added to the product name. So that product: <code>renderLightingMain</code> becomes for example <code>renderLightingMain.beauty</code> and <code>renderLightingMain.diffuse</code>.</p> <h5 id=client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender--requires-enabled-compositing-node-tree>Requires enabled compositing node tree</h5> <p>The render workflow requires Blender to be configured to use the Compositor Node Tree, because it relies on <code>CompositorNodeOutputFile</code> to define the output files for rendering.</p> <details class=mkdocstrings-source> <summary>Source code in <code>client/ayon_blender/plugins/publish/collect_render.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 50</span>
+<span class=normal> 51</span>
+<span class=normal> 52</span>
+<span class=normal> 53</span>
+<span class=normal> 54</span>
+<span class=normal> 55</span>
+<span class=normal> 56</span>
+<span class=normal> 57</span>
+<span class=normal> 58</span>
+<span class=normal> 59</span>
+<span class=normal> 60</span>
+<span class=normal> 61</span>
+<span class=normal> 62</span>
+<span class=normal> 63</span>
+<span class=normal> 64</span>
+<span class=normal> 65</span>
+<span class=normal> 66</span>
+<span class=normal> 67</span>
+<span class=normal> 68</span>
+<span class=normal> 69</span>
+<span class=normal> 70</span>
+<span class=normal> 71</span>
+<span class=normal> 72</span>
+<span class=normal> 73</span>
+<span class=normal> 74</span>
+<span class=normal> 75</span>
+<span class=normal> 76</span>
+<span class=normal> 77</span>
+<span class=normal> 78</span>
+<span class=normal> 79</span>
+<span class=normal> 80</span>
+<span class=normal> 81</span>
+<span class=normal> 82</span>
+<span class=normal> 83</span>
+<span class=normal> 84</span>
+<span class=normal> 85</span>
+<span class=normal> 86</span>
+<span class=normal> 87</span>
+<span class=normal> 88</span>
+<span class=normal> 89</span>
+<span class=normal> 90</span>
+<span class=normal> 91</span>
+<span class=normal> 92</span>
+<span class=normal> 93</span>
+<span class=normal> 94</span>
+<span class=normal> 95</span>
+<span class=normal> 96</span>
+<span class=normal> 97</span>
+<span class=normal> 98</span>
+<span class=normal> 99</span>
+<span class=normal>100</span>
+<span class=normal>101</span>
+<span class=normal>102</span>
+<span class=normal>103</span>
+<span class=normal>104</span>
+<span class=normal>105</span>
+<span class=normal>106</span>
+<span class=normal>107</span>
+<span class=normal>108</span>
+<span class=normal>109</span>
+<span class=normal>110</span>
+<span class=normal>111</span>
+<span class=normal>112</span>
+<span class=normal>113</span>
+<span class=normal>114</span>
+<span class=normal>115</span>
+<span class=normal>116</span>
+<span class=normal>117</span>
+<span class=normal>118</span>
+<span class=normal>119</span>
+<span class=normal>120</span>
+<span class=normal>121</span>
+<span class=normal>122</span>
+<span class=normal>123</span>
+<span class=normal>124</span>
+<span class=normal>125</span>
+<span class=normal>126</span>
+<span class=normal>127</span>
+<span class=normal>128</span>
+<span class=normal>129</span>
+<span class=normal>130</span>
+<span class=normal>131</span>
+<span class=normal>132</span>
+<span class=normal>133</span>
+<span class=normal>134</span>
+<span class=normal>135</span>
+<span class=normal>136</span>
+<span class=normal>137</span>
+<span class=normal>138</span>
+<span class=normal>139</span>
+<span class=normal>140</span>
+<span class=normal>141</span>
+<span class=normal>142</span>
+<span class=normal>143</span>
+<span class=normal>144</span>
+<span class=normal>145</span>
+<span class=normal>146</span>
+<span class=normal>147</span>
+<span class=normal>148</span>
+<span class=normal>149</span>
+<span class=normal>150</span>
+<span class=normal>151</span>
+<span class=normal>152</span>
+<span class=normal>153</span>
+<span class=normal>154</span>
+<span class=normal>155</span>
+<span class=normal>156</span>
+<span class=normal>157</span>
+<span class=normal>158</span>
+<span class=normal>159</span>
+<span class=normal>160</span>
+<span class=normal>161</span>
+<span class=normal>162</span>
+<span class=normal>163</span>
+<span class=normal>164</span>
+<span class=normal>165</span>
+<span class=normal>166</span>
+<span class=normal>167</span>
+<span class=normal>168</span>
+<span class=normal>169</span>
+<span class=normal>170</span>
+<span class=normal>171</span>
+<span class=normal>172</span>
+<span class=normal>173</span>
+<span class=normal>174</span>
+<span class=normal>175</span>
+<span class=normal>176</span>
+<span class=normal>177</span>
+<span class=normal>178</span>
+<span class=normal>179</span>
+<span class=normal>180</span>
+<span class=normal>181</span>
+<span class=normal>182</span>
+<span class=normal>183</span>
+<span class=normal>184</span>
+<span class=normal>185</span>
+<span class=normal>186</span>
+<span class=normal>187</span>
+<span class=normal>188</span>
+<span class=normal>189</span>
+<span class=normal>190</span>
+<span class=normal>191</span>
+<span class=normal>192</span>
+<span class=normal>193</span>
+<span class=normal>194</span>
+<span class=normal>195</span>
+<span class=normal>196</span>
+<span class=normal>197</span>
+<span class=normal>198</span>
+<span class=normal>199</span>
+<span class=normal>200</span>
+<span class=normal>201</span>
+<span class=normal>202</span>
+<span class=normal>203</span>
+<span class=normal>204</span>
+<span class=normal>205</span>
+<span class=normal>206</span>
+<span class=normal>207</span>
+<span class=normal>208</span>
+<span class=normal>209</span>
+<span class=normal>210</span>
+<span class=normal>211</span>
+<span class=normal>212</span>
+<span class=normal>213</span>
+<span class=normal>214</span>
+<span class=normal>215</span>
+<span class=normal>216</span>
+<span class=normal>217</span>
+<span class=normal>218</span>
+<span class=normal>219</span>
+<span class=normal>220</span>
+<span class=normal>221</span>
+<span class=normal>222</span>
+<span class=normal>223</span>
+<span class=normal>224</span>
+<span class=normal>225</span>
+<span class=normal>226</span>
+<span class=normal>227</span>
+<span class=normal>228</span>
+<span class=normal>229</span>
+<span class=normal>230</span>
+<span class=normal>231</span>
+<span class=normal>232</span>
+<span class=normal>233</span>
+<span class=normal>234</span>
+<span class=normal>235</span>
+<span class=normal>236</span>
+<span class=normal>237</span>
+<span class=normal>238</span>
+<span class=normal>239</span>
+<span class=normal>240</span>
+<span class=normal>241</span>
+<span class=normal>242</span>
+<span class=normal>243</span>
+<span class=normal>244</span>
+<span class=normal>245</span>
+<span class=normal>246</span>
+<span class=normal>247</span>
+<span class=normal>248</span>
+<span class=normal>249</span>
+<span class=normal>250</span>
+<span class=normal>251</span>
+<span class=normal>252</span>
+<span class=normal>253</span>
+<span class=normal>254</span>
+<span class=normal>255</span>
+<span class=normal>256</span>
+<span class=normal>257</span>
+<span class=normal>258</span>
+<span class=normal>259</span>
+<span class=normal>260</span>
+<span class=normal>261</span>
+<span class=normal>262</span>
+<span class=normal>263</span>
+<span class=normal>264</span>
+<span class=normal>265</span>
+<span class=normal>266</span>
+<span class=normal>267</span>
+<span class=normal>268</span>
+<span class=normal>269</span>
+<span class=normal>270</span>
+<span class=normal>271</span>
+<span class=normal>272</span>
+<span class=normal>273</span>
+<span class=normal>274</span>
+<span class=normal>275</span>
+<span class=normal>276</span>
+<span class=normal>277</span>
+<span class=normal>278</span>
+<span class=normal>279</span>
+<span class=normal>280</span>
+<span class=normal>281</span>
+<span class=normal>282</span>
+<span class=normal>283</span>
+<span class=normal>284</span>
+<span class=normal>285</span>
+<span class=normal>286</span>
+<span class=normal>287</span>
+<span class=normal>288</span>
+<span class=normal>289</span>
+<span class=normal>290</span>
+<span class=normal>291</span>
+<span class=normal>292</span>
+<span class=normal>293</span>
+<span class=normal>294</span>
+<span class=normal>295</span>
+<span class=normal>296</span>
+<span class=normal>297</span>
+<span class=normal>298</span>
+<span class=normal>299</span>
+<span class=normal>300</span>
+<span class=normal>301</span>
+<span class=normal>302</span>
+<span class=normal>303</span>
+<span class=normal>304</span>
+<span class=normal>305</span>
+<span class=normal>306</span>
+<span class=normal>307</span>
+<span class=normal>308</span>
+<span class=normal>309</span>
+<span class=normal>310</span>
+<span class=normal>311</span>
+<span class=normal>312</span>
+<span class=normal>313</span>
+<span class=normal>314</span>
+<span class=normal>315</span>
+<span class=normal>316</span>
+<span class=normal>317</span>
+<span class=normal>318</span>
+<span class=normal>319</span>
+<span class=normal>320</span>
+<span class=normal>321</span>
+<span class=normal>322</span>
+<span class=normal>323</span>
+<span class=normal>324</span>
+<span class=normal>325</span>
+<span class=normal>326</span>
+<span class=normal>327</span>
+<span class=normal>328</span>
+<span class=normal>329</span>
+<span class=normal>330</span>
+<span class=normal>331</span>
+<span class=normal>332</span>
+<span class=normal>333</span>
+<span class=normal>334</span>
+<span class=normal>335</span>
+<span class=normal>336</span>
+<span class=normal>337</span>
+<span class=normal>338</span>
+<span class=normal>339</span>
+<span class=normal>340</span>
+<span class=normal>341</span>
+<span class=normal>342</span>
+<span class=normal>343</span>
+<span class=normal>344</span>
+<span class=normal>345</span>
+<span class=normal>346</span>
+<span class=normal>347</span>
+<span class=normal>348</span>
+<span class=normal>349</span>
+<span class=normal>350</span>
+<span class=normal>351</span>
+<span class=normal>352</span>
+<span class=normal>353</span>
+<span class=normal>354</span>
+<span class=normal>355</span>
+<span class=normal>356</span>
+<span class=normal>357</span>
+<span class=normal>358</span>
+<span class=normal>359</span>
+<span class=normal>360</span>
+<span class=normal>361</span>
+<span class=normal>362</span>
+<span class=normal>363</span>
+<span class=normal>364</span>
+<span class=normal>365</span>
+<span class=normal>366</span>
+<span class=normal>367</span>
+<span class=normal>368</span>
+<span class=normal>369</span>
+<span class=normal>370</span>
+<span class=normal>371</span>
+<span class=normal>372</span>
+<span class=normal>373</span>
+<span class=normal>374</span>
+<span class=normal>375</span>
+<span class=normal>376</span>
+<span class=normal>377</span>
+<span class=normal>378</span>
+<span class=normal>379</span>
+<span class=normal>380</span>
+<span class=normal>381</span>
+<span class=normal>382</span>
+<span class=normal>383</span>
+<span class=normal>384</span>
+<span class=normal>385</span>
+<span class=normal>386</span>
+<span class=normal>387</span>
+<span class=normal>388</span>
+<span class=normal>389</span>
+<span class=normal>390</span>
+<span class=normal>391</span>
+<span class=normal>392</span>
+<span class=normal>393</span>
+<span class=normal>394</span>
+<span class=normal>395</span>
+<span class=normal>396</span>
+<span class=normal>397</span>
+<span class=normal>398</span>
+<span class=normal>399</span>
+<span class=normal>400</span>
+<span class=normal>401</span>
+<span class=normal>402</span>
+<span class=normal>403</span>
+<span class=normal>404</span>
+<span class=normal>405</span>
+<span class=normal>406</span>
+<span class=normal>407</span>
+<span class=normal>408</span>
+<span class=normal>409</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>class</span><span class=w> </span><span class=nc>CollectBlenderRender</span><span class=p>(</span><span class=n>plugin</span><span class=o>.</span><span class=n>BlenderInstancePlugin</span><span class=p>):</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Gather all publishable render instances.</span>
+
+<span class=sd>    For the instance node (bpy.types.CompositorNodeOutputFile) we collect the</span>
+<span class=sd>    configured output paths (FileSlots or LayerSlots) and their colorspaces.</span>
+
+<span class=sd>    ### AOV identifiers</span>
+
+<span class=sd>    When multiple outputs are present (only the case when not rendering to</span>
+<span class=sd>    multilayer EXR) then we assign each output an &#39;aov identifier&#39; that will</span>
+<span class=sd>    be added to the product name. So that product: `renderLightingMain` becomes</span>
+<span class=sd>    for example `renderLightingMain.beauty` and `renderLightingMain.diffuse`.</span>
+
+<span class=sd>    ### Requires enabled compositing node tree</span>
+
+<span class=sd>    The render workflow requires Blender to be configured to use the</span>
+<span class=sd>    Compositor Node Tree, because it relies on `CompositorNodeOutputFile` to</span>
+<span class=sd>    define the output files for rendering.</span>
+
+<span class=sd>    &quot;&quot;&quot;</span>
+
+    <span class=n>order</span> <span class=o>=</span> <span class=n>pyblish</span><span class=o>.</span><span class=n>api</span><span class=o>.</span><span class=n>CollectorOrder</span> <span class=o>+</span> <span class=mf>0.01</span>
+    <span class=n>hosts</span> <span class=o>=</span> <span class=p>[</span><span class=s2>&quot;blender&quot;</span><span class=p>]</span>
+    <span class=n>families</span> <span class=o>=</span> <span class=p>[</span><span class=s2>&quot;render&quot;</span><span class=p>]</span>
+    <span class=n>label</span> <span class=o>=</span> <span class=s2>&quot;Collect Render&quot;</span>
+    <span class=n>sync_workfile_version</span> <span class=o>=</span> <span class=kc>False</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>process</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>instance</span><span class=p>:</span> <span class=n>pyblish</span><span class=o>.</span><span class=n>api</span><span class=o>.</span><span class=n>Instance</span><span class=p>):</span>
+
+        <span class=n>comp_output_node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span> <span class=o>=</span> <span class=p>(</span>
+            <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=p>[</span><span class=s2>&quot;transientData&quot;</span><span class=p>][</span><span class=s2>&quot;instance_node&quot;</span><span class=p>])</span>
+        <span class=n>frame_start</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=p>[</span><span class=s2>&quot;frameStartHandle&quot;</span><span class=p>]</span>
+        <span class=n>frame_end</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=p>[</span><span class=s2>&quot;frameEndHandle&quot;</span><span class=p>]</span>
+        <span class=n>creator_attributes</span><span class=p>:</span> <span class=nb>dict</span> <span class=o>=</span> <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=p>[</span><span class=s2>&quot;creator_attributes&quot;</span><span class=p>]</span>
+        <span class=n>frame_step</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=n>creator_attributes</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&quot;step&quot;</span><span class=p>,</span> <span class=mi>1</span><span class=p>)</span>
+        <span class=n>review</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=n>creator_attributes</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&quot;review&quot;</span><span class=p>,</span> <span class=kc>False</span><span class=p>)</span>
+
+        <span class=n>colorspace_data</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>get_colorspace_data</span><span class=p>(</span><span class=n>comp_output_node</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>log</span><span class=o>.</span><span class=n>debug</span><span class=p>(</span><span class=sa>f</span><span class=s2>&quot;Collected colorspace data: </span><span class=si>{</span><span class=n>colorspace_data</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>)</span>
+        <span class=k>if</span> <span class=n>colorspace_data</span><span class=p>:</span>
+            <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=o>.</span><span class=n>update</span><span class=p>(</span><span class=n>colorspace_data</span><span class=p>)</span>
+
+        <span class=n>render_products</span> <span class=o>=</span> <span class=n>colorspace</span><span class=o>.</span><span class=n>ARenderProduct</span><span class=p>(</span>
+            <span class=n>frame_start</span><span class=o>=</span><span class=n>frame_start</span><span class=p>,</span>
+            <span class=n>frame_end</span><span class=o>=</span><span class=n>frame_end</span>
+        <span class=p>)</span>
+
+        <span class=n>expected_files</span><span class=p>:</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]]</span> <span class=o>=</span> <span class=p>{}</span>
+        <span class=n>outputs</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>get_expected_outputs</span><span class=p>(</span><span class=n>comp_output_node</span><span class=p>,</span> <span class=n>instance</span><span class=p>)</span>
+        <span class=k>for</span> <span class=n>aov_identifier</span><span class=p>,</span> <span class=n>output_path</span> <span class=ow>in</span> <span class=n>outputs</span><span class=o>.</span><span class=n>items</span><span class=p>():</span>
+            <span class=n>aov_label</span> <span class=o>=</span> <span class=n>aov_identifier</span> <span class=ow>or</span> <span class=s2>&quot;&lt;beauty&gt;&quot;</span>
+            <span class=bp>self</span><span class=o>.</span><span class=n>log</span><span class=o>.</span><span class=n>debug</span><span class=p>(</span><span class=sa>f</span><span class=s2>&quot;AOV &#39;</span><span class=si>{</span><span class=n>aov_label</span><span class=si>}</span><span class=s2>&#39;: </span><span class=si>{</span><span class=n>output_path</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>)</span>
+
+            <span class=n>expected_files</span><span class=p>[</span><span class=n>aov_identifier</span><span class=p>]</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>generate_expected_frames</span><span class=p>(</span>
+                <span class=n>output_path</span><span class=p>,</span>
+                <span class=n>frame_start</span><span class=p>,</span>
+                <span class=n>frame_end</span><span class=p>,</span>
+                <span class=n>frame_step</span>
+            <span class=p>)</span>
+
+            <span class=c1># We need to have a matching &#39;renderProduct&#39; entry so that</span>
+            <span class=c1># the logic in core for `_create_instances_for_aov` assigns</span>
+            <span class=c1># the colorspace data to the relevant AOV instance.</span>
+            <span class=n>aov_colorspace</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=p>(</span>
+                <span class=n>colorspace_data</span><span class=p>[</span><span class=s2>&quot;colorspace&quot;</span><span class=p>]</span> <span class=k>if</span> <span class=n>colorspace_data</span> <span class=k>else</span> <span class=s2>&quot;&quot;</span>
+            <span class=p>)</span>
+            <span class=n>render_products</span><span class=o>.</span><span class=n>add_render_product</span><span class=p>(</span>
+                <span class=n>product_name</span><span class=o>=</span><span class=n>aov_identifier</span><span class=p>,</span>
+                <span class=n>colorspace</span><span class=o>=</span><span class=n>aov_colorspace</span>
+            <span class=p>)</span>
+
+            <span class=c1># Log the expected sequence of frames for the AOV</span>
+            <span class=n>files</span> <span class=o>=</span> <span class=n>files_as_sequence</span><span class=p>(</span><span class=n>expected_files</span><span class=p>[</span><span class=n>aov_identifier</span><span class=p>])</span>
+            <span class=bp>self</span><span class=o>.</span><span class=n>log</span><span class=o>.</span><span class=n>debug</span><span class=p>(</span><span class=sa>f</span><span class=s2>&quot;Expected frames: </span><span class=si>{</span><span class=n>files</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>)</span>
+
+        <span class=c1># Collect Render Target</span>
+        <span class=n>local_render</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=n>creator_attributes</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&quot;render_target&quot;</span><span class=p>)</span> <span class=o>==</span> <span class=s2>&quot;local&quot;</span>
+
+        <span class=n>context</span> <span class=o>=</span> <span class=n>instance</span><span class=o>.</span><span class=n>context</span>
+        <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=o>.</span><span class=n>update</span><span class=p>({</span>
+            <span class=s2>&quot;families&quot;</span><span class=p>:</span> <span class=p>[</span><span class=s2>&quot;render&quot;</span><span class=p>,</span> <span class=s2>&quot;render.farm&quot;</span><span class=p>],</span>
+            <span class=s2>&quot;fps&quot;</span><span class=p>:</span> <span class=n>context</span><span class=o>.</span><span class=n>data</span><span class=p>[</span><span class=s2>&quot;fps&quot;</span><span class=p>],</span>
+            <span class=s2>&quot;byFrameStep&quot;</span><span class=p>:</span> <span class=n>frame_step</span><span class=p>,</span>
+            <span class=s2>&quot;review&quot;</span><span class=p>:</span> <span class=n>review</span><span class=p>,</span>
+            <span class=s2>&quot;multipartExr&quot;</span><span class=p>:</span> <span class=bp>self</span><span class=o>.</span><span class=n>is_multilayer_exr</span><span class=p>(</span><span class=n>comp_output_node</span><span class=p>),</span>
+            <span class=s2>&quot;farm&quot;</span><span class=p>:</span> <span class=ow>not</span> <span class=n>local_render</span><span class=p>,</span>
+            <span class=s2>&quot;expectedFiles&quot;</span><span class=p>:</span> <span class=p>[</span><span class=n>expected_files</span><span class=p>],</span>
+            <span class=s2>&quot;renderProducts&quot;</span><span class=p>:</span> <span class=n>render_products</span><span class=p>,</span>
+        <span class=p>})</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>get_colorspace_data</span><span class=p>(</span>
+        <span class=bp>self</span><span class=p>,</span>
+        <span class=n>node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=n>Optional</span><span class=p>[</span><span class=n>RenderColorspaceData</span><span class=p>]:</span>
+        <span class=n>ocio_path</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>getenv</span><span class=p>(</span><span class=s2>&quot;OCIO&quot;</span><span class=p>)</span>
+        <span class=k>if</span> <span class=ow>not</span> <span class=n>ocio_path</span><span class=p>:</span>
+            <span class=c1># Assume not color-managed</span>
+            <span class=k>return</span> <span class=kc>None</span>
+
+        <span class=c1># TODO: Technically Blender hides/disabled Display/View versus</span>
+        <span class=c1>#  Colorspace depending on `node.format.has_linear_colorspace`</span>
+        <span class=c1>#  which may mean it uses one of the two instead of both.</span>
+        <span class=c1># Get from node or scene</span>
+        <span class=k>if</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>color_management</span> <span class=o>==</span> <span class=s2>&quot;OVERRIDE&quot;</span><span class=p>:</span>
+            <span class=n>display</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>display_settings</span><span class=o>.</span><span class=n>display_device</span>
+            <span class=n>view</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>view_settings</span><span class=o>.</span><span class=n>view_transform</span>
+            <span class=n>colorspace</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>linear_colorspace_settings</span><span class=o>.</span><span class=n>name</span>
+            <span class=c1># look: str = node.format.view_settings.look</span>
+        <span class=k>else</span><span class=p>:</span>
+            <span class=n>display</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>bpy</span><span class=o>.</span><span class=n>context</span><span class=o>.</span><span class=n>scene</span><span class=o>.</span><span class=n>display_settings</span><span class=o>.</span><span class=n>display_device</span>
+            <span class=n>view</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>bpy</span><span class=o>.</span><span class=n>context</span><span class=o>.</span><span class=n>scene</span><span class=o>.</span><span class=n>view_settings</span><span class=o>.</span><span class=n>view_transform</span>
+            <span class=c1># TODO: Where do we get colorspace if it doesn&#39;t come from node</span>
+            <span class=c1>#  override nor scene override? In Blender 5+ there seems to be</span>
+            <span class=c1>#  bpy.context.blend_data.colorspace.working_space but similar</span>
+            <span class=c1>#  does not exist in Blender 4</span>
+            <span class=c1># This gets the scene render colorspace, which should technically</span>
+            <span class=c1># only apply when it&#39;s set to &quot;Override&quot; on the scene output</span>
+            <span class=c1># settings. But since we can&#39;t find the source Follow Scene value</span>
+            <span class=c1># it&#39;s the best alternative for now to rely upon, especially</span>
+            <span class=c1># because the default value does match the default render</span>
+            <span class=c1># colorspace.</span>
+            <span class=n>colorspace</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=p>(</span>
+                <span class=n>bpy</span><span class=o>.</span><span class=n>context</span><span class=o>.</span><span class=n>scene</span><span class=o>.</span><span class=n>render</span>
+                <span class=o>.</span><span class=n>image_settings</span><span class=o>.</span><span class=n>linear_colorspace_settings</span><span class=o>.</span><span class=n>name</span>
+            <span class=p>)</span>
+            <span class=c1># look: str = bpy.context.scene.view_settings.look</span>
+
+        <span class=k>return</span> <span class=p>{</span>
+            <span class=s2>&quot;colorspaceConfig&quot;</span><span class=p>:</span> <span class=n>ocio_path</span><span class=p>,</span>
+            <span class=s2>&quot;colorspaceDisplay&quot;</span><span class=p>:</span> <span class=n>display</span><span class=p>,</span>
+            <span class=s2>&quot;colorspaceView&quot;</span><span class=p>:</span> <span class=n>view</span><span class=p>,</span>
+            <span class=s2>&quot;colorspace&quot;</span><span class=p>:</span> <span class=n>colorspace</span>
+        <span class=p>}</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>is_multilayer_exr</span><span class=p>(</span>
+        <span class=bp>self</span><span class=p>,</span>
+        <span class=n>node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>bool</span><span class=p>:</span>
+        <span class=k>return</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span> <span class=o>==</span> <span class=s2>&quot;OPEN_EXR_MULTILAYER&quot;</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>get_expected_outputs</span><span class=p>(</span>
+        <span class=bp>self</span><span class=p>,</span>
+        <span class=n>node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span><span class=p>,</span>
+        <span class=n>instance</span><span class=p>:</span> <span class=n>pyblish</span><span class=o>.</span><span class=n>api</span><span class=o>.</span><span class=n>Instance</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=nb>str</span><span class=p>]:</span>
+<span class=w>        </span><span class=sd>&quot;&quot;&quot;Return the expected output files from a compositor node output file.</span>
+
+<span class=sd>        The output paths are **not** converted to individual frames and will</span>
+<span class=sd>        still contain the `####` frame padding tokens to. So the final path</span>
+<span class=sd>        would still need to be constructed from the resulting path.</span>
+
+<span class=sd>        Even if the path set in the scene does not contain the `#` frame</span>
+<span class=sd>        tokens or an extension, this method will ensure that the returned</span>
+<span class=sd>        paths do and qualify as a full path with `#` as padding frame tokens.</span>
+
+<span class=sd>        Returns:</span>
+<span class=sd>            dict[str]: The full output image or sequence paths per identifier.</span>
+
+<span class=sd>        &quot;&quot;&quot;</span>
+        <span class=c1># Blender 5</span>
+        <span class=k>if</span> <span class=n>lib</span><span class=o>.</span><span class=n>get_blender_version</span><span class=p>()</span> <span class=o>&gt;=</span> <span class=p>(</span><span class=mi>5</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>):</span>
+            <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_get_expected_outputs_blender_5</span><span class=p>(</span><span class=n>node</span><span class=p>)</span>
+
+        <span class=c1># Blender 4</span>
+        <span class=n>output_paths</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_get_expected_outputs_blender_4</span><span class=p>(</span><span class=n>node</span><span class=p>)</span>
+        <span class=n>is_multilayer</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>is_multilayer_exr</span><span class=p>(</span><span class=n>node</span><span class=p>)</span>
+        <span class=n>outputs_per_aov</span> <span class=o>=</span> <span class=p>{}</span>
+        <span class=k>for</span> <span class=n>output_path</span> <span class=ow>in</span> <span class=n>output_paths</span><span class=p>:</span>
+            <span class=k>if</span> <span class=n>is_multilayer</span><span class=p>:</span>
+                <span class=c1># Only ever a single output - we enforce the identifier to an</span>
+                <span class=c1># empty string to have it considered to not split into a</span>
+                <span class=c1># subname for the product</span>
+                <span class=n>aov_identifier</span> <span class=o>=</span> <span class=s2>&quot;&quot;</span>
+            <span class=k>else</span><span class=p>:</span>
+                <span class=n>aov_identifier</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>get_aov_identifier</span><span class=p>(</span>
+                    <span class=n>output_path</span><span class=p>,</span>
+                    <span class=n>instance</span>
+                <span class=p>)</span>
+            <span class=n>outputs_per_aov</span><span class=p>[</span><span class=n>aov_identifier</span><span class=p>]</span> <span class=o>=</span> <span class=n>output_path</span>
+        <span class=k>return</span> <span class=n>outputs_per_aov</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>_get_expected_outputs_blender_5</span><span class=p>(</span>
+        <span class=bp>self</span><span class=p>,</span>
+        <span class=n>node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=nb>str</span><span class=p>]:</span>
+<span class=w>        </span><span class=sd>&quot;&quot;&quot;Return output filepaths for CompositorNodeOutputFile in Blender 5&quot;&quot;&quot;</span>
+        <span class=n>directory</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>directory</span>
+        <span class=n>file_name</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>file_name</span>
+        <span class=n>outputs</span><span class=p>:</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=nb>str</span><span class=p>]</span> <span class=o>=</span> <span class=p>{}</span>
+        <span class=n>base_path</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>join</span><span class=p>(</span><span class=n>directory</span><span class=p>,</span> <span class=n>file_name</span><span class=p>)</span>
+
+        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>is_multilayer_exr</span><span class=p>(</span><span class=n>node</span><span class=p>):</span>
+            <span class=n>file_path</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_resolve_full_render_path</span><span class=p>(</span>
+                <span class=n>path</span><span class=o>=</span><span class=n>base_path</span><span class=p>,</span>
+                <span class=n>file_format</span><span class=o>=</span><span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span>
+            <span class=p>)</span>
+            <span class=n>outputs</span><span class=p>[</span><span class=s2>&quot;&quot;</span><span class=p>]</span> <span class=o>=</span> <span class=n>file_path</span>  <span class=c1># beauty only</span>
+        <span class=k>else</span><span class=p>:</span>
+            <span class=c1># Separate images</span>
+            <span class=k>for</span> <span class=n>output_item</span> <span class=ow>in</span> <span class=n>node</span><span class=o>.</span><span class=n>file_output_items</span><span class=p>:</span>
+                <span class=k>if</span> <span class=n>output_item</span><span class=o>.</span><span class=n>override_node_format</span><span class=p>:</span>
+                    <span class=n>output_format</span> <span class=o>=</span> <span class=n>output_item</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span>
+                <span class=k>else</span><span class=p>:</span>
+                    <span class=n>output_format</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span>
+
+                <span class=c1># Resolve the full render path for the output path</span>
+                <span class=n>file_path</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_resolve_full_render_path</span><span class=p>(</span>
+                    <span class=n>path</span><span class=o>=</span><span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>base_path</span><span class=si>}{</span><span class=n>output_item</span><span class=o>.</span><span class=n>name</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>,</span>
+                    <span class=n>file_format</span><span class=o>=</span><span class=n>output_format</span>
+                <span class=p>)</span>
+
+                <span class=c1># Use the output item name as AOV identifier but remove any</span>
+                <span class=c1># special characters like `#`, `_`, `.` and spaces.</span>
+                <span class=n>aov_identifier</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>re</span><span class=o>.</span><span class=n>sub</span><span class=p>(</span><span class=s2>&quot;[#_. ]&quot;</span><span class=p>,</span> <span class=s2>&quot;&quot;</span><span class=p>,</span> <span class=n>output_item</span><span class=o>.</span><span class=n>name</span><span class=p>)</span>
+                <span class=n>outputs</span><span class=p>[</span><span class=n>aov_identifier</span><span class=p>]</span> <span class=o>=</span> <span class=n>file_path</span>
+        <span class=k>return</span> <span class=n>outputs</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>_get_expected_outputs_blender_4</span><span class=p>(</span>
+        <span class=bp>self</span><span class=p>,</span>
+        <span class=n>node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]:</span>
+<span class=w>        </span><span class=sd>&quot;&quot;&quot;Return output filepaths for CompositorNodeOutputFile in Blender 4&quot;&quot;&quot;</span>
+        <span class=n>outputs</span><span class=p>:</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]</span> <span class=o>=</span> <span class=p>[]</span>
+        <span class=n>base_path</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>base_path</span>
+
+        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>is_multilayer_exr</span><span class=p>(</span><span class=n>node</span><span class=p>):</span>
+            <span class=c1># Single multi-layered EXR containing all the images as layers</span>
+            <span class=c1># for layer_slot in node.layer_slots:</span>
+            <span class=c1>#     name = layer_slot.name</span>
+            <span class=c1># Resolve the full render path for the output path</span>
+            <span class=n>file_path</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_resolve_full_render_path</span><span class=p>(</span>
+                <span class=n>path</span><span class=o>=</span><span class=n>base_path</span><span class=p>,</span>
+                <span class=n>file_format</span><span class=o>=</span><span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span>
+            <span class=p>)</span>
+            <span class=n>outputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>file_path</span><span class=p>)</span>
+        <span class=k>else</span><span class=p>:</span>
+            <span class=k>for</span> <span class=n>file_slot</span> <span class=ow>in</span> <span class=n>node</span><span class=o>.</span><span class=n>file_slots</span><span class=p>:</span>
+                <span class=c1># TODO: Should we skip file slots that are not connected?</span>
+                <span class=c1>#  (what does blender do?)</span>
+                <span class=c1># TODO: Do we need to check `file_slot.save_as_render`?</span>
+                <span class=c1># TODO: Collect format from File Slot (it can override it)</span>
+                <span class=c1>#  however this would also need support by other publish</span>
+                <span class=c1>#  plug-ins to allow custom colorspace data per output AOV</span>
+                <span class=c1>#  (render product) within a single instance</span>
+                <span class=k>if</span> <span class=n>file_slot</span><span class=o>.</span><span class=n>use_node_format</span><span class=p>:</span>
+                    <span class=n>output_format</span> <span class=o>=</span> <span class=n>node</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span>
+                <span class=k>else</span><span class=p>:</span>
+                    <span class=n>output_format</span> <span class=o>=</span> <span class=n>file_slot</span><span class=o>.</span><span class=n>format</span><span class=o>.</span><span class=n>file_format</span>
+
+                <span class=c1># Append slot path to base path</span>
+                <span class=n>sub_path</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=n>file_slot</span><span class=o>.</span><span class=n>path</span>
+                <span class=n>file_path</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>join</span><span class=p>(</span><span class=n>base_path</span><span class=p>,</span> <span class=n>sub_path</span><span class=p>)</span>
+
+                <span class=c1># Resolve the full render path for the output path</span>
+                <span class=n>file_path</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_resolve_full_render_path</span><span class=p>(</span>
+                    <span class=n>path</span><span class=o>=</span><span class=n>file_path</span><span class=p>,</span>
+                    <span class=n>file_format</span><span class=o>=</span><span class=n>output_format</span>
+                <span class=p>)</span>
+
+                <span class=n>outputs</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>file_path</span><span class=p>)</span>
+        <span class=k>return</span> <span class=n>outputs</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>_resolve_full_render_path</span><span class=p>(</span>
+            <span class=bp>self</span><span class=p>,</span>
+            <span class=n>path</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+            <span class=n>file_format</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+<span class=w>        </span><span class=sd>&quot;&quot;&quot;Resolve the full render path for the output path.</span>
+
+<span class=sd>        Filepaths in render outputs may be set relatively, with or</span>
+<span class=sd>        without # tokens, with or without file extension. However, we need</span>
+<span class=sd>        them consistently formatted for collecting them correctly.</span>
+<span class=sd>        So we ensure the # token is present and the file extension is added.</span>
+
+<span class=sd>        The output path will be a normalized, absolute path with `#` tokens</span>
+<span class=sd>        in it that indicated the padded frame number.</span>
+
+<span class=sd>        &quot;&quot;&quot;</span>
+        <span class=c1># Ensure the extension is for the file</span>
+        <span class=n>extension</span> <span class=o>=</span> <span class=n>render_lib</span><span class=o>.</span><span class=n>get_file_format_extension</span><span class=p>(</span><span class=n>file_format</span><span class=p>)</span>
+        <span class=n>path</span> <span class=o>=</span> <span class=n>bpy</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>ensure_ext</span><span class=p>(</span><span class=n>path</span><span class=p>,</span> <span class=sa>f</span><span class=s2>&quot;.</span><span class=si>{</span><span class=n>extension</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>)</span>
+
+        <span class=c1># If the path does not contain a frame token `#` then we append</span>
+        <span class=c1># the default frame token `####` to the end of the path before the</span>
+        <span class=c1># extension.</span>
+        <span class=k>if</span> <span class=s2>&quot;#&quot;</span> <span class=ow>not</span> <span class=ow>in</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>basename</span><span class=p>(</span><span class=n>path</span><span class=p>):</span>
+            <span class=n>base</span><span class=p>,</span> <span class=n>ext</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>splitext</span><span class=p>(</span><span class=n>path</span><span class=p>)</span>
+            <span class=n>path</span> <span class=o>=</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>base</span><span class=si>}</span><span class=s2>####</span><span class=si>{</span><span class=n>ext</span><span class=si>}</span><span class=s2>&quot;</span>
+
+        <span class=c1># Generate an absolute normalized path for the output</span>
+        <span class=n>path</span> <span class=o>=</span> <span class=n>bpy</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>abspath</span><span class=p>(</span><span class=n>path</span><span class=p>)</span>
+        <span class=n>path</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>normpath</span><span class=p>(</span><span class=n>path</span><span class=p>)</span>
+        <span class=k>return</span> <span class=n>path</span>
+
+    <span class=nd>@staticmethod</span>
+    <span class=k>def</span><span class=w> </span><span class=nf>generate_expected_frames</span><span class=p>(</span>
+        <span class=n>path_with_frame_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+        <span class=n>frame_start</span><span class=p>:</span> <span class=nb>int</span><span class=p>,</span>
+        <span class=n>frame_end</span><span class=p>:</span> <span class=nb>int</span><span class=p>,</span>
+        <span class=n>frame_step</span><span class=p>:</span> <span class=nb>int</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]:</span>
+<span class=w>        </span><span class=sd>&quot;&quot;&quot;Generate the expected files for each frame.</span>
+
+<span class=sd>        It replaces the sequence of `#` with the frame number.</span>
+
+<span class=sd>        Returns:</span>
+<span class=sd>            list[str]: All frames for input path.</span>
+
+<span class=sd>        &quot;&quot;&quot;</span>
+        <span class=n>directory</span><span class=p>,</span> <span class=n>filename</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>split</span><span class=p>(</span><span class=n>path_with_frame_token</span><span class=p>)</span>
+
+        <span class=c1># Find the last occurrence of `#+` in the filename to determine</span>
+        <span class=c1># the frame token position. If multiple `%#` patterns are present</span>
+        <span class=c1># in the filename Blender uses the last one for the frame number.</span>
+        <span class=n>match</span> <span class=o>=</span> <span class=n>re</span><span class=o>.</span><span class=n>search</span><span class=p>(</span><span class=sa>r</span><span class=s2>&quot;(#+)[^#]+$&quot;</span><span class=p>,</span> <span class=n>filename</span><span class=p>)</span>
+        <span class=k>if</span> <span class=ow>not</span> <span class=n>match</span><span class=p>:</span>
+            <span class=k>raise</span> <span class=ne>ValueError</span><span class=p>(</span>
+                <span class=sa>f</span><span class=s2>&quot;Path &#39;</span><span class=si>{</span><span class=n>path_with_frame_token</span><span class=si>}</span><span class=s2>&#39; does not contain a frame &quot;</span>
+                <span class=s2>&quot;token &#39;#&#39;.&quot;</span>
+            <span class=p>)</span>
+        <span class=n>padding</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=nb>len</span><span class=p>(</span><span class=n>match</span><span class=o>.</span><span class=n>group</span><span class=p>(</span><span class=mi>1</span><span class=p>))</span>
+        <span class=n>filename</span><span class=p>,</span> <span class=n>ext</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>splitext</span><span class=p>(</span><span class=n>filename</span><span class=p>)</span>
+
+        <span class=n>filename_head</span> <span class=o>=</span> <span class=n>filename</span><span class=p>[:</span><span class=n>match</span><span class=o>.</span><span class=n>start</span><span class=p>(</span><span class=mi>1</span><span class=p>)]</span>
+        <span class=n>filename_tail</span> <span class=o>=</span> <span class=n>filename</span><span class=p>[</span><span class=n>match</span><span class=o>.</span><span class=n>end</span><span class=p>(</span><span class=mi>1</span><span class=p>):]</span>
+
+        <span class=n>expected_files</span><span class=p>:</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]</span> <span class=o>=</span> <span class=p>[]</span>
+        <span class=k>for</span> <span class=n>frame</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>frame_start</span><span class=p>,</span> <span class=n>frame_end</span> <span class=o>+</span> <span class=mi>1</span><span class=p>,</span> <span class=n>frame_step</span><span class=p>):</span>
+            <span class=c1># Replace #### with padded number</span>
+            <span class=n>frame_str</span> <span class=o>=</span> <span class=nb>str</span><span class=p>(</span><span class=n>frame</span><span class=p>)</span><span class=o>.</span><span class=n>zfill</span><span class=p>(</span><span class=n>padding</span><span class=p>)</span>
+            <span class=n>frame_filename</span> <span class=o>=</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>filename_head</span><span class=si>}{</span><span class=n>frame_str</span><span class=si>}{</span><span class=n>filename_tail</span><span class=si>}</span><span class=s2>&quot;</span>
+            <span class=n>expected_file</span> <span class=o>=</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>join</span><span class=p>(</span><span class=n>directory</span><span class=p>,</span><span class=w> </span><span class=n>frame_filename</span><span class=p>)</span><span class=si>}{</span><span class=n>ext</span><span class=si>}</span><span class=s2>&quot;</span>
+            <span class=n>expected_files</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>expected_file</span><span class=o>.</span><span class=n>replace</span><span class=p>(</span><span class=s2>&quot;</span><span class=se>\\</span><span class=s2>&quot;</span><span class=p>,</span> <span class=s2>&quot;/&quot;</span><span class=p>))</span>
+
+        <span class=k>return</span> <span class=n>expected_files</span>
+
+    <span class=k>def</span><span class=w> </span><span class=nf>get_aov_identifier</span><span class=p>(</span>
+            <span class=bp>self</span><span class=p>,</span> <span class=n>path</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+            <span class=n>instance</span><span class=p>:</span> <span class=n>pyblish</span><span class=o>.</span><span class=n>api</span><span class=o>.</span><span class=n>Instance</span>
+    <span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+        <span class=c1># TODO: Define sensible way to compute AOV name for the publish product</span>
+        <span class=c1>#  based on the image outputs the comp node (when NOT multilayer EXR).</span>
+        <span class=c1>#  This identifier will be the suffix for the product, like:</span>
+        <span class=c1>#  `renderLightingMain.{aov}` -&gt; `renderLightingMain.beauty`</span>
+        <span class=c1># Change &quot;/path/to/my_filename.####.exr&quot; to &quot;my_filename&quot;</span>
+        <span class=n>aov_identifier</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>basename</span><span class=p>(</span><span class=n>path</span><span class=p>)</span><span class=o>.</span><span class=n>split</span><span class=p>(</span><span class=s2>&quot;#&quot;</span><span class=p>,</span> <span class=mi>1</span><span class=p>)[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>strip</span><span class=p>(</span><span class=s2>&quot;._&quot;</span><span class=p>)</span>
+
+        <span class=c1># The creator&#39;s prepare rendering setup logic will create the filenames</span>
+        <span class=c1># prefixed with `{variant}_`. We don&#39;t want to include that as a part</span>
+        <span class=c1># of the AOV identifier because it&#39;d double the variant in the product</span>
+        <span class=c1># name.</span>
+        <span class=n>variant</span> <span class=o>=</span> <span class=n>instance</span><span class=o>.</span><span class=n>data</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&quot;variant&quot;</span><span class=p>,</span> <span class=s2>&quot;&quot;</span><span class=p>)</span>
+        <span class=n>variant_prefix</span> <span class=o>=</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>variant</span><span class=si>}</span><span class=s2>_&quot;</span>
+        <span class=k>if</span> <span class=n>aov_identifier</span><span class=o>.</span><span class=n>startswith</span><span class=p>(</span><span class=n>variant_prefix</span><span class=p>):</span>
+            <span class=bp>self</span><span class=o>.</span><span class=n>log</span><span class=o>.</span><span class=n>debug</span><span class=p>(</span>
+                <span class=sa>f</span><span class=s2>&quot;Stripping variant &#39;</span><span class=si>{</span><span class=n>variant</span><span class=si>}</span><span class=s2>&#39; prefix from AOV identifier: &quot;</span>
+                <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>aov_identifier</span><span class=si>}</span><span class=s2>&quot;</span>
+            <span class=p>)</span>
+            <span class=n>aov_identifier</span> <span class=o>=</span> <span class=n>aov_identifier</span><span class=o>.</span><span class=n>removeprefix</span><span class=p>(</span><span class=n>variant_prefix</span><span class=p>)</span>
+        <span class=k>return</span> <span class=n>aov_identifier</span>
+</code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender.generate_expected_frames class="doc doc-heading"> <code class="highlight language-python"><span class=n>generate_expected_frames</span><span class=p>(</span><span class=n>path_with_frame_token</span><span class=p>,</span> <span class=n>frame_start</span><span class=p>,</span> <span class=n>frame_end</span><span class=p>,</span> <span class=n>frame_step</span><span class=p>)</span></code> <span class="doc doc-labels"> <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small> </span> </h3> <div class="doc doc-contents "> <p>Generate the expected files for each frame.</p> <p>It replaces the sequence of <code>#</code> with the frame number.</p> <p><span class=doc-section-title>Returns:</span></p> <table> <thead> <tr> <th>Type</th> <th>Description</th> </tr> </thead> <tbody> <tr class=doc-section-item> <td> <code><span title=list>list</span>[<span title=str>str</span>]</code> </td> <td> <div class=doc-md-description> <p>list[str]: All frames for input path.</p> </div> </td> </tr> </tbody> </table> <details class=mkdocstrings-source> <summary>Source code in <code>client/ayon_blender/plugins/publish/collect_render.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>344</span>
+<span class=normal>345</span>
+<span class=normal>346</span>
+<span class=normal>347</span>
+<span class=normal>348</span>
+<span class=normal>349</span>
+<span class=normal>350</span>
+<span class=normal>351</span>
+<span class=normal>352</span>
+<span class=normal>353</span>
+<span class=normal>354</span>
+<span class=normal>355</span>
+<span class=normal>356</span>
+<span class=normal>357</span>
+<span class=normal>358</span>
+<span class=normal>359</span>
+<span class=normal>360</span>
+<span class=normal>361</span>
+<span class=normal>362</span>
+<span class=normal>363</span>
+<span class=normal>364</span>
+<span class=normal>365</span>
+<span class=normal>366</span>
+<span class=normal>367</span>
+<span class=normal>368</span>
+<span class=normal>369</span>
+<span class=normal>370</span>
+<span class=normal>371</span>
+<span class=normal>372</span>
+<span class=normal>373</span>
+<span class=normal>374</span>
+<span class=normal>375</span>
+<span class=normal>376</span>
+<span class=normal>377</span>
+<span class=normal>378</span>
+<span class=normal>379</span>
+<span class=normal>380</span>
+<span class=normal>381</span>
+<span class=normal>382</span>
+<span class=normal>383</span>
+<span class=normal>384</span></pre></div></td><td class=code><div><pre><span></span><code><span class=nd>@staticmethod</span>
+<span class=k>def</span><span class=w> </span><span class=nf>generate_expected_frames</span><span class=p>(</span>
+    <span class=n>path_with_frame_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+    <span class=n>frame_start</span><span class=p>:</span> <span class=nb>int</span><span class=p>,</span>
+    <span class=n>frame_end</span><span class=p>:</span> <span class=nb>int</span><span class=p>,</span>
+    <span class=n>frame_step</span><span class=p>:</span> <span class=nb>int</span>
+<span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]:</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Generate the expected files for each frame.</span>
+
+<span class=sd>    It replaces the sequence of `#` with the frame number.</span>
+
+<span class=sd>    Returns:</span>
+<span class=sd>        list[str]: All frames for input path.</span>
+
+<span class=sd>    &quot;&quot;&quot;</span>
+    <span class=n>directory</span><span class=p>,</span> <span class=n>filename</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>split</span><span class=p>(</span><span class=n>path_with_frame_token</span><span class=p>)</span>
+
+    <span class=c1># Find the last occurrence of `#+` in the filename to determine</span>
+    <span class=c1># the frame token position. If multiple `%#` patterns are present</span>
+    <span class=c1># in the filename Blender uses the last one for the frame number.</span>
+    <span class=n>match</span> <span class=o>=</span> <span class=n>re</span><span class=o>.</span><span class=n>search</span><span class=p>(</span><span class=sa>r</span><span class=s2>&quot;(#+)[^#]+$&quot;</span><span class=p>,</span> <span class=n>filename</span><span class=p>)</span>
+    <span class=k>if</span> <span class=ow>not</span> <span class=n>match</span><span class=p>:</span>
+        <span class=k>raise</span> <span class=ne>ValueError</span><span class=p>(</span>
+            <span class=sa>f</span><span class=s2>&quot;Path &#39;</span><span class=si>{</span><span class=n>path_with_frame_token</span><span class=si>}</span><span class=s2>&#39; does not contain a frame &quot;</span>
+            <span class=s2>&quot;token &#39;#&#39;.&quot;</span>
+        <span class=p>)</span>
+    <span class=n>padding</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=nb>len</span><span class=p>(</span><span class=n>match</span><span class=o>.</span><span class=n>group</span><span class=p>(</span><span class=mi>1</span><span class=p>))</span>
+    <span class=n>filename</span><span class=p>,</span> <span class=n>ext</span> <span class=o>=</span> <span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>splitext</span><span class=p>(</span><span class=n>filename</span><span class=p>)</span>
+
+    <span class=n>filename_head</span> <span class=o>=</span> <span class=n>filename</span><span class=p>[:</span><span class=n>match</span><span class=o>.</span><span class=n>start</span><span class=p>(</span><span class=mi>1</span><span class=p>)]</span>
+    <span class=n>filename_tail</span> <span class=o>=</span> <span class=n>filename</span><span class=p>[</span><span class=n>match</span><span class=o>.</span><span class=n>end</span><span class=p>(</span><span class=mi>1</span><span class=p>):]</span>
+
+    <span class=n>expected_files</span><span class=p>:</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]</span> <span class=o>=</span> <span class=p>[]</span>
+    <span class=k>for</span> <span class=n>frame</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>frame_start</span><span class=p>,</span> <span class=n>frame_end</span> <span class=o>+</span> <span class=mi>1</span><span class=p>,</span> <span class=n>frame_step</span><span class=p>):</span>
+        <span class=c1># Replace #### with padded number</span>
+        <span class=n>frame_str</span> <span class=o>=</span> <span class=nb>str</span><span class=p>(</span><span class=n>frame</span><span class=p>)</span><span class=o>.</span><span class=n>zfill</span><span class=p>(</span><span class=n>padding</span><span class=p>)</span>
+        <span class=n>frame_filename</span> <span class=o>=</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>filename_head</span><span class=si>}{</span><span class=n>frame_str</span><span class=si>}{</span><span class=n>filename_tail</span><span class=si>}</span><span class=s2>&quot;</span>
+        <span class=n>expected_file</span> <span class=o>=</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>join</span><span class=p>(</span><span class=n>directory</span><span class=p>,</span><span class=w> </span><span class=n>frame_filename</span><span class=p>)</span><span class=si>}{</span><span class=n>ext</span><span class=si>}</span><span class=s2>&quot;</span>
+        <span class=n>expected_files</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>expected_file</span><span class=o>.</span><span class=n>replace</span><span class=p>(</span><span class=s2>&quot;</span><span class=se>\\</span><span class=s2>&quot;</span><span class=p>,</span> <span class=s2>&quot;/&quot;</span><span class=p>))</span>
+
+    <span class=k>return</span> <span class=n>expected_files</span>
+</code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=client.ayon_blender.plugins.publish.collect_render.CollectBlenderRender.get_expected_outputs class="doc doc-heading"> <code class="highlight language-python"><span class=n>get_expected_outputs</span><span class=p>(</span><span class=n>node</span><span class=p>,</span> <span class=n>instance</span><span class=p>)</span></code> </h3> <div class="doc doc-contents "> <p>Return the expected output files from a compositor node output file.</p> <p>The output paths are <strong>not</strong> converted to individual frames and will still contain the <code>####</code> frame padding tokens to. So the final path would still need to be constructed from the resulting path.</p> <p>Even if the path set in the scene does not contain the <code>#</code> frame tokens or an extension, this method will ensure that the returned paths do and qualify as a full path with <code>#</code> as padding frame tokens.</p> <p><span class=doc-section-title>Returns:</span></p> <table> <thead> <tr> <th>Type</th> <th>Description</th> </tr> </thead> <tbody> <tr class=doc-section-item> <td> <code><span title=dict>dict</span>[<span title=str>str</span>, <span title=str>str</span>]</code> </td> <td> <div class=doc-md-description> <p>dict[str]: The full output image or sequence paths per identifier.</p> </div> </td> </tr> </tbody> </table> <details class=mkdocstrings-source> <summary>Source code in <code>client/ayon_blender/plugins/publish/collect_render.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>190</span>
+<span class=normal>191</span>
+<span class=normal>192</span>
+<span class=normal>193</span>
+<span class=normal>194</span>
+<span class=normal>195</span>
+<span class=normal>196</span>
+<span class=normal>197</span>
+<span class=normal>198</span>
+<span class=normal>199</span>
+<span class=normal>200</span>
+<span class=normal>201</span>
+<span class=normal>202</span>
+<span class=normal>203</span>
+<span class=normal>204</span>
+<span class=normal>205</span>
+<span class=normal>206</span>
+<span class=normal>207</span>
+<span class=normal>208</span>
+<span class=normal>209</span>
+<span class=normal>210</span>
+<span class=normal>211</span>
+<span class=normal>212</span>
+<span class=normal>213</span>
+<span class=normal>214</span>
+<span class=normal>215</span>
+<span class=normal>216</span>
+<span class=normal>217</span>
+<span class=normal>218</span>
+<span class=normal>219</span>
+<span class=normal>220</span>
+<span class=normal>221</span>
+<span class=normal>222</span>
+<span class=normal>223</span>
+<span class=normal>224</span>
+<span class=normal>225</span>
+<span class=normal>226</span>
+<span class=normal>227</span>
+<span class=normal>228</span>
+<span class=normal>229</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>get_expected_outputs</span><span class=p>(</span>
+    <span class=bp>self</span><span class=p>,</span>
+    <span class=n>node</span><span class=p>:</span> <span class=s2>&quot;bpy.types.CompositorNodeOutputFile&quot;</span><span class=p>,</span>
+    <span class=n>instance</span><span class=p>:</span> <span class=n>pyblish</span><span class=o>.</span><span class=n>api</span><span class=o>.</span><span class=n>Instance</span>
+<span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=nb>str</span><span class=p>]:</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Return the expected output files from a compositor node output file.</span>
+
+<span class=sd>    The output paths are **not** converted to individual frames and will</span>
+<span class=sd>    still contain the `####` frame padding tokens to. So the final path</span>
+<span class=sd>    would still need to be constructed from the resulting path.</span>
+
+<span class=sd>    Even if the path set in the scene does not contain the `#` frame</span>
+<span class=sd>    tokens or an extension, this method will ensure that the returned</span>
+<span class=sd>    paths do and qualify as a full path with `#` as padding frame tokens.</span>
+
+<span class=sd>    Returns:</span>
+<span class=sd>        dict[str]: The full output image or sequence paths per identifier.</span>
+
+<span class=sd>    &quot;&quot;&quot;</span>
+    <span class=c1># Blender 5</span>
+    <span class=k>if</span> <span class=n>lib</span><span class=o>.</span><span class=n>get_blender_version</span><span class=p>()</span> <span class=o>&gt;=</span> <span class=p>(</span><span class=mi>5</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>):</span>
+        <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_get_expected_outputs_blender_5</span><span class=p>(</span><span class=n>node</span><span class=p>)</span>
+
+    <span class=c1># Blender 4</span>
+    <span class=n>output_paths</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_get_expected_outputs_blender_4</span><span class=p>(</span><span class=n>node</span><span class=p>)</span>
+    <span class=n>is_multilayer</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>is_multilayer_exr</span><span class=p>(</span><span class=n>node</span><span class=p>)</span>
+    <span class=n>outputs_per_aov</span> <span class=o>=</span> <span class=p>{}</span>
+    <span class=k>for</span> <span class=n>output_path</span> <span class=ow>in</span> <span class=n>output_paths</span><span class=p>:</span>
+        <span class=k>if</span> <span class=n>is_multilayer</span><span class=p>:</span>
+            <span class=c1># Only ever a single output - we enforce the identifier to an</span>
+            <span class=c1># empty string to have it considered to not split into a</span>
+            <span class=c1># subname for the product</span>
+            <span class=n>aov_identifier</span> <span class=o>=</span> <span class=s2>&quot;&quot;</span>
+        <span class=k>else</span><span class=p>:</span>
+            <span class=n>aov_identifier</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>get_aov_identifier</span><span class=p>(</span>
+                <span class=n>output_path</span><span class=p>,</span>
+                <span class=n>instance</span>
+            <span class=p>)</span>
+        <span class=n>outputs_per_aov</span><span class=p>[</span><span class=n>aov_identifier</span><span class=p>]</span> <span class=o>=</span> <span class=n>output_path</span>
+    <span class=k>return</span> <span class=n>outputs_per_aov</span>
+</code></pre></div></td></tr></table></div> </details> </div> </div> </div> </div> </div> <div class="doc doc-object doc-class"> <h2 id=client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData class="doc doc-heading"> <code>RenderColorspaceData</code> </h2> <div class="doc doc-contents "> <p class="doc doc-class-bases"> Bases: <code><span title=typing.TypedDict>TypedDict</span></code></p> <p>Colorspace data for the render instance.</p> <p>This is used to store the colorspace configuration for the render output. It includes the OCIO configuration, display, and view settings.</p> <p><span class=doc-section-title>Attributes:</span></p> <table> <thead> <tr> <th>Name</th> <th>Type</th> <th>Description</th> </tr> </thead> <tbody> <tr class=doc-section-item> <td><code><span title=client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData.colorspaceConfig>colorspaceConfig</span></code></td> <td> <code><span title=str>str</span></code> </td> <td> <div class=doc-md-description> <p>Path to the OCIO configuration file.</p> </div> </td> </tr> <tr class=doc-section-item> <td><code><span title=client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData.colorspaceDisplay>colorspaceDisplay</span></code></td> <td> <code><span title=str>str</span></code> </td> <td> <div class=doc-md-description> <p>Display device name.</p> </div> </td> </tr> <tr class=doc-section-item> <td><code><span title=client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData.colorspaceView>colorspaceView</span></code></td> <td> <code><span title=str>str</span></code> </td> <td> <div class=doc-md-description> <p>View transform name.</p> </div> </td> </tr> <tr class=doc-section-item> <td><code><span title=client.ayon_blender.plugins.publish.collect_render.RenderColorspaceData.colorspace>colorspace</span></code></td> <td> <code><span title=str>str</span></code> </td> <td> <div class=doc-md-description> <p>Colorspace of the output image.</p> </div> </td> </tr> </tbody> </table> <details class=mkdocstrings-source> <summary>Source code in <code>client/ayon_blender/plugins/publish/collect_render.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>32</span>
+<span class=normal>33</span>
+<span class=normal>34</span>
+<span class=normal>35</span>
+<span class=normal>36</span>
+<span class=normal>37</span>
+<span class=normal>38</span>
+<span class=normal>39</span>
+<span class=normal>40</span>
+<span class=normal>41</span>
+<span class=normal>42</span>
+<span class=normal>43</span>
+<span class=normal>44</span>
+<span class=normal>45</span>
+<span class=normal>46</span>
+<span class=normal>47</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>class</span><span class=w> </span><span class=nc>RenderColorspaceData</span><span class=p>(</span><span class=n>TypedDict</span><span class=p>):</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Colorspace data for the render instance.</span>
+
+<span class=sd>    This is used to store the colorspace configuration for the render output.</span>
+<span class=sd>    It includes the OCIO configuration, display, and view settings.</span>
+
+<span class=sd>    Attributes:</span>
+<span class=sd>        colorspaceConfig (str): Path to the OCIO configuration file.</span>
+<span class=sd>        colorspaceDisplay (str): Display device name.</span>
+<span class=sd>        colorspaceView (str): View transform name.</span>
+<span class=sd>        colorspace (str): Colorspace of the output image.</span>
+<span class=sd>    &quot;&quot;&quot;</span>
+    <span class=n>colorspaceConfig</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>colorspaceDisplay</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>colorspaceView</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>colorspace</span><span class=p>:</span> <span class=nb>str</span>
+</code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> </div> </div> </div> <div class="doc doc-object doc-function"> <h2 id=client.ayon_blender.plugins.publish.collect_render.files_as_sequence class="doc doc-heading"> <code class="highlight language-python"><span class=n>files_as_sequence</span><span class=p>(</span><span class=n>files</span><span class=p>)</span></code> </h2> <div class="doc doc-contents "> <p>Convert sequence of files to sequence pattern.</p> <p>Convert a list of files to a sequence pattern purely used for improved human-readable logging purposes.</p> <details class=mkdocstrings-source> <summary>Source code in <code>client/ayon_blender/plugins/publish/collect_render.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>14</span>
+<span class=normal>15</span>
+<span class=normal>16</span>
+<span class=normal>17</span>
+<span class=normal>18</span>
+<span class=normal>19</span>
+<span class=normal>20</span>
+<span class=normal>21</span>
+<span class=normal>22</span>
+<span class=normal>23</span>
+<span class=normal>24</span>
+<span class=normal>25</span>
+<span class=normal>26</span>
+<span class=normal>27</span>
+<span class=normal>28</span>
+<span class=normal>29</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>files_as_sequence</span><span class=p>(</span><span class=n>files</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>list</span><span class=p>[</span><span class=nb>str</span><span class=p>]:</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Convert sequence of files to sequence pattern.</span>
+
+<span class=sd>    Convert a list of files to a sequence pattern purely used for improved</span>
+<span class=sd>    human-readable logging purposes.&quot;&quot;&quot;</span>
+    <span class=c1># clique.PATTERNS[&quot;frames&quot;] but also allow `_` before digits</span>
+    <span class=n>pattern</span> <span class=o>=</span> <span class=sa>r</span><span class=s2>&quot;(?P&lt;index&gt;(?P&lt;padding&gt;0*)\d+)\.\D+\d?$&quot;</span>
+    <span class=n>files</span> <span class=o>=</span> <span class=p>[</span><span class=n>os</span><span class=o>.</span><span class=n>path</span><span class=o>.</span><span class=n>basename</span><span class=p>(</span><span class=n>f</span><span class=p>)</span> <span class=k>for</span> <span class=n>f</span> <span class=ow>in</span> <span class=n>files</span><span class=p>]</span>
+    <span class=n>collections</span><span class=p>,</span> <span class=n>remainder</span> <span class=o>=</span> <span class=n>clique</span><span class=o>.</span><span class=n>assemble</span><span class=p>(</span>
+        <span class=n>files</span><span class=p>,</span>
+        <span class=n>patterns</span><span class=o>=</span><span class=p>[</span><span class=n>pattern</span><span class=p>],</span>
+        <span class=n>assume_padded_when_ambiguous</span><span class=o>=</span><span class=kc>True</span><span class=p>,</span>
+    <span class=p>)</span>
+    <span class=n>names</span> <span class=o>=</span> <span class=p>[</span><span class=nb>str</span><span class=p>(</span><span class=n>collection</span><span class=p>)</span> <span class=k>for</span> <span class=n>collection</span> <span class=ow>in</span> <span class=n>collections</span><span class=p>]</span>
+    <span class=n>names</span><span class=o>.</span><span class=n>extend</span><span class=p>(</span><span class=n>remainder</span><span class=p>)</span>
+    <span class=k>return</span> <span class=n>names</span>
+</code></pre></div></td></tr></table></div> </details> </div> </div> </div> </div> </div> </article> </div> <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script> </div> </main> <footer class=md-footer> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"annotate": null, "base": "../../../../..", "features": ["navigation.sections", "navigation.path", "navigation.prune"], "search": "../../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script> <script src=../../../../../assets/javascripts/bundle.79ae519e.min.js></script> </body> </html>
