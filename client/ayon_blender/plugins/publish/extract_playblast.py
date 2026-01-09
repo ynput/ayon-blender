@@ -23,7 +23,7 @@ class ExtractPlayblast(
 
     label = "Extract Playblast"
     hosts = ["blender"]
-    families = ["review"]
+    families = ["review.playblast"]
     optional = True
     order = pyblish.api.ExtractorOrder + 0.01
 
