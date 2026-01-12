@@ -1,14 +1,14 @@
 from __future__ import annotations
 import os
 import re
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 import pyblish.api
 import clique
 
 import bpy
 
-from ayon_blender.api import colorspace, plugin, render_lib
+from ayon_blender.api import colorspace, plugin, lib, render_lib
 
 
 def files_as_sequence(files) -> list[str]:
@@ -39,10 +39,12 @@ class RenderColorspaceData(TypedDict):
         colorspaceConfig (str): Path to the OCIO configuration file.
         colorspaceDisplay (str): Display device name.
         colorspaceView (str): View transform name.
+        colorspace (str): Colorspace of the output image.
     """
     colorspaceConfig: str
     colorspaceDisplay: str
     colorspaceView: str
+    colorspace: str
 
 
 class CollectBlenderRender(plugin.BlenderInstancePlugin):
@@ -78,30 +80,25 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             instance.data["transientData"]["instance_node"])
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
-        frame_step: int = instance.data["creator_attributes"].get("step", 1)
-        review: bool = instance.data["creator_attributes"].get("review", False)
+        creator_attributes: dict = instance.data["creator_attributes"]
+        frame_step: int = creator_attributes.get("step", 1)
+        review: bool = creator_attributes.get("review", False)
+
+        colorspace_data = self.get_colorspace_data(comp_output_node)
+        self.log.debug(f"Collected colorspace data: {colorspace_data}")
+        if colorspace_data:
+            instance.data.update(colorspace_data)
+
+        render_products = colorspace.ARenderProduct(
+            frame_start=frame_start,
+            frame_end=frame_end
+        )
 
         expected_files: dict[str, list[str]] = {}
-        output_paths = self.get_expected_outputs(comp_output_node)
-        is_multilayer = self.is_multilayer_exr(comp_output_node)
-
-        for output_path in output_paths:
-            if is_multilayer:
-                # Only ever a single output - we enforce the identifier to an
-                # empty string to have it considered to not split into a
-                # subname for the product
-                aov_identifier = ""
-            else:
-                aov_identifier = self.get_aov_identifier(
-                    output_path,
-                    instance
-                )
-
+        outputs = self.get_expected_outputs(comp_output_node, instance)
+        for aov_identifier, output_path in outputs.items():
             aov_label = aov_identifier or "<beauty>"
-            self.log.debug(
-                f"Expecting outputs for AOV {aov_label}: "
-                f"{output_path}"
-            )
+            self.log.debug(f"AOV '{aov_label}': {output_path}")
 
             expected_files[aov_identifier] = self.generate_expected_frames(
                 output_path,
@@ -110,9 +107,23 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 frame_step
             )
 
+            # We need to have a matching 'renderProduct' entry so that
+            # the logic in core for `_create_instances_for_aov` assigns
+            # the colorspace data to the relevant AOV instance.
+            aov_colorspace: str = (
+                colorspace_data["colorspace"] if colorspace_data else ""
+            )
+            render_products.add_render_product(
+                product_name=aov_identifier,
+                colorspace=aov_colorspace
+            )
+
             # Log the expected sequence of frames for the AOV
             files = files_as_sequence(expected_files[aov_identifier])
             self.log.debug(f"Expected frames: {files}")
+
+        # Collect Render Target
+        local_render: bool = creator_attributes.get("render_target") == "local"
 
         context = instance.context
         instance.data.update({
@@ -120,47 +131,54 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "fps": context.data["fps"],
             "byFrameStep": frame_step,
             "review": review,
-            "multipartExr": is_multilayer,
-            "farm": True,
+            "multipartExr": self.is_multilayer_exr(comp_output_node),
+            "farm": not local_render,
             "expectedFiles": [expected_files],
-            "renderProducts": colorspace.ARenderProduct(
-                frame_start=frame_start,
-                frame_end=frame_end
-            ),
+            "renderProducts": render_products,
         })
-        colorspace_data = self.get_colorspace_data(comp_output_node)
-        self.log.debug(f"Collected colorspace data: {colorspace_data}")
-        instance.data.update(colorspace_data)
 
     def get_colorspace_data(
         self,
         node: "bpy.types.CompositorNodeOutputFile"
-    ) -> RenderColorspaceData:
-        # OCIO not currently implemented in Blender, but the following
-        # settings are required by the schema, so it is hardcoded.
+    ) -> Optional[RenderColorspaceData]:
         ocio_path = os.getenv("OCIO")
         if not ocio_path:
-            # assume not color-managed, return fallback placeholder data
-            return {
-                "colorspaceConfig": "",
-                "colorspaceDisplay": "sRGB",
-                "colorspaceView": "ACES 1.0 SDR-video",
-            }
+            # Assume not color-managed
+            return None
 
+        # TODO: Technically Blender hides/disabled Display/View versus
+        #  Colorspace depending on `node.format.has_linear_colorspace`
+        #  which may mean it uses one of the two instead of both.
         # Get from node or scene
         if node.format.color_management == "OVERRIDE":
-            display: str = node.display_settings.display_device
-            view: str = node.view_settings.view_transform
-            # look: str = node.view_settings.look
+            display: str = node.format.display_settings.display_device
+            view: str = node.format.view_settings.view_transform
+            colorspace: str = node.format.linear_colorspace_settings.name
+            # look: str = node.format.view_settings.look
         else:
             display: str = bpy.context.scene.display_settings.display_device
             view: str = bpy.context.scene.view_settings.view_transform
+            # TODO: Where do we get colorspace if it doesn't come from node
+            #  override nor scene override? In Blender 5+ there seems to be
+            #  bpy.context.blend_data.colorspace.working_space but similar
+            #  does not exist in Blender 4
+            # This gets the scene render colorspace, which should technically
+            # only apply when it's set to "Override" on the scene output
+            # settings. But since we can't find the source Follow Scene value
+            # it's the best alternative for now to rely upon, especially
+            # because the default value does match the default render
+            # colorspace.
+            colorspace: str = (
+                bpy.context.scene.render
+                .image_settings.linear_colorspace_settings.name
+            )
             # look: str = bpy.context.scene.view_settings.look
 
         return {
             "colorspaceConfig": ocio_path,
             "colorspaceDisplay": display,
             "colorspaceView": view,
+            "colorspace": colorspace
         }
 
     def is_multilayer_exr(
@@ -171,8 +189,9 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
     def get_expected_outputs(
         self,
-        node: "bpy.types.CompositorNodeOutputFile"
-    ) -> list[str]:
+        node: "bpy.types.CompositorNodeOutputFile",
+        instance: pyblish.api.Instance
+    ) -> dict[str, str]:
         """Return the expected output files from a compositor node output file.
 
         The output paths are **not** converted to individual frames and will
@@ -184,9 +203,72 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         paths do and qualify as a full path with `#` as padding frame tokens.
 
         Returns:
-            list[str]: The full output image or sequence paths.
+            dict[str]: The full output image or sequence paths per identifier.
 
         """
+        # Blender 5
+        if lib.get_blender_version() >= (5, 0, 0):
+            return self._get_expected_outputs_blender_5(node)
+
+        # Blender 4
+        output_paths = self._get_expected_outputs_blender_4(node)
+        is_multilayer = self.is_multilayer_exr(node)
+        outputs_per_aov = {}
+        for output_path in output_paths:
+            if is_multilayer:
+                # Only ever a single output - we enforce the identifier to an
+                # empty string to have it considered to not split into a
+                # subname for the product
+                aov_identifier = ""
+            else:
+                aov_identifier = self.get_aov_identifier(
+                    output_path,
+                    instance
+                )
+            outputs_per_aov[aov_identifier] = output_path
+        return outputs_per_aov
+
+    def _get_expected_outputs_blender_5(
+        self,
+        node: "bpy.types.CompositorNodeOutputFile"
+    ) -> dict[str, str]:
+        """Return output filepaths for CompositorNodeOutputFile in Blender 5"""
+        directory: str = node.directory
+        file_name: str = node.file_name
+        outputs: dict[str, str] = {}
+        base_path: str = os.path.join(directory, file_name)
+
+        if self.is_multilayer_exr(node):
+            file_path = self._resolve_full_render_path(
+                path=base_path,
+                file_format=node.format.file_format
+            )
+            outputs[""] = file_path  # beauty only
+        else:
+            # Separate images
+            for output_item in node.file_output_items:
+                if output_item.override_node_format:
+                    output_format = output_item.format.file_format
+                else:
+                    output_format = node.format.file_format
+
+                # Resolve the full render path for the output path
+                file_path = self._resolve_full_render_path(
+                    path=f"{base_path}{output_item.name}",
+                    file_format=output_format
+                )
+
+                # Use the output item name as AOV identifier but remove any
+                # special characters like `#`, `_`, `.` and spaces.
+                aov_identifier: str = re.sub("[#_. ]", "", output_item.name)
+                outputs[aov_identifier] = file_path
+        return outputs
+
+    def _get_expected_outputs_blender_4(
+        self,
+        node: "bpy.types.CompositorNodeOutputFile"
+    ) -> list[str]:
+        """Return output filepaths for CompositorNodeOutputFile in Blender 4"""
         outputs: list[str] = []
         base_path: str = node.base_path
 
@@ -225,7 +307,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 )
 
                 outputs.append(file_path)
-
         return outputs
 
     def _resolve_full_render_path(
@@ -325,6 +406,4 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                 f"{aov_identifier}"
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
-
-        self.log.info(f"'{aov_identifier}' AOV from filepath: {path}")
         return aov_identifier

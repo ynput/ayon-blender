@@ -10,6 +10,7 @@ class CreateReview(plugin.BlenderCreator):
     label = "Review"
     description = __doc__
     product_type = "review"
+    product_base_type = "review"
     icon = "video-camera"
 
     def create(
@@ -35,3 +36,6 @@ class CreateReview(plugin.BlenderCreator):
         defs = lib.collect_animation_defs(self.create_context)
 
         return defs
+
+    def get_publish_families(self):
+        return ["review", "review.playblast"]

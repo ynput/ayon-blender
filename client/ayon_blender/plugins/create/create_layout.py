@@ -12,6 +12,7 @@ class CreateLayout(plugin.BlenderCreator):
     label = "Layout"
     description = __doc__
     product_type = "layout"
+    product_base_type = "layout"
     icon = "cubes"
 
     create_as_asset_group = True

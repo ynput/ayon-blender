@@ -32,7 +32,8 @@ from .ops import (
 )
 from .lib import (
     imprint,
-    get_blender_version
+    get_blender_version,
+    get_scene_node_tree
 )
 
 
@@ -212,8 +213,9 @@ class BlenderCreator(Creator):
 
             # Consider any node tree objects as well
             node_tree_objects = []
-            if bpy.context.scene.node_tree:
-                node_tree_objects = bpy.context.scene.node_tree.nodes
+            node_tree = get_scene_node_tree()
+            if node_tree:
+                node_tree_objects = node_tree.nodes
 
             for obj_or_col in itertools.chain(
                     ayon_instance_objs,
@@ -276,6 +278,9 @@ class BlenderCreator(Creator):
             ayon_instances.children.link(instance_node)
 
         self.set_instance_data(product_name, instance_data)
+
+        # Mimic families override like `self.read` does
+        instance_data["families"] = self.get_publish_families()
 
         instance = CreatedInstance(
             self.product_type, product_name, instance_data, self,
@@ -359,13 +364,7 @@ class BlenderCreator(Creator):
             if isinstance(node, bpy.types.Collection):
                 # Remove recursively linked child collections and objects
                 for child in node.children_recursive:
-                    if isinstance(child, bpy.types.Collection):
-                        # If only linked to this collection, relink to scene before removal
-                        if len(child.users_collection) == 1:
-                            if child.name not in bpy.context.scene.collection:
-                                bpy.context.scene.collection.children.link(child)
-
-                    elif isinstance(child, bpy.types.Object):
+                     if isinstance(child, bpy.types.Object):
                         if len(child.users_collection) == 1:
                             if child.name not in bpy.context.scene.collection:
                                 bpy.context.scene.collection.objects.link(child)
@@ -383,7 +382,8 @@ class BlenderCreator(Creator):
 
             # Remove compositor node
             elif isinstance(node, bpy.types.CompositorNode):
-                bpy.context.scene.node_tree.nodes.remove(node)
+                node_tree = get_scene_node_tree()
+                node_tree.nodes.remove(node)
 
             self._remove_instance_from_context(instance)
 
@@ -441,6 +441,7 @@ class BlenderCreator(Creator):
         instance in a different way, e.g. in a custom property or the 'mute'
         state of a node.
         """
+        data.pop("families", None)
         imprint(node, data)
 
     def read(self, node) -> dict:
@@ -452,7 +453,12 @@ class BlenderCreator(Creator):
         if not ayon_property:
             return {}
 
-        return ayon_property.to_dict()
+        data = ayon_property.to_dict()
+        data["families"] = self.get_publish_families()
+        return data
+
+    def get_publish_families(self) -> list[str]:
+        return [self.product_type]
 
 
 class BlenderLoader(LoaderPlugin):
@@ -566,26 +572,6 @@ class BlenderLoader(LoaderPlugin):
         # Only containerise if anything was loaded by the Loader.
         if not nodes:
             return None
-
-        # Only containerise if it's not already a collection from a .blend file.
-        # representation = context["representation"]["name"]
-        # if representation != "blend":
-        #     from ayon_blender.api.pipeline import containerise
-        #     return containerise(
-        #         name=name,
-        #         namespace=namespace,
-        #         nodes=nodes,
-        #         context=context,
-        #         loader=self.__class__.__name__,
-        #     )
-
-        # folder_name = context["folder"]["name"]
-        # product_name = context["product"]["name"]
-        # instance_name = prepare_scene_name(
-        #     folder_name, product_name, unique_number
-        # ) + '_CON'
-
-        # return self._get_instance_collection(instance_name, nodes)
 
     def exec_update(self, container: Dict, context: Dict):
         """Must be implemented by a subclass"""

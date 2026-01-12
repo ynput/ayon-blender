@@ -26,6 +26,11 @@ def load_scripts(paths):
 
     It is possible that this function will be changed in future and usage will
     be based on Blender version.
+
+    This does not work in Blender 5+ due to `bpy_types` being unavailable. But
+    usually this is not needed for Blender 5+ anyway, because it does allow
+    better user scripts management through environment variables than older
+    releases of Blender.
     """
     import bpy_types
 
@@ -131,6 +136,16 @@ def load_scripts(paths):
 
 
 def append_user_scripts():
+    """Apply user scripts to Blender.
+
+    This was originally used for early Blender 4 versions due to requiring
+    AYON to be sources from `BLENDER_USER_SCRIPTS` paths which unfortunately
+    allowed only a single path, *and* it had the side effect of not loading the
+    default user scripts anymore.
+
+    In Blender 5+ this is irrelevant and instead additional Script Directories
+    can be configured and used instead.
+    """
     default_user_prefs = os.path.join(
         bpy.utils.resource_path('USER'),
         "scripts",
@@ -614,6 +629,18 @@ def strip_container_data(containers):
 
 
 @contextlib.contextmanager
+def strip_instance_data(node):
+    """Remove instance data during context
+    """
+    previous_data = dict(node.get(AYON_PROPERTY, {}))
+    try:
+        node[AYON_PROPERTY]["active"] = False
+        yield
+    finally:
+        node[AYON_PROPERTY] = previous_data
+
+
+@contextlib.contextmanager
 def strip_namespace(containers):
     """Strip namespace during context
     This context manager is only valid for blender version elder than 5.0.
@@ -632,7 +659,7 @@ def strip_namespace(containers):
             children = node.children_recursive
         elif isinstance(node, bpy.types.Object):
             children = node.children
-        elif isinstance(node, bpy.types.Node):
+        elif isinstance(node, (bpy.types.Node, bpy.types.Action)):
             children = [node]
         else:
             raise TypeError(f"Unsupported type: {node} ({type(node)})")
@@ -650,6 +677,60 @@ def strip_namespace(containers):
     finally:
         for node, original_namespace in original_namespaces.items():
             node.name = f"{original_namespace}:{name}"
+
+
+@contextlib.contextmanager
+def packed_images(datablocks, logger=None):
+    """Unpack packed images during context
+    This will pack all unpacked images found in the given datablocks,
+    and unpack them back when exiting the context.
+
+    Args:
+        datablocks (set): Datablocks to search for
+            unpacked images.
+        logger (logging.Logger): Logger to use for warnings if packing fails.
+
+    """
+
+    if logger is None:
+        logger = log
+
+    unpacked_node_images = set()
+    for data in datablocks:
+        if not (
+            isinstance(data, bpy.types.Object) and data.type == 'MESH'
+        ):
+            continue
+        for material_slot in data.material_slots:
+            mat = material_slot.material
+            if not (mat and mat.use_nodes):
+                continue
+            tree = mat.node_tree
+            if tree.type != 'SHADER':
+                continue
+            for node in tree.nodes:
+                if node.bl_idname != 'ShaderNodeTexImage':
+                    continue
+                if not node.image:
+                    continue
+                if node.image.packed_file is not None:
+                    continue
+
+                try:
+                    node.image.pack()
+                except RuntimeError:
+                    logger.warning(
+                        f"Unable to pack node: {node}",
+                        exc_info=True
+                    )
+                    continue
+                unpacked_node_images.add(node.image)
+    try:
+        yield
+
+    finally:
+        for image in unpacked_node_images:
+            image.unpack()
 
 
 def search_replace_render_paths(src: str, dest: str) -> bool:
@@ -677,7 +758,7 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
         changes = True
 
     # Base paths for Compositor File Output Nodes
-    node_tree = bpy.context.scene.node_tree
+    node_tree = get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
             if node.bl_idname != "CompositorNodeOutputFile":
@@ -696,3 +777,29 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
             changes = True
 
     return changes
+
+
+def get_scene_node_tree(ensure_exists=False):
+    """Return the node tree
+
+    Arguments:
+        ensure_exists (bool): When enabled, make sure a compositor node tree is
+            enabled and set.
+    """
+    if get_blender_version() >= (5, 0, 0):
+        # Blender 5.0+
+        if not bpy.context.scene.compositing_node_group and ensure_exists:
+            # In Blender 5 if no comp node tree is set, create one
+            tree = bpy.data.node_groups.new("Compositor Nodes",
+                                            "CompositorNodeTree")
+            bpy.context.scene.compositing_node_group = tree
+            return tree
+
+        return bpy.context.scene.compositing_node_group
+    else:
+        # Blender 4.0 and below
+        if not bpy.context.scene.node_tree and ensure_exists:
+            # Force enable compositor in Blender 4
+            bpy.context.scene.use_nodes = True
+
+        return bpy.context.scene.node_tree

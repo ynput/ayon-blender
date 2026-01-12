@@ -2,6 +2,7 @@ import os
 
 import bpy
 
+from ayon_core.lib import BoolDef, EnumDef
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
 
@@ -10,16 +11,25 @@ class ExtractAnimationABC(
     plugin.BlenderExtractor,
     publish.OptionalPyblishPluginMixin,
 ):
-    """Extract as ABC."""
+    """Extract as ABC.
+
+    For more details on the export options, see:
+    https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.alembic_export   # noqa
+    """
 
     label = "Extract Animation ABC"
     hosts = ["blender"]
     families = ["animation"]
     optional = True
 
+    subdiv_schema: bool = False
+    evaluation_mode: str = "RENDER"
+
     def process(self, instance):
         if not self.is_active(instance.data):
             return
+
+        attr_values = self.get_attr_values_from_data(instance.data)
 
         # Define extract output file path
         stagingdir = self.staging_dir(instance)
@@ -61,7 +71,11 @@ class ExtractAnimationABC(
                 selected=True,
                 flatten=False,
                 start=instance.data["frameStartHandle"],
-                end=instance.data["frameEndHandle"]
+                end=instance.data["frameEndHandle"],
+                subdiv_schema=attr_values.get("subdiv_schema",
+                                              self.subdiv_schema),
+                evaluation_mode=attr_values.get("evaluation_mode",
+                                                self.evaluation_mode),
             )
 
         plugin.deselect_all()
@@ -79,3 +93,32 @@ class ExtractAnimationABC(
 
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
+
+    @classmethod
+    def get_attribute_defs(cls):
+        return [
+            BoolDef(
+                "subdiv_schema",
+                label="Alembic Mesh Subdiv Schema",
+                tooltip="Export Meshes using Alembic's subdivision schema.\n"
+                        "Enabling this includes creases with the export but "
+                        "excludes the mesh's normals.\n"
+                        "Enabling this usually result in smaller file size "
+                        "due to lack of normals.",
+                default=cls.subdiv_schema
+            ),
+            EnumDef(
+                "evaluation_mode",
+                label="Alembic Evaluation Mode",
+                items=[
+                    {"value": "RENDER", "label": "Render"},
+                    {"value": "VIEWPORT", "label": "Viewport"},
+                ],
+                tooltip=(
+                    "For Alembic export determines visibility of objects, "
+                    "modifier settings, and other areas\nwhere there are "
+                    "different settings for viewport and rendering."
+                ),
+                default=cls.evaluation_mode
+            )
+        ]

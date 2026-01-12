@@ -38,7 +38,7 @@ class ExtractCamera(
         camera = None
 
         for obj in instance:
-            if obj.type == "CAMERA":
+            if isinstance(obj, bpy.types.Object) and obj.type == "CAMERA":
                 obj.select_set(True)
                 selected.append(obj)
                 camera = obj
