@@ -81,7 +81,7 @@ class BlendLoader(plugin.BlenderLoader):
                 obj.get(AYON_PROPERTY).get('family') == 'rig'
             )
         ]
-        if not rigs:
+        if not rigs or not self.create_animation_instance_on_load:
             return
         # Create animation instances for each rig
         for rig in rigs:
