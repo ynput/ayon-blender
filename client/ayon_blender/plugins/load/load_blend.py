@@ -81,7 +81,7 @@ class BlendLoader(plugin.BlenderLoader):
                 obj.get(AYON_PROPERTY).get('family') == 'rig'
             )
         ]
-        if not rigs or not self.create_animation_instance_on_load:
+        if not rigs:
             return
         # Create animation instances for each rig
         for rig in rigs:
@@ -162,11 +162,12 @@ class BlendLoader(plugin.BlenderLoader):
 
         container, members = self._process_data(libpath, group_name)
 
-        if product_type == "layout":
-            self._post_process_layout(container, folder_name, representation)
+        if self.create_animation_instance_on_load:
+            if product_type == "layout":
+                self._post_process_layout(container, folder_name, representation)
 
-        if product_type == "rig" and self.create_animation_instance_on_load:
-            create_animation_instance(container)
+            if product_type == "rig":
+                create_animation_instance(container)
 
         add_to_ayon_container(container)
 
