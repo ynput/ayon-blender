@@ -8,8 +8,7 @@ from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,
-    get_blender_version,
-    create_animation_instance
+    get_blender_version
 )
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,

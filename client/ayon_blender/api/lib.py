@@ -2,7 +2,7 @@ import os
 import traceback
 import importlib
 import contextlib
-from typing import Dict, List, Union, TYPE_CHECKING
+from typing import Dict, List, Union
 
 import bpy
 import addon_utils
