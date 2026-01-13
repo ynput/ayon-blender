@@ -1,6 +1,8 @@
 """Create an animation asset."""
 
+import bpy
 from ayon_blender.api import plugin, lib
+from ayon_core.pipeline import CreatorError
 
 
 class CreateAnimation(plugin.BlenderCreator):
@@ -33,7 +35,14 @@ class CreateAnimation(plugin.BlenderCreator):
             # Use for Load Blend automated creation of animation instances
             # upon loading rig files
             obj = pre_create_data.get("asset_group")
-            collection.objects.link(obj)
+            if isinstance(obj, bpy.types.Collection):
+                collection.children.link(obj)
+            elif isinstance(obj, bpy.types.Object):
+                collection.objects.link(obj)
+            else:
+                raise CreatorError(
+                    "asset_group must be a Collection or Object"
+                )
 
         return collection
 

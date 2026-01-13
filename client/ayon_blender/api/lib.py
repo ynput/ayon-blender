@@ -10,9 +10,9 @@ from ayon_core.lib import (
     Logger,
     NumberDef
 )
+from ayon_core.pipeline import registered_host
 
-if TYPE_CHECKING:
-    from ayon_core.pipeline.create import CreateContext  # noqa: F401
+from ayon_core.pipeline.create import CreateContext
 
 from . import pipeline
 
@@ -803,3 +803,24 @@ def get_scene_node_tree(ensure_exists=False):
             bpy.context.scene.use_nodes = True
 
         return bpy.context.scene.node_tree
+
+
+def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
+    """Create animation instances for the given rigs.
+
+    Args:
+        rig (Union[bpy.types.Collection, bpy.types.Object]): Rig to create
+        animation instances for.
+    """
+    creator_identifier = "io.ayon.creators.blender.animation"
+    host = registered_host()
+    create_context = CreateContext(host)
+
+    create_context.create(
+        creator_identifier=creator_identifier,
+        variant=rig.name.split(':')[-1],
+        pre_create_data={
+            "use_selection": False,
+            "asset_group": rig
+        }
+    )
