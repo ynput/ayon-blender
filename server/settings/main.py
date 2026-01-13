@@ -8,6 +8,10 @@ from .creators import (
     CreatorsModel,
     DEFAULT_CREATORS_SETTINGS
 )
+from .loaders import (
+    LoadersModel,
+    DEFAULT_LOADERS_SETTINGS
+)
 from .imageio import BlenderImageIOModel
 from .publish_plugins import (
     PublishPluginsModel,
@@ -95,6 +99,11 @@ class BlenderSettings(BaseSettingsModel):
         title="Creator Plugins",
         description="Configure various creators.",
     )
+    load: LoadersModel = SettingsField(
+        default_factory=LoadersModel,
+        title="Loader Plugins",
+        description="Configure various loaders.",
+    )
     publish: PublishPluginsModel = SettingsField(
         default_factory=PublishPluginsModel,
         title="Publish Plugins",
@@ -116,6 +125,7 @@ DEFAULT_VALUES = {
     },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "create": DEFAULT_CREATORS_SETTINGS,
+    "load": DEFAULT_LOADERS_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
     "workfile_builder": {
         "create_first_version": False,
