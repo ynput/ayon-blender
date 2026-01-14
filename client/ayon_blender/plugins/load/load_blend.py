@@ -4,15 +4,12 @@ from pathlib import Path
 
 import bpy
 
-from ayon_core.pipeline import (
-    AYON_CONTAINER_ID,
-    registered_host
-)
-from ayon_core.pipeline.create import CreateContext
+from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,
-    get_blender_version
+    get_blender_version,
+    create_animation_instance
 )
 from ayon_blender.api.pipeline import (
     add_to_ayon_container,
@@ -31,6 +28,9 @@ class BlendLoader(plugin.BlenderLoader):
     label = "Append Blend"
     icon = "code-fork"
     color = "orange"
+
+    # From settings
+    create_animation_instance_on_load = True
 
     @staticmethod
     def _get_asset_container(objects):
@@ -72,6 +72,7 @@ class BlendLoader(plugin.BlenderLoader):
         return parent_containers
 
     def _post_process_layout(self, container, asset, representation):
+
         rigs = [
             obj for obj in container.children_recursive
             if (
@@ -82,21 +83,9 @@ class BlendLoader(plugin.BlenderLoader):
         ]
         if not rigs:
             return
-
         # Create animation instances for each rig
-        creator_identifier = "io.ayon.creators.blender.animation"
-        host = registered_host()
-        create_context = CreateContext(host)
-
         for rig in rigs:
-            create_context.create(
-                creator_identifier=creator_identifier,
-                variant=rig.name.split(':')[-1],
-                pre_create_data={
-                    "use_selection": False,
-                    "asset_group": rig
-                }
-            )
+            create_animation_instance(rig)
 
     def _process_data(self, libpath, group_name):
         # Append all the data from the .blend file
@@ -173,8 +162,12 @@ class BlendLoader(plugin.BlenderLoader):
 
         container, members = self._process_data(libpath, group_name)
 
-        if product_type == "layout":
-            self._post_process_layout(container, folder_name, representation)
+        if self.create_animation_instance_on_load:
+            if product_type == "layout":
+                self._post_process_layout(container, folder_name, representation)
+
+            if product_type == "rig":
+                create_animation_instance(container)
 
         add_to_ayon_container(container)
 
