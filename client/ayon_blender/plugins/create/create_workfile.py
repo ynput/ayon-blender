@@ -52,7 +52,7 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
             data = {
                 "folderPath": folder_path,
                 "task": task_name,
-                "variant": task_name,
+                "variant": self.default_variant,
             }
             data.update(
                 self.get_dynamic_data(
