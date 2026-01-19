@@ -31,6 +31,10 @@ from ayon_core.style import load_stylesheet
 from .workio import OpenFileCacher
 from . import pipeline
 from . import render_lib
+from .workfile_template_builder import (
+    build_workfile_template,
+    update_workfile_template
+)
 
 
 PREVIEW_COLLECTIONS: Dict = dict()
@@ -435,6 +439,44 @@ class VersionUpWorkfile(LaunchQtApp):
         return {"FINISHED"}
 
 
+class BuildWorkfileFromTemplate(LaunchQtApp):
+    """Build Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_build_workfile_from_template"
+    bl_label = "Build Workfile from Template"
+    def execute(self, context):
+        build_workfile_template()
+        return {"FINISHED"}
+
+
+class UpdateWorkfileFromTemplate(LaunchQtApp):
+    """Update Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_update_workfile_from_template"
+    bl_label = "Update Workfile from Template"
+    def execute(self, context):
+        update_workfile_template()
+        return {"FINISHED"}
+
+
+class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
+    """AYON submenu example."""
+
+    bl_idname = "TOPBAR_MT_AYON_TEMPLATED_WORKFILE"
+    bl_label = "Templated Workfile"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator(
+            BuildWorkfileFromTemplate.bl_idname,
+            text="Build Workfile from Template"
+        )
+        layout.operator(
+            UpdateWorkfileFromTemplate.bl_idname,
+            text="Update Workfile from Template"
+        )
+
+
 class TOPBAR_MT_ayon(bpy.types.Menu):
     """AYON menu."""
 
@@ -498,6 +540,12 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
+        layout.separator()
+        layout.menu(
+            TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
+            text="Templated Workfile"
+        )
+
 def draw_ayon_menu(self, context):
     """Draw the AYON menu in the top bar."""
 
@@ -516,6 +564,9 @@ classes = [
     SetUnitScale,
     CreateRenderSetup,
     VersionUpWorkfile,
+    BuildWorkfileFromTemplate,
+    UpdateWorkfileFromTemplate,
+    TOPBAR_MT_ayon_Templated_Workfile,
     TOPBAR_MT_ayon,
 ]
 

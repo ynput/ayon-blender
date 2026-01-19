@@ -4,7 +4,11 @@ from pathlib import Path
 
 import bpy
 
-from ayon_core.pipeline import AYON_CONTAINER_ID
+from ayon_core.pipeline import (
+    AYON_CONTAINER_ID,
+    AYON_INSTANCE_ID,
+    AVALON_INSTANCE_ID,
+)
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,

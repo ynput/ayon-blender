@@ -1,7 +1,6 @@
 from ayon_server.settings import (
     BaseSettingsModel,
     SettingsField,
-    TemplateWorkfileBaseOptions,
     task_types_enum,
 )
 from .creators import (
@@ -21,6 +20,7 @@ from .render_settings import (
     RenderSettingsModel,
     DEFAULT_RENDER_SETTINGS
 )
+from .templated_workfile_build import TemplatedWorkfileBuildModel
 
 
 class UnitScaleSettingsModel(BaseSettingsModel):
@@ -87,13 +87,13 @@ class BlenderSettings(BaseSettingsModel):
         description="Enable / disable global color management system using OCIO files.",
     )
     RenderSettings: RenderSettingsModel = SettingsField(
-        default_factory=RenderSettingsModel, title="Render Settings")
-    workfile_builder: TemplateWorkfileBaseOptions = SettingsField(
-        default_factory=TemplateWorkfileBaseOptions,
-        title="Workfile Builder",
-        description="Configures startup workfile blend scene.",
+        default_factory=RenderSettingsModel, title="Render Settings"
     )
-
+    templated_workfile_build: TemplatedWorkfileBuildModel = SettingsField(
+        default_factory=TemplatedWorkfileBuildModel,
+        title="Templated Workfile Build",
+        description="Build/Update workfile blend scene.",
+    )
     create: CreatorsModel = SettingsField(
         default_factory=CreatorsModel,
         title="Creator Plugins",
@@ -127,8 +127,7 @@ DEFAULT_VALUES = {
     "create": DEFAULT_CREATORS_SETTINGS,
     "load": DEFAULT_LOADERS_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
-    "workfile_builder": {
-        "create_first_version": False,
-        "custom_templates": []
-    }
+    "templated_workfile_build": {
+        "profiles": []
+    },
 }
