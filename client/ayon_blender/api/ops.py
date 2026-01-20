@@ -33,7 +33,9 @@ from . import pipeline
 from . import render_lib
 from .workfile_template_builder import (
     build_workfile_template,
-    update_workfile_template
+    update_workfile_template,
+    create_placeholder,
+    update_placeholder
 )
 
 
@@ -459,6 +461,26 @@ class UpdateWorkfileFromTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
+class CreatePlaceholder(LaunchQtApp):
+    """Create Placeholder from ayon template settings."""
+
+    bl_idname = "wm.ayon_create_placeholder"
+    bl_label = "Create Placeholder"
+    def execute(self, context):
+        create_placeholder(parent=self._window)
+        return {"FINISHED"}
+
+
+class UpdatePlaceholder(LaunchQtApp):
+    """Update Placeholder from ayon template settings."""
+
+    bl_idname = "wm.ayon_update_placeholder"
+    bl_label = "Update Placeholder"
+    def execute(self, context):
+        update_placeholder(parent=self._window)
+        return {"FINISHED"}
+
+
 class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
     """AYON submenu example."""
 
@@ -474,6 +496,14 @@ class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
         layout.operator(
             UpdateWorkfileFromTemplate.bl_idname,
             text="Update Workfile from Template"
+        )
+        layout.operator(
+            CreatePlaceholder.bl_idname,
+            text="Create Placeholder"
+        )
+        layout.operator(
+            UpdatePlaceholder.bl_idname,
+            text="Update Placeholder"
         )
 
 

@@ -273,6 +273,28 @@ def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
     }
 
 
+def set_context_settings(frame_range: bool = True,
+                         resolution: bool = True,
+                         scene_units: bool = False):
+    """Set context settings for the current scene.
+
+    Args:
+        frame_range (bool): Set frame range context variable.
+        resolution (bool): Set resolution context variable.
+        scene_units (bool): Set scene units context variable.
+    """
+    task_entity = get_current_task_entity()
+    if not task_entity:
+        # No task entity found, nothing to set
+        return
+    if frame_range:
+        set_frame_range(task_entity)
+    if resolution:
+        set_resolution(task_entity)
+    if scene_units:
+        set_unit_scale_from_settings(scene_units=scene_units)
+
+
 def set_frame_range(entity: dict):
     scene = bpy.context.scene
 
@@ -336,19 +358,22 @@ def set_resolution(entity: dict):
     scene.render.resolution_y = resolution_y
 
 
-def set_unit_scale_from_settings(unit_scale_settings=None):
-    if unit_scale_settings is None:
-        return
+def set_unit_scale_from_settings(blender_settings=None, scene_units=False):
+    unit_scale_settings = blender_settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
-    if unit_scale_enabled:
+    if unit_scale_enabled or scene_units:
         unit_scale = unit_scale_settings["base_file_unit_scale"]
         bpy.context.scene.unit_settings.scale_length = unit_scale
 
 
-def on_new():
-    project = get_current_project_name()
-    settings = get_project_settings(project).get("blender")
+def get_blender_settings(project_name=None) -> Dict:
+    if not project_name:
+        project_name = get_current_project_name()
+    return get_project_settings(project_name).get("blender")
 
+
+def on_new():
+    settings = get_blender_settings()
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
 
@@ -359,13 +384,12 @@ def on_new():
     if set_frames_startup:
         set_frame_range(task_entity)
 
-    unit_scale_settings = settings.get("unit_scale_settings")
-    set_unit_scale_from_settings(unit_scale_settings=unit_scale_settings)
+    set_unit_scale_from_settings(blender_settings=settings)
 
 
 def on_open():
     project = os.environ.get("AYON_PROJECT_NAME")
-    settings = get_project_settings(project).get("blender")
+    settings = get_blender_settings(project)
 
     set_resolution_startup = settings.get("set_resolution_startup")
     set_frames_startup = settings.get("set_frames_startup")
