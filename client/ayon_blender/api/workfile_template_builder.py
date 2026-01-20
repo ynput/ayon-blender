@@ -129,6 +129,7 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
             parent_object.children.link(placeholder)
             imprinted_placeholder = parent_object
         else:
+            bpy.context.scene.collection.children.link(placeholder)
             imprinted_placeholder = placeholder
 
         imprint(imprinted_placeholder, placeholder_data)
