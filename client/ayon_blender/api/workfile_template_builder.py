@@ -2,10 +2,7 @@
 import bpy
 
 import itertools
-from ayon_core.pipeline import (
-    registered_host,
-    get_current_folder_path
-)
+from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
     TemplateAlreadyImported,
     AbstractTemplateBuilder,
@@ -21,7 +18,8 @@ from .pipeline import get_ayon_property
 from .lib import (
     get_scene_node_tree,
     get_selected_collections,
-    imprint
+    imprint,
+    update_content_on_context_change
 )
 
 from pathlib import Path
@@ -65,8 +63,7 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
             bpy.context.scene.collection.children.link(target_collection)
 
         # update imported sets information
-        folder_path = get_current_folder_path()
-        set_folder_path_for_ayon_instances(folder_path)
+        update_content_on_context_change()
         return True
 
 class BlenderPlaceholderPlugin(PlaceholderPlugin):
