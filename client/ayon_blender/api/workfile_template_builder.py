@@ -237,7 +237,7 @@ def update_workfile_template(*args) -> None:
     builder = BlenderTemplateBuilder(registered_host())
     builder.rebuild_template()
 
-def create_placeholder(*args, **kwargs) -> None:
+def create_placeholder(*args, **kwargs):
     """Create Workfile Placeholder for Blender."""
     host = registered_host()
     builder = BlenderTemplateBuilder(host)
@@ -245,9 +245,10 @@ def create_placeholder(*args, **kwargs) -> None:
     window = WorkfileBuildPlaceholderDialog(host, builder,
                                             parent=parent)
     window.show()
+    return window
 
 
-def update_placeholder(*args, **kwargs) -> None:
+def update_placeholder(*args, **kwargs):
     """Update Workfile Placeholder for Blender."""
     host = registered_host()
     builder = BlenderTemplateBuilder(host)
@@ -273,3 +274,4 @@ def update_placeholder(*args, **kwargs) -> None:
                                             parent=parent)
     window.set_update_mode(placeholder_item)
     window.exec_()
+    return window
