@@ -462,8 +462,10 @@ class CreatePlaceholder(LaunchQtApp):
     bl_label = "Create Placeholder"
     def execute(self, context):
         from .workfile_template_builder import create_placeholder
-        create_placeholder(parent=self._window)
-        return {"FINISHED"}
+        window = create_placeholder()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
 
 
 class UpdatePlaceholder(LaunchQtApp):
@@ -473,8 +475,10 @@ class UpdatePlaceholder(LaunchQtApp):
     bl_label = "Update Placeholder"
     def execute(self, context):
         from .workfile_template_builder import update_placeholder
-        update_placeholder(parent=self._window)
-        return {"FINISHED"}
+        window = update_placeholder()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
 
 
 class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
