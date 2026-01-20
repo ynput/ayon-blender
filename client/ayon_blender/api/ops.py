@@ -404,9 +404,7 @@ class SetUnitScale(bpy.types.Operator):
     def execute(self, context):
         project = get_current_project_name()
         settings = get_project_settings(project).get("blender")
-        unit_scale_settings = settings.get("unit_scale_settings")
-        pipeline.set_unit_scale_from_settings(
-            unit_scale_settings=unit_scale_settings)
+        pipeline.set_unit_scale_from_settings(blender_settings=settings)
         return {"FINISHED"}
 
 
