@@ -31,12 +31,6 @@ from ayon_core.style import load_stylesheet
 from .workio import OpenFileCacher
 from . import pipeline
 from . import render_lib
-from .workfile_template_builder import (
-    build_workfile_template,
-    update_workfile_template,
-    create_placeholder,
-    update_placeholder
-)
 
 
 PREVIEW_COLLECTIONS: Dict = dict()
@@ -447,6 +441,7 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
     bl_idname = "wm.ayon_build_workfile_from_template"
     bl_label = "Build Workfile from Template"
     def execute(self, context):
+        from .workfile_template_builder import build_workfile_template
         build_workfile_template()
         return {"FINISHED"}
 
@@ -457,6 +452,7 @@ class UpdateWorkfileFromTemplate(LaunchQtApp):
     bl_idname = "wm.ayon_update_workfile_from_template"
     bl_label = "Update Workfile from Template"
     def execute(self, context):
+        from .workfile_template_builder import update_workfile_template
         update_workfile_template()
         return {"FINISHED"}
 
@@ -467,6 +463,7 @@ class CreatePlaceholder(LaunchQtApp):
     bl_idname = "wm.ayon_create_placeholder"
     bl_label = "Create Placeholder"
     def execute(self, context):
+        from .workfile_template_builder import create_placeholder
         create_placeholder(parent=self._window)
         return {"FINISHED"}
 
@@ -477,6 +474,7 @@ class UpdatePlaceholder(LaunchQtApp):
     bl_idname = "wm.ayon_update_placeholder"
     bl_label = "Update Placeholder"
     def execute(self, context):
+        from .workfile_template_builder import update_placeholder
         update_placeholder(parent=self._window)
         return {"FINISHED"}
 
@@ -596,6 +594,8 @@ classes = [
     VersionUpWorkfile,
     BuildWorkfileFromTemplate,
     UpdateWorkfileFromTemplate,
+    CreatePlaceholder,
+    UpdatePlaceholder,
     TOPBAR_MT_ayon_Templated_Workfile,
     TOPBAR_MT_ayon,
 ]
