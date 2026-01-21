@@ -47,8 +47,8 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
                 "Clean scene if needed (File > New Scene)"
             ))
 
-        bpy.data.collections.new(PLACEHOLDER_SET)
-
+        placeholder_collection = bpy.data.collections.new(PLACEHOLDER_SET)
+        bpy.context.scene.collection.children.link(placeholder_collection)
         filepath = Path(path)
         if not filepath.exists():
             return False
