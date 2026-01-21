@@ -433,6 +433,17 @@ class VersionUpWorkfile(LaunchQtApp):
         return {"FINISHED"}
 
 
+class CreateFirstWorkfileFromTemplate(LaunchQtApp):
+    """Build Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_create_first_workfile_from_template"
+    bl_label = "Create First Workfile from Template"
+    def execute(self, context):
+        from .workfile_template_builder import create_first_worfile_from_template
+        create_first_worfile_from_template()
+        return {"FINISHED"}
+
+
 class BuildWorkfileFromTemplate(LaunchQtApp):
     """Build Workfile from ayon template settings."""
 
@@ -489,6 +500,10 @@ class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.operator(
+            CreateFirstWorkfileFromTemplate.bl_idname,
+            text="Create First Workfile from Template"
+        )
         layout.operator(
             BuildWorkfileFromTemplate.bl_idname,
             text="Build Workfile from Template"
@@ -594,6 +609,7 @@ classes = [
     SetUnitScale,
     CreateRenderSetup,
     VersionUpWorkfile,
+    CreateFirstWorkfileFromTemplate,
     BuildWorkfileFromTemplate,
     UpdateWorkfileFromTemplate,
     CreatePlaceholder,
