@@ -67,7 +67,7 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         return True
 
 class BlenderPlaceholderPlugin(PlaceholderPlugin):
-    """Base Placeholder Plugin for 3ds Max with one unified cache.
+    """Base Placeholder Plugin for Blender with one unified cache.
 
     Creates a locator as placeholder node, which during populate provide
     all of its attributes defined on the locator's transform in
