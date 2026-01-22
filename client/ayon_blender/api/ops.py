@@ -509,10 +509,10 @@ class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
             BuildWorkfileFromTemplate.bl_idname,
             text="Build Workfile from Template"
         )
-        layout.operator(
-            UpdateWorkfileFromTemplate.bl_idname,
-            text="Update Workfile from Template"
-        )
+        # layout.operator(
+        #     UpdateWorkfileFromTemplate.bl_idname,
+        #     text="Update Workfile from Template"
+        # )
         layout.operator(
             CreatePlaceholder.bl_idname,
             text="Create Placeholder"
@@ -612,7 +612,7 @@ classes = [
     VersionUpWorkfile,
     CreateFirstWorkfileFromTemplate,
     BuildWorkfileFromTemplate,
-    UpdateWorkfileFromTemplate,
+    # UpdateWorkfileFromTemplate,
     CreatePlaceholder,
     UpdatePlaceholder,
     TOPBAR_MT_ayon_Templated_Workfile,
