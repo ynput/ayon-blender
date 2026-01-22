@@ -12,6 +12,7 @@ from ayon_core.pipeline.workfile.workfile_template_builder import (
 from ayon_core.tools.workfile_template_build import (
     WorkfileBuildPlaceholderDialog,
 )
+from ayon_core.tools.workfile_template_build import open_template_ui
 
 from .constants import AYON_INSTANCES
 from .pipeline import get_ayon_property
@@ -244,6 +245,15 @@ def build_workfile_template(*args) -> None:
 #     """Update the workfile template."""
 #     builder = BlenderTemplateBuilder(registered_host())
 #     builder.rebuild_template()
+
+
+def open_template(*args, **kwargs) -> None:
+    """Open workfile template for Blender."""
+    builder = BlenderTemplateBuilder(registered_host())
+    builder.build_template()
+    main_window = kwargs.get("main_window")
+    open_template_ui(builder, main_window=main_window)
+    return main_window
 
 
 def create_placeholder(*args, **kwargs):

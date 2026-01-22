@@ -467,6 +467,20 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 #         return {"FINISHED"}
 
 
+class OpenTemplate(LaunchQtApp):
+    """Build Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_open_template"
+    bl_label = "Open Template"
+    def execute(self, context):
+        from .workfile_template_builder import open_template
+        window = open_template()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
+
+
+
 class CreatePlaceholder(LaunchQtApp):
     """Create Placeholder from ayon template settings."""
 
@@ -513,6 +527,11 @@ class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
         #     UpdateWorkfileFromTemplate.bl_idname,
         #     text="Update Workfile from Template"
         # )
+        layout.separator()
+        layout.operator(
+            OpenTemplate.bl_idname,
+            text="Open Template"
+        )
         layout.operator(
             CreatePlaceholder.bl_idname,
             text="Create Placeholder"
@@ -613,6 +632,7 @@ classes = [
     CreateFirstWorkfileFromTemplate,
     BuildWorkfileFromTemplate,
     # UpdateWorkfileFromTemplate,
+    OpenTemplate,
     CreatePlaceholder,
     UpdatePlaceholder,
     TOPBAR_MT_ayon_Templated_Workfile,
