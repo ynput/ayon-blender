@@ -1,10 +1,10 @@
 import logging
 from typing import Generator, TYPE_CHECKING
-import re
-import os
+
 import bpy
 from ayon_core.pipeline.load import LoadError
 from ayon_blender.api.pipeline import AVALON_PROPERTY
+
 
 if TYPE_CHECKING:
     from ayon_core.pipeline.create import CreateContext  # noqa: F401
@@ -108,107 +108,39 @@ def get_asset_container(objects):
 def load_collection(
     filepath,
     link=True,
-    group_name=None,
-    instances_collection=False,
-    instance_object_data=False,
+    lib_container_name = None,
+    group_name = None
 ) -> bpy.types.Collection:
-    """Load a collection to the scene using bpy.ops.wm.link (UI 1:1 behavior)."""
-
+    """Load a collection to the scene."""
+    loaded_containers = []
     asset_container = get_collection(group_name)
+    with bpy.data.libraries.load(filepath, link=link, relative=False) as (
+        data_from,
+        data_to,
+    ):
+        for attr in dir(data_to):
+            setattr(data_to, attr, getattr(data_from, attr))
 
-    # ------------------------------------------------------------------
-    # 1) Discover collections available in the library (cheap, no linking)
-    # ------------------------------------------------------------------
-    with bpy.data.libraries.load(filepath, link=False, relative=False) as (data_from, _):
-        lib_collections = list(data_from.collections)
+    for coll in data_to.collections:
+        if coll is not None and coll.name not in asset_container.children:
+            asset_container.children.link(coll)
 
-    # ------------------------------------------------------------------
-    # 2) Choose what to link
-    #    group_name is the collection we are looking for in the published file.
-    #    We will link exactly that collection by name.
-    # ------------------------------------------------------------------
-    # Normalize group_name to desired published collection name:
-    # Example:
-    #   group_name:            general_01_assembly_ManWoman
-    #   desired collection:    general_assembly_ManWoman
-    # Rule: remove the second token if it is exactly two digits (e.g. "_01_").
-    target_name = re.sub(r"^([^_]+)_\d{2}_(.+)$", r"\1_\2", group_name)
+    for obj in data_to.objects:
+        if obj is not None and obj.name not in asset_container.objects:
+            asset_container.objects.link(obj)
 
-    if target_name not in lib_collections:
+    loaded_containers = [asset_container]
+
+    if len(loaded_containers) != 1:
+        for loaded_container in loaded_containers:
+            bpy.data.collections.remove(loaded_container)
         raise LoadError(
-            f"load_collection: target collection '{target_name}' not found in library."
+            "More then 1 'container' is loaded. That means the publish was "
+            "not correct."
         )
+    container_collection = loaded_containers[0]
 
-    # ------------------------------------------------------------------
-    # 3) Link using the operator with UI toggles OFF
-    # ------------------------------------------------------------------
-    directory = os.path.join(filepath, "Collection") + os.sep
-    op_filepath = directory + target_name
-
-    # Ensure Blender links into our AYON container collection to avoid creating "LinkedData"
-    try:
-        view_layer = bpy.context.view_layer
-
-        def _find_layer_collection(layer_coll, collection):
-            if layer_coll.collection == collection:
-                return layer_coll
-            for ch in layer_coll.children:
-                found = _find_layer_collection(ch, collection)
-                if found:
-                    return found
-            return None
-
-        lc = _find_layer_collection(view_layer.layer_collection, asset_container)
-        if lc:
-            view_layer.active_layer_collection = lc
-    except Exception:
-        pass
-
-    bpy.ops.wm.link(
-        filepath=op_filepath,
-        directory=directory,
-        filename=target_name,
-        # link=True means keep data linked (AYON link workflow)
-        link=link,
-        relative_path=False,
-
-        # Make behavior match UI toggles 1:1
-        instance_collections=instances_collection,
-        instance_object_data=instance_object_data,
-
-        # Keep selection side effects minimal
-        autoselect=False,
-        active_collection=True,
-    )
-
-    # ------------------------------------------------------------------
-    # 4) Retrieve the linked collection datablock and ensure it's parented under asset_container
-    # ------------------------------------------------------------------
-    linked_coll = bpy.data.collections.get(target_name)
-
-    # Handle name collision suffix (e.g. "MyColl.001")
-    if linked_coll is None:
-        candidates = [
-            c for c in bpy.data.collections
-            if c.name == target_name or c.name.startswith(target_name + ".")
-        ]
-        candidates.sort(key=lambda c: c.name)
-        linked_coll = candidates[-1] if candidates else None
-
-    if linked_coll is None:
-        raise LoadError(
-            f"wm.link completed but collection '{target_name}' not found in bpy.data.collections."
-        )
-
-    if linked_coll.name not in asset_container.children:
-        asset_container.children.link(linked_coll)
-
-    # ------------------------------------------------------------------
-    # Keep original return semantics: return the (local) container collection in the scene.
-    # Your original code returns asset_container, not the linked collection.
-    # ------------------------------------------------------------------
-    return asset_container
-
+    return container_collection
 
 
 def get_collection(group_name):
