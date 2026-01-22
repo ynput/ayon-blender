@@ -587,6 +587,9 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
                 bpy.context.window_manager.keyconfigs.addon.keymaps.update()
 
         layout.separator()
+        layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
+
+        layout.separator()
         layout.operator(LaunchCreator.bl_idname, text="Create...")
         layout.operator(LaunchLoader.bl_idname, text="Load...")
         layout.operator(
@@ -602,8 +605,6 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
         layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.operator(CreateRenderSetup.bl_idname,
                         text="Create Render Setup")
-        layout.separator()
-        layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
 
         layout.separator()
         layout.menu(
