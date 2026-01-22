@@ -227,10 +227,12 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
 
         imprint(obj_or_col, {"folderPath": folder_path})
 
+
 def create_first_worfile_from_template(*args) -> None:
     """Create the first workfile from template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
     builder.build_template(workfile_creation_enabled=True)
+
 
 def build_workfile_template(*args) -> None:
     """Build the workfile template."""
@@ -238,10 +240,11 @@ def build_workfile_template(*args) -> None:
     builder.build_template()
 
 
-def update_workfile_template(*args) -> None:
-    """Update the workfile template."""
-    builder = BlenderTemplateBuilder(registered_host())
-    builder.rebuild_template()
+# def update_workfile_template(*args) -> None:
+#     """Update the workfile template."""
+#     builder = BlenderTemplateBuilder(registered_host())
+#     builder.rebuild_template()
+
 
 def create_placeholder(*args, **kwargs):
     """Create Workfile Placeholder for Blender."""

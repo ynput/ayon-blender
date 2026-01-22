@@ -455,15 +455,16 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
-class UpdateWorkfileFromTemplate(LaunchQtApp):
-    """Update Workfile from ayon template settings."""
+# TODO: implement update functionality when the load placeholder supported.
+# class UpdateWorkfileFromTemplate(LaunchQtApp):
+#     """Update Workfile from ayon template settings."""
 
-    bl_idname = "wm.ayon_update_workfile_from_template"
-    bl_label = "Update Workfile from Template"
-    def execute(self, context):
-        from .workfile_template_builder import update_workfile_template
-        update_workfile_template()
-        return {"FINISHED"}
+#     bl_idname = "wm.ayon_update_workfile_from_template"
+#     bl_label = "Update Workfile from Template"
+#     def execute(self, context):
+#         from .workfile_template_builder import update_workfile_template
+#         update_workfile_template()
+#         return {"FINISHED"}
 
 
 class CreatePlaceholder(LaunchQtApp):
