@@ -105,6 +105,24 @@ def get_asset_container(objects):
     return None
 
 
+def _find_collection_by_name(target_name):
+    """Find a collection by name, handling name collision suffixes (e.g. "MyColl.001").
+    
+    Args:
+        target_name (str): The target collection name to search for.
+    
+    Returns:
+        bpy.types.Collection or None: The found collection or None.
+    """
+    candidates = [
+        col for col in bpy.data.collections
+        if col.name == target_name
+        or col.name.startswith(target_name + ".")
+    ]
+    candidates.sort(key=lambda col: col.name)
+    return candidates[-1] if candidates else None
+
+
 def load_collection(
     filepath,
     link=True,
@@ -164,35 +182,31 @@ def load_collection(
         active_collection=True,
     )
 
-    # ------------------------------------------------------------------
-    # 4) Retrieve the linked collection datablock and ensure it's parented under asset_container
-    # ------------------------------------------------------------------
-    linked_coll = bpy.data.collections.get(target_name)
+    # Retrieve the linked collection datablock and ensure it's parented under asset_container
+    linked_asset = bpy.data.collections.get(target_name)
 
     # Handle name collision suffix (e.g. "MyColl.001")
-    if linked_coll is None:
-        candidates = [
-            col for col in bpy.data.collections
-            if col.name == target_name
-            or col.name.startswith(target_name + ".")
-            or target_name in col.name
-            or f"{target_name}." in col.name
-        ]
-        candidates.sort(key=lambda col: col.name)
-        linked_coll = candidates[-1] if candidates else None
+    if linked_asset is None:
+        linked_asset = _find_collection_by_name(target_name)
 
-    if linked_coll is None:
+    if linked_asset is None:
+        linked_asset = bpy.data.objects.get(target_name)
+
+    if linked_asset is None:
         raise LoadError(
-            f"wm.link completed but collection '{target_name}' not found in bpy.data.collections."
+            f"wm.link completed but collection '{target_name}' not found in "
+            "bpy.data.collections or bpy.data.objects"
         )
 
-    if linked_coll.name not in asset_container.children:
-        asset_container.children.link(linked_coll)
-
-    # ------------------------------------------------------------------
-    # Keep original return semantics: return the (local) container collection in the scene.
-    # Your original code returns asset_container, not the linked collection.
-    # ------------------------------------------------------------------
+    if linked_asset.name not in asset_container.children:
+        if isinstance(linked_asset, bpy.types.Collection):
+            asset_container.children.link(linked_asset)
+        elif isinstance(linked_asset, bpy.types.Object):
+            asset_container.objects.link(linked_asset)
+        else:
+            raise LoadError(
+                f"Linked asset '{target_name}' is neither a Collection nor an Object."
+            )
     return asset_container
 
 
