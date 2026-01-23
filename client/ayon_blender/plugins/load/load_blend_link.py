@@ -30,12 +30,29 @@ class BlendLinkLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
+    instances_collection = False
+    instance_object_data = False
+
     options = [
         BoolDef(
             "addOverride",
             label="Add Override",
             default=False,
             tooltip="Add a library override for the loaded asset.",
+        ),
+        BoolDef(
+            "instances_collection",
+            label="Instances Collection",
+            default=False,
+            tooltip=("Create instances for collections, "
+                     "rather than adding them directly to the scene."),
+        ),
+        BoolDef(
+            "instance_object_data",
+            label="Instance Object Data",
+            default=False,
+            tooltip=("Create instances for object data which "
+                     "are not referenced by any objects"),
         )
     ]
 
@@ -65,24 +82,22 @@ class BlendLinkLoader(plugin.BlenderLoader):
         scene_collection = bpy.context.scene.collection
 
         if loaded_collection and group_name in scene_collection.children:
-
-            message = (
-                f"Collection {group_name} already loaded, "
-                f"instance to {group_name} is created instead of "
-                "linking new collection"
-            )
-            show_message(f"Collection {group_name} already loaded", message)
-            instance = bpy.data.objects.new(name=group_name, object_data=None)
-            instance.instance_type = 'COLLECTION'
-            instance.instance_collection = loaded_collection
-            # Link the instance to the active scene
-            bpy.context.scene.collection.objects.link(instance)
+            message = f"Collection {group_name} already loaded"
+            show_message("Loaded Collection found", message)
             return
 
+        instances_collection = options.get(
+            "instances_collection", self.instances_collection
+        )
+        instance_object_data = options.get(
+            "instance_object_data", self.instance_object_data
+        )
         loaded_collection = load_collection(
             filepath,
             link=True,
-            group_name=group_name
+            group_name=group_name,
+            instances_collection=instances_collection,
+            instance_object_data=instance_object_data,
         )
 
         options = options or dict()
