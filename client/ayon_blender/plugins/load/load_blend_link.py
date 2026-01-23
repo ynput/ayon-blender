@@ -10,9 +10,7 @@ from ayon_blender.api.plugin_load import (
 )
 from ayon_blender.api.pipeline import (
     metadata_update,
-    get_container_name,
     containerise,
-    show_message
 )
 
 
