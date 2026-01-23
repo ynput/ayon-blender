@@ -89,11 +89,6 @@ class BlenderSettings(BaseSettingsModel):
     RenderSettings: RenderSettingsModel = SettingsField(
         default_factory=RenderSettingsModel, title="Render Settings"
     )
-    templated_workfile_build: TemplatedWorkfileBuildModel = SettingsField(
-        default_factory=TemplatedWorkfileBuildModel,
-        title="Templated Workfile Build",
-        description="Build/Update workfile blend scene.",
-    )
     create: CreatorsModel = SettingsField(
         default_factory=CreatorsModel,
         title="Creator Plugins",
@@ -108,6 +103,11 @@ class BlenderSettings(BaseSettingsModel):
         default_factory=PublishPluginsModel,
         title="Publish Plugins",
         description="Configure various validator and extractor types for publishing.",
+    )
+    templated_workfile_build: TemplatedWorkfileBuildModel = SettingsField(
+        default_factory=TemplatedWorkfileBuildModel,
+        title="Templated Workfile Build",
+        description="Build/Update workfile blend scene.",
     )
 
 
