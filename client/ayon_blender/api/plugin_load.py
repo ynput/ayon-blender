@@ -123,6 +123,32 @@ def _find_collection_by_name(target_name):
     return candidates[-1] if candidates else None
 
 
+def _find_object_by_name(target_name):
+    """Find top object by name, handling name collision suffixes (e.g. "MyObj.001").
+
+    Args:
+        target_name (str): The target collection name to search for.
+
+    Returns:
+        bpy.types.Object or None: The found object or None.
+    """
+    candidates = [
+        col for col in bpy.data.objects
+        if col.name == target_name
+        or col.name.startswith(target_name + ".")
+    ]
+    candidates.sort(key=lambda col: col.name)
+    return candidates[-1] if candidates else None
+
+
+def link_object_by_hierarchy(container, obj):
+    if obj.name not in container.objects:
+        container.objects.link(obj)
+    for child in obj.children:
+        link_object_by_hierarchy(container, child)
+
+
+
 def load_collection(
     filepath,
     link=True,
@@ -193,20 +219,25 @@ def load_collection(
         linked_asset = bpy.data.objects.get(target_name)
 
     if linked_asset is None:
+        linked_asset =_find_object_by_name(target_name)
+
+    if linked_asset is None:
         raise LoadError(
             f"wm.link completed but collection '{target_name}' not found in "
             "bpy.data.collections or bpy.data.objects"
         )
 
-    if linked_asset.name not in asset_container.children:
-        if isinstance(linked_asset, bpy.types.Collection):
+    # Only link if the asset is not already the container itself
+    if isinstance(linked_asset, bpy.types.Collection):
+        if linked_asset not in asset_container.children:
             asset_container.children.link(linked_asset)
-        elif isinstance(linked_asset, bpy.types.Object):
-            asset_container.objects.link(linked_asset)
-        else:
-            raise LoadError(
-                f"Linked asset '{target_name}' is neither a Collection nor an Object."
-            )
+    elif isinstance(linked_asset, bpy.types.Object):
+        if linked_asset.name not in asset_container.objects:
+            link_object_by_hierarchy(asset_container, linked_asset)
+    else:
+        raise LoadError(
+            f"Linked asset '{target_name}' is neither a Collection nor an Object."
+        )
     return asset_container
 
 
