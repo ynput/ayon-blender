@@ -439,8 +439,8 @@ class CreateFirstWorkfileFromTemplate(LaunchQtApp):
     bl_idname = "wm.ayon_create_first_workfile_from_template"
     bl_label = "Create First Workfile from Template"
     def execute(self, context):
-        from .workfile_template_builder import create_first_worfile_from_template
-        create_first_worfile_from_template()
+        from .workfile_template_builder import create_first_workfile_from_template
+        create_first_workfile_from_template()
         return {"FINISHED"}
 
 
