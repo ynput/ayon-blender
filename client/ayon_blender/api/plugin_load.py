@@ -123,38 +123,12 @@ def _find_collection_by_name(target_name):
     return candidates[-1] if candidates else None
 
 
-def _find_object_by_name(target_name):
-    """Find top object by name, handling name collision suffixes (e.g. "MyObj.001").
-
-    Args:
-        target_name (str): The target collection name to search for.
-
-    Returns:
-        bpy.types.Object or None: The found object or None.
-    """
-    candidates = [
-        col for col in bpy.data.objects
-        if col.name == target_name
-        or col.name.startswith(target_name + ".")
-    ]
-    candidates.sort(key=lambda col: col.name)
-    return candidates[-1] if candidates else None
-
-
-def link_object_by_hierarchy(container, obj):
-    if obj.name not in container.objects:
-        container.objects.link(obj)
-    for child in obj.children:
-        link_object_by_hierarchy(container, child)
-
-
-
 def load_collection(
     filepath,
     link=True,
     group_name=None,
-    instances_collection=False,
-    instance_object_data=False,
+    instances_collections=False,
+    instance_object_data=False
 ) -> bpy.types.Collection:
     """Load a collection to the scene using bpy.ops.wm.link (UI 1:1 behavior).
 
@@ -162,7 +136,7 @@ def load_collection(
         filepath (str): Path to the .blend file.
         link (bool): Whether to link or append the data.
         group_name (str): Name of the collection to load.
-        instances_collection (bool): Whether to instance collections.
+        instances_collections (bool): Whether to instance collections.
         instance_object_data (bool): Whether to instance object data.
     Returns:
         bpy.types.Collection: The loaded collection datablock.
@@ -170,6 +144,7 @@ def load_collection(
     asset_container = get_collection(group_name)
     # Rule: remove the second token if it is exactly two digits (e.g. "_01_").
     target_name = re.sub(r"^([^_]+)_\d{2}_(.+)$", r"\1_\2", group_name)
+
     directory = os.path.join(filepath, "Collection") + os.sep
     op_filepath = directory + target_name
 
@@ -200,7 +175,7 @@ def load_collection(
         link=link,
         relative_path=False,
         # Make behavior match UI toggles 1:1
-        instance_collections=instances_collection,
+        instances_collections=instances_collections,
         instance_object_data=instance_object_data,
 
         # Keep selection side effects minimal
@@ -216,28 +191,53 @@ def load_collection(
         linked_asset = _find_collection_by_name(target_name)
 
     if linked_asset is None:
-        linked_asset = bpy.data.objects.get(target_name)
-
-    if linked_asset is None:
-        linked_asset =_find_object_by_name(target_name)
-
-    if linked_asset is None:
         raise LoadError(
-            f"wm.link completed but collection '{target_name}' not found in "
-            "bpy.data.collections or bpy.data.objects"
+            f"wm.link completed but collection '{target_name}' not found in bpy.data.collections."
         )
-
-    if isinstance(linked_asset, bpy.types.Collection):
-        if linked_asset.name not in asset_container.children:
-            asset_container.children.link(linked_asset)
-    elif isinstance(linked_asset, bpy.types.Object):
-        if linked_asset.name not in asset_container.objects:
-            link_object_by_hierarchy(asset_container, linked_asset)
+    if linked_asset.name not in asset_container.children:
+        asset_container.children.link(linked_asset)
     else:
         raise LoadError(
             f"Linked asset '{target_name}' is neither a Collection nor an Object."
         )
     return asset_container
+
+
+def load_collection_through_libraries(
+    filepath,
+    link=True,
+    group_name = None
+) -> bpy.types.Collection:
+    """Load a collection by bpy.data.libraries.load to the scene."""
+    loaded_containers = []
+    asset_container = get_collection(group_name)
+    with bpy.data.libraries.load(filepath, link=link, relative=False) as (
+        data_from,
+        data_to,
+    ):
+        for attr in dir(data_to):
+            setattr(data_to, attr, getattr(data_from, attr))
+
+    for coll in data_to.collections:
+        if coll is not None and coll.name not in asset_container.children:
+            asset_container.children.link(coll)
+
+    for obj in data_to.objects:
+        if obj is not None and obj.name not in asset_container.objects:
+            asset_container.objects.link(obj)
+
+    loaded_containers = [asset_container]
+
+    if len(loaded_containers) != 1:
+        for loaded_container in loaded_containers:
+            bpy.data.collections.remove(loaded_container)
+        raise LoadError(
+            "More then 1 'container' is loaded. That means the publish was "
+            "not correct."
+        )
+    container_collection = loaded_containers[0]
+
+    return container_collection
 
 
 def get_collection(group_name):

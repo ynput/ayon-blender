@@ -6,11 +6,13 @@ from ayon_blender.api import plugin
 
 from ayon_blender.api.plugin_load import (
     add_override,
-    load_collection
+    load_collection,
+    load_collection_through_libraries,
 )
 from ayon_blender.api.pipeline import (
     metadata_update,
     containerise,
+    show_message
 )
 
 
@@ -28,7 +30,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    instances_collection = False
+    instances_collections = False
     instance_object_data = False
 
     options = [
@@ -39,7 +41,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             tooltip="Add a library override for the loaded asset.",
         ),
         BoolDef(
-            "instances_collection",
+            "instances_collections",
             label="Instances Collection",
             default=False,
             tooltip=("Create instances for collections, "
@@ -67,25 +69,41 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # TODO: Disallow loading same collection?
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
+        product_type = context["product"]["productType"]
 
         unique_number = plugin.get_unique_number(folder_name, product_name)
         group_name = plugin.prepare_scene_name(
             folder_name, product_name, unique_number
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
-        instances_collection = options.get(
-            "instances_collection", self.instances_collection
+        instances_collections = options.get(
+            "instances_collections", self.instances_collections
         )
         instance_object_data = options.get(
             "instance_object_data", self.instance_object_data
         )
-        loaded_collection = load_collection(
-            filepath,
-            link=True,
-            group_name=group_name,
-            instances_collection=instances_collection,
-            instance_object_data=instance_object_data,
-        )
+        # TODO: we need to discuss the possible solutions for aligning
+        # the publishing workflow with collection
+        if product_type in {"rig", "model", "animation", "camera"}:
+            loaded_collection = load_collection_through_libraries(
+                filepath,
+                link=True,
+                group_name=group_name
+            )
+            if loaded_collection.name in bpy.context.scene.collection.children:
+                show_message(
+                    f"Collection '{loaded_collection.name}' is already linked to the scene."
+                )
+                return
+        else:
+            loaded_collection = load_collection(
+                filepath,
+                link=True,
+                group_name=group_name,
+                product_type=product_type,
+                instances_collections=instances_collections,
+                instance_object_data=instance_object_data
+            )
 
         options = options or dict()
         if options.get("addOverride", False):

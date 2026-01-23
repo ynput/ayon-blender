@@ -2,7 +2,7 @@ from ayon_server.settings import BaseSettingsModel, SettingsField
 
 
 class BlendLinkLoader(BaseSettingsModel):
-    instances_collection: bool = SettingsField(
+    instances_collections: bool = SettingsField(
         False,
         title="Instances Collection",
         description=(
@@ -38,7 +38,7 @@ class LoadersModel(BaseSettingsModel):
 
 DEFAULT_LOADERS_SETTINGS = {
     "BlendLinkLoader": {
-        "instances_collection": False,
+        "instances_collections": False,
         "instance_object_data": False
     },
     "BlendLoader": {
