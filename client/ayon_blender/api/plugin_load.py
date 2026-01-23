@@ -175,6 +175,8 @@ def load_collection(
             col for col in bpy.data.collections
             if col.name == target_name
             or col.name.startswith(target_name + ".")
+            or target_name in col.name
+            or f"{target_name}." in col.name
         ]
         candidates.sort(key=lambda col: col.name)
         linked_coll = candidates[-1] if candidates else None

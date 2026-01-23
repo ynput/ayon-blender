@@ -75,17 +75,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
             folder_name, product_name, unique_number
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
-        container_name = get_container_name(
-            name, namespace, context, suffix="CON"
-        )
-        loaded_collection = bpy.data.collections.get(container_name)
-        scene_collection = bpy.context.scene.collection
-
-        if loaded_collection and group_name in scene_collection.children:
-            message = f"Collection {group_name} already loaded"
-            show_message("Loaded Collection found", message)
-            return
-
         instances_collection = options.get(
             "instances_collection", self.instances_collection
         )
