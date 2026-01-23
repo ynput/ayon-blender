@@ -227,9 +227,8 @@ def load_collection(
             "bpy.data.collections or bpy.data.objects"
         )
 
-    # Only link if the asset is not already the container itself
     if isinstance(linked_asset, bpy.types.Collection):
-        if linked_asset not in asset_container.children:
+        if linked_asset.name not in asset_container.children:
             asset_container.children.link(linked_asset)
     elif isinstance(linked_asset, bpy.types.Object):
         if linked_asset.name not in asset_container.objects:
