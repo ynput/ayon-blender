@@ -145,11 +145,10 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
         target_property = get_ayon_property(target_collection)
         # Delete attributes to ensure we imprint new data with correct type
         for key in changed_values.keys():
-            placeholder_item.data[key] = value
             if key in target_property:
-                    target_property.pop(key, None)
+                target_property.pop(key, None)
 
-        self.imprint(node_name, changed_values)
+        imprint(target_collection, changed_values)
 
     def collect_placeholders(self):
         placeholders = []
