@@ -293,5 +293,5 @@ def update_placeholder(*args, **kwargs):
     window = WorkfileBuildPlaceholderDialog(host, builder,
                                             parent=parent)
     window.set_update_mode(placeholder_item)
-    window.exec_()
+    window.show()
     return window
