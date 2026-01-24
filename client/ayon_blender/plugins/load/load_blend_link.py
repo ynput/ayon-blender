@@ -91,7 +91,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
                 group_name=group_name
             )
             if loaded_collection.name in bpy.context.scene.collection.children:
-                show_message(
+                show_message(f"Collection {loaded_collection.name} already linked",
                     f"Collection '{loaded_collection.name}' is already linked to the scene."
                 )
                 return
@@ -100,7 +100,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
                 filepath,
                 link=True,
                 group_name=group_name,
-                product_type=product_type,
                 instances_collections=instances_collections,
                 instance_object_data=instance_object_data
             )
