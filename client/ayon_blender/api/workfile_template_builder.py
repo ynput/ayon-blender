@@ -100,9 +100,7 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
             for node in nodes:
                 ayon_prop = get_ayon_property(node)
                 identifier = ayon_prop.get("plugin_identifier")
-                if not identifier:
-                    continue
-                nodes_by_identifier.setdefault(identifier, []).append(node)
+                nodes_by_identifier.setdefault(identifier, []).append(node.name)
 
             # Set the cache
             self.builder.set_shared_populate_data(
@@ -156,11 +154,15 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
     def collect_placeholders(self):
         placeholders = []
         nodes_by_identifier = self._collect_scene_placeholders()
-        for node in nodes_by_identifier.get(self.identifier, []):
+        for node_name in nodes_by_identifier.get(self.identifier, []):
             # TODO do data validations and maybe upgrades if they are invalid
+            node = bpy.data.collections.get(node_name)
             placeholder_data = get_ayon_property(node)
+            # Convert IDPropertyGroup to dict to avoid pickle errors
+            if placeholder_data:
+                placeholder_data = dict(placeholder_data)
             placeholders.append(
-                self.item_class(scene_identifier=node,
+                self.item_class(scene_identifier=node_name,
                                 data=placeholder_data,
                                 plugin=self)
             )
