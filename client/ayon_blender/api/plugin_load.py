@@ -127,7 +127,7 @@ def load_collection(
     filepath,
     link=True,
     group_name=None,
-    instances_collections=False,
+    instance_collections=False,
     instance_object_data=False
 ) -> bpy.types.Collection:
     """Load a collection to the scene using bpy.ops.wm.link (UI 1:1 behavior).
@@ -136,7 +136,7 @@ def load_collection(
         filepath (str): Path to the .blend file.
         link (bool): Whether to link or append the data.
         group_name (str): Name of the collection to load.
-        instances_collections (bool): Whether to instance collections.
+        instance_collections (bool): Whether to instance collections.
         instance_object_data (bool): Whether to instance object data.
     Returns:
         bpy.types.Collection: The loaded collection datablock.
@@ -175,7 +175,7 @@ def load_collection(
         link=link,
         relative_path=False,
         # Make behavior match UI toggles 1:1
-        instances_collections=instances_collections,
+        instance_collections=instance_collections,
         instance_object_data=instance_object_data,
 
         # Keep selection side effects minimal

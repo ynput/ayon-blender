@@ -30,7 +30,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    instances_collections = False
+    instance_collections = False
     instance_object_data = False
 
     options = [
@@ -41,7 +41,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             tooltip="Add a library override for the loaded asset.",
         ),
         BoolDef(
-            "instances_collections",
+            "instance_collections",
             label="Instances Collection",
             default=False,
             tooltip=("Create instances for collections, "
@@ -76,8 +76,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
             folder_name, product_name, unique_number
         )
         namespace = namespace or f"{folder_name}_{unique_number}"
-        instances_collections = options.get(
-            "instances_collections", self.instances_collections
+        instance_collections  = options.get(
+            "instance_collections", self.instance_collections
         )
         instance_object_data = options.get(
             "instance_object_data", self.instance_object_data
@@ -100,7 +100,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
                 filepath,
                 link=True,
                 group_name=group_name,
-                instances_collections=instances_collections,
+                instance_collections=instance_collections,
                 instance_object_data=instance_object_data
             )
 
