@@ -123,7 +123,7 @@ def _find_collection_by_name(target_name):
     return candidates[-1] if candidates else None
 
 
-def load_collection(
+def link_collection(
     filepath,
     link=True,
     group_name=None,
@@ -203,7 +203,7 @@ def load_collection(
     return asset_container
 
 
-def load_collection_through_libraries(
+def load_collection(
     filepath,
     link=True,
     group_name = None
