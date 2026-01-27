@@ -107,10 +107,10 @@ def get_asset_container(objects):
 
 def _find_collection_by_name(target_name):
     """Find a collection by name, handling name collision suffixes (e.g. "MyColl.001").
-    
+
     Args:
         target_name (str): The target collection name to search for.
-    
+
     Returns:
         bpy.types.Collection or None: The found collection or None.
     """
@@ -196,10 +196,7 @@ def link_collection(
         )
     if linked_asset.name not in asset_container.children:
         asset_container.children.link(linked_asset)
-    else:
-        raise LoadError(
-            f"Linked asset '{target_name}' is neither a Collection nor an Object."
-        )
+
     return asset_container
 
 
