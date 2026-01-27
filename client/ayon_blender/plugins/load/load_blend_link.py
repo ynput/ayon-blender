@@ -1,6 +1,6 @@
 import bpy
 import os
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
