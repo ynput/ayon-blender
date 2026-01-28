@@ -105,7 +105,7 @@ def get_asset_container(objects):
     return None
 
 
-def _find_collection_by_name(target_name):
+def find_collection_by_name(target_name):
     """Find a collection by name, handling name collision suffixes (e.g. "MyColl.001").
 
     Args:
@@ -120,6 +120,24 @@ def _find_collection_by_name(target_name):
         or col.name.startswith(target_name + ".")
     ]
     candidates.sort(key=lambda col: col.name)
+    return candidates[-1] if candidates else None
+
+
+def find_objects_by_name(target_name):
+    """Find an object by name, handling name collision suffixes (e.g. "MyColl.001").
+
+    Args:
+        target_name (str): The target object name to search for.
+
+    Returns:
+        bpy.types.Object or None: The found object or None.
+    """
+    candidates = [
+        obj for obj in bpy.data.objects
+        if obj.name == target_name
+        or obj.name.startswith(target_name + ".")
+    ]
+    candidates.sort(key=lambda obj: obj.name)
     return candidates[-1] if candidates else None
 
 
@@ -188,7 +206,7 @@ def link_collection(
 
     # Handle name collision suffix (e.g. "MyColl.001")
     if linked_asset is None:
-        linked_asset = _find_collection_by_name(target_name)
+        linked_asset = find_collection_by_name(target_name)
 
     if linked_asset is None:
         raise LoadError(

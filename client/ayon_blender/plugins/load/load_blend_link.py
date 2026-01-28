@@ -1,6 +1,6 @@
 import bpy
 import os
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from ayon_core.lib import BoolDef
 from ayon_blender.api import plugin
 
@@ -8,6 +8,8 @@ from ayon_blender.api.plugin_load import (
     add_override,
     link_collection,
     load_collection,
+    find_collection_by_name,
+    find_objects_by_name,
 )
 from ayon_blender.api.pipeline import (
     metadata_update,
@@ -96,38 +98,47 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove existing container from the Blender scene."""
-
         collection = container["node"]
+        target_name = f"{container['namespace']}_{container['name']}"
         if collection.children:
             library = self._get_library_from_collection(collection.children[0])
             if library:
                 bpy.data.libraries.remove(library)
             else:
-                # Ensure the collection is linked to the scene's master collection
-                scene_collection = bpy.context.scene.collection
-                for col in collection.children:
-                    scene_collection.children.unlink(col)
-        # remove the container collection
+                target_collection = find_collection_by_name(target_name)
+                if target_collection:
+                    for col in target_collection.children:
+                        bpy.data.collections.remove(col)
+                    for obj in target_collection.objects:
+                        bpy.data.objects.remove(obj)
+
+        # Remove the container collection
         bpy.data.collections.remove(collection)
+
+        target_collection = find_collection_by_name(target_name)
+        if target_collection:
+            bpy.data.collections.remove(target_collection)
+
+        target_object = find_objects_by_name(target_name)
+        if target_object:
+            bpy.data.objects.remove(target_object)
 
         return True
 
     def _get_library_from_collection(
-            self, collection: bpy.types.Collection) -> Union[bpy.types.Library, None]:
+            self, collection: bpy.types.Collection
+    ) -> Optional[bpy.types.Library]:
         """Get the library from the collection."""
-
         for child in collection.children:
             if child.library:
                 return child.library
-            # With override library
-            elif child.override_library and child.override_library.reference:
+            if child.override_library and child.override_library.reference:
                 return child.override_library.reference.library
 
         for child in collection.objects:
             if child.library:
                 return child.library
-            # With override library
-            elif child.override_library and child.override_library.reference:
+            if child.override_library and child.override_library.reference:
                 return child.override_library.reference.library
 
         return None
