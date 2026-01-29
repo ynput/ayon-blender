@@ -212,8 +212,8 @@ def link_collection(
         raise LoadError(
             f"wm.link completed but collection '{target_name}' not found in bpy.data.collections."
         )
-    if linked_asset.name not in asset_container.children:
-        asset_container.children.link(linked_asset)
+    # if target_name not in asset_container.children:
+    #     asset_container.children.link(linked_asset)
 
     return asset_container
 
