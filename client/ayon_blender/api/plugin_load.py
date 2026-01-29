@@ -1,10 +1,10 @@
 import logging
 from typing import Generator, TYPE_CHECKING
-
+import re
+import os
 import bpy
 from ayon_core.pipeline.load import LoadError
 from ayon_blender.api.pipeline import AVALON_PROPERTY
-
 
 if TYPE_CHECKING:
     from ayon_core.pipeline.create import CreateContext  # noqa: F401
@@ -105,13 +105,111 @@ def get_asset_container(objects):
     return None
 
 
+def find_collection_by_name(target_name):
+    """Find a collection by name, handling name collision suffixes (e.g. "MyColl.001").
+
+    Args:
+        target_name (str): The target collection name to search for.
+
+    Returns:
+        bpy.types.Collection or None: The found collection or None.
+    """
+    candidates = [
+        col for col in bpy.data.collections
+        if col.name == target_name
+        or col.name.startswith(target_name + ".")
+    ]
+    candidates.sort(key=lambda col: col.name)
+    return candidates[-1] if candidates else None
+
+
+def find_objects_by_name(target_name):
+    """Find an object by name, handling name collision suffixes (e.g. "MyColl.001").
+
+    Args:
+        target_name (str): The target object name to search for.
+
+    Returns:
+        bpy.types.Object or None: The found object or None.
+    """
+    candidates = [
+        obj for obj in bpy.data.objects
+        if obj.name == target_name
+        or obj.name.startswith(target_name + ".")
+    ]
+    candidates.sort(key=lambda obj: obj.name)
+    return candidates[-1] if candidates else None
+
+
+def link_collection(
+    filepath,
+    link=True,
+    group_name=None,
+    instance_collections=False,
+    instance_object_data=False
+) -> bpy.types.Collection:
+    """Load a collection to the scene using bpy.ops.wm.link (UI 1:1 behavior).
+
+    Args:
+        filepath (str): Path to the .blend file.
+        link (bool): Whether to link or append the data.
+        group_name (str): Name of the collection to load.
+        instance_collections (bool): Whether to instance collections.
+        instance_object_data (bool): Whether to instance object data.
+    Returns:
+        bpy.types.Collection: The loaded collection datablock.
+    """
+    asset_container = get_collection(group_name)
+    # Rule: remove the second token if it is exactly two digits (e.g. "_01_").
+    target_name = re.sub(r"^([^_]+)_\d{2}_(.+)$", r"\1_\2", group_name)
+
+    directory = os.path.join(filepath, "Collection") + os.sep
+    op_filepath = directory + target_name
+
+    # Ensure Blender links into our AYON container collection to avoid creating "LinkedData"
+    try:
+        view_layer = bpy.context.view_layer
+
+        def _find_layer_collection(layer_coll, collection):
+            if layer_coll.collection == collection:
+                return layer_coll
+            for ch in layer_coll.children:
+                found = _find_layer_collection(ch, collection)
+                if found:
+                    return found
+            return None
+
+        lc = _find_layer_collection(view_layer.layer_collection, asset_container)
+        if lc:
+            view_layer.active_layer_collection = lc
+    except Exception:
+        pass
+
+    bpy.ops.wm.link(
+        filepath=op_filepath,
+        directory=directory,
+        filename=target_name,
+        # link=True means keep data linked (AYON link workflow)
+        link=link,
+        relative_path=False,
+        # Make behavior match UI toggles 1:1
+        instance_collections=instance_collections,
+        instance_object_data=instance_object_data,
+
+        # Keep selection side effects minimal
+        autoselect=False,
+        active_collection=True,
+    )
+
+    return asset_container
+
+
 def load_collection(
     filepath,
     link=True,
-    lib_container_name = None,
     group_name = None
 ) -> bpy.types.Collection:
-    """Load a collection to the scene."""
+    """Load a collection by bpy.data.libraries.load to the scene."""
     loaded_containers = []
     asset_container = get_collection(group_name)
     with bpy.data.libraries.load(filepath, link=link, relative=False) as (
