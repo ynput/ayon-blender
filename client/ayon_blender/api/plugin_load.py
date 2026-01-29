@@ -201,20 +201,6 @@ def link_collection(
         active_collection=True,
     )
 
-    # Retrieve the linked collection datablock and ensure it's parented under asset_container
-    linked_asset = bpy.data.collections.get(target_name)
-
-    # Handle name collision suffix (e.g. "MyColl.001")
-    if linked_asset is None:
-        linked_asset = find_collection_by_name(target_name)
-
-    if linked_asset is None:
-        raise LoadError(
-            f"wm.link completed but collection '{target_name}' not found in bpy.data.collections."
-        )
-    if linked_asset.name not in asset_container.children:
-        asset_container.children.link(linked_asset)
-
     return asset_container
 
 
