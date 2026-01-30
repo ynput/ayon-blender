@@ -101,7 +101,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         collection = container["node"]
         target_name = f"{container['namespace']}_{container['name']}"
         if collection.children:
-            library = self._get_library_from_collection(collection.children[0])
+            library = self._get_library_from_collection(collection)
             if library:
                 bpy.data.libraries.remove(library)
             else:
