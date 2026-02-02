@@ -82,7 +82,7 @@ class InstallPySideToBlender(PreLaunchHook):
         qt_binding = "PySide2" if before_blender_4 else "PySide6"
         # Use PySide6 6.6.3 because 6.7.0 had a bug
         #   - 'QTextEdit' can't be added to 'QBoxLayout'
-        qt_binding_version = None if before_blender_4 else "6.6.3"
+        qt_binding_version = None
 
         python_dir = os.path.join(versions_dir, version_subfolder, "python")
         python_lib = os.path.join(python_dir, "lib")
