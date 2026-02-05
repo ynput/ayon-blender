@@ -251,7 +251,6 @@ def build_workfile_template(*args) -> None:
 def open_template(*args, **kwargs) -> None:
     """Open workfile template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template()
     main_window = kwargs.get("main_window")
     open_template_ui(builder, main_window=main_window)
     return main_window
