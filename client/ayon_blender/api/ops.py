@@ -404,9 +404,7 @@ class SetUnitScale(bpy.types.Operator):
     def execute(self, context):
         project = get_current_project_name()
         settings = get_project_settings(project).get("blender")
-        unit_scale_settings = settings.get("unit_scale_settings")
-        pipeline.set_unit_scale_from_settings(
-            unit_scale_settings=unit_scale_settings)
+        pipeline.set_unit_scale_from_settings(blender_settings=settings)
         return {"FINISHED"}
 
 
@@ -433,6 +431,115 @@ class VersionUpWorkfile(LaunchQtApp):
     def execute(self, context):
         version_up_current_workfile()
         return {"FINISHED"}
+
+
+class CreateFirstWorkfileFromTemplate(LaunchQtApp):
+    """Build Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_create_first_workfile_from_template"
+    bl_label = "Create First Workfile from Template"
+    def execute(self, context):
+        from .workfile_template_builder import create_first_workfile_from_template
+        create_first_workfile_from_template()
+        return {"FINISHED"}
+
+
+class BuildWorkfileFromTemplate(LaunchQtApp):
+    """Build Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_build_workfile_from_template"
+    bl_label = "Build Workfile from Template"
+    def execute(self, context):
+        from .workfile_template_builder import build_workfile_template
+        build_workfile_template()
+        return {"FINISHED"}
+
+
+# TODO: implement update functionality when the load placeholder supported.
+# class UpdateWorkfileFromTemplate(LaunchQtApp):
+#     """Update Workfile from ayon template settings."""
+
+#     bl_idname = "wm.ayon_update_workfile_from_template"
+#     bl_label = "Update Workfile from Template"
+#     def execute(self, context):
+#         from .workfile_template_builder import update_workfile_template
+#         update_workfile_template()
+#         return {"FINISHED"}
+
+
+class OpenTemplate(LaunchQtApp):
+    """Build Workfile from ayon template settings."""
+
+    bl_idname = "wm.ayon_open_template"
+    bl_label = "Open Template"
+    def execute(self, context):
+        from .workfile_template_builder import open_template
+        window = open_template()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
+
+
+
+class CreatePlaceholder(LaunchQtApp):
+    """Create Placeholder from ayon template settings."""
+
+    bl_idname = "wm.ayon_create_placeholder"
+    bl_label = "Create Placeholder"
+    def execute(self, context):
+        from .workfile_template_builder import create_placeholder
+        window = create_placeholder()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
+
+
+class UpdatePlaceholder(LaunchQtApp):
+    """Update Placeholder from ayon template settings."""
+
+    bl_idname = "wm.ayon_update_placeholder"
+    bl_label = "Update Placeholder"
+    def execute(self, context):
+        from .workfile_template_builder import update_placeholder
+        window = update_placeholder()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
+
+
+class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
+    """AYON submenu example."""
+
+    bl_idname = "TOPBAR_MT_AYON_TEMPLATED_WORKFILE"
+    bl_label = "Templated Workfile"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator(
+            CreateFirstWorkfileFromTemplate.bl_idname,
+            text="Create First Workfile from Template"
+        )
+        layout.operator(
+            BuildWorkfileFromTemplate.bl_idname,
+            text="Build Workfile from Template"
+        )
+        # layout.operator(
+        #     UpdateWorkfileFromTemplate.bl_idname,
+        #     text="Update Workfile from Template"
+        # )
+        layout.separator()
+        layout.operator(
+            OpenTemplate.bl_idname,
+            text="Open Template"
+        )
+        layout.operator(
+            CreatePlaceholder.bl_idname,
+            text="Create Placeholder"
+        )
+        layout.operator(
+            UpdatePlaceholder.bl_idname,
+            text="Update Placeholder"
+        )
 
 
 class TOPBAR_MT_ayon(bpy.types.Menu):
@@ -480,6 +587,9 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
                 bpy.context.window_manager.keyconfigs.addon.keymaps.update()
 
         layout.separator()
+        layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
+
+        layout.separator()
         layout.operator(LaunchCreator.bl_idname, text="Create...")
         layout.operator(LaunchLoader.bl_idname, text="Load...")
         layout.operator(
@@ -495,8 +605,12 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
         layout.operator(SetUnitScale.bl_idname, text="Set Unit Scale")
         layout.operator(CreateRenderSetup.bl_idname,
                         text="Create Render Setup")
+
         layout.separator()
-        layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
+        layout.menu(
+            TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
+            text="Templated Workfile"
+        )
 
 def draw_ayon_menu(self, context):
     """Draw the AYON menu in the top bar."""
@@ -516,6 +630,13 @@ classes = [
     SetUnitScale,
     CreateRenderSetup,
     VersionUpWorkfile,
+    CreateFirstWorkfileFromTemplate,
+    BuildWorkfileFromTemplate,
+    # UpdateWorkfileFromTemplate,
+    OpenTemplate,
+    CreatePlaceholder,
+    UpdatePlaceholder,
+    TOPBAR_MT_ayon_Templated_Workfile,
     TOPBAR_MT_ayon,
 ]
 

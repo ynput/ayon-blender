@@ -824,3 +824,51 @@ def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]
             "asset_group": rig
         }
     )
+
+
+def update_content_on_context_change():
+    """
+    This will update scene content to match new folder on context change
+    """
+
+    host = registered_host()
+    create_context = CreateContext(host, discover_publish_plugins=False)
+    task_entity = create_context.get_current_task_entity()
+
+    instance_values = {
+        "folderPath": create_context.get_current_folder_path(),
+        "task": task_entity["name"],
+    }
+    creator_attribute_values = {
+        "frameStart": float(task_entity["attrib"]["frameStart"]),
+        "frameEnd": float(task_entity["attrib"]["frameEnd"]),
+        "handleStart": float(task_entity["attrib"]["handleStart"]),
+        "handleEnd": float(task_entity["attrib"]["handleEnd"]),
+    }
+
+    has_changes = False
+    for instance in create_context.instances:
+        for key, value in instance_values.items():
+            if key not in instance or instance[key] == value:
+                continue
+
+            # Update instance value
+            print(f"Updating {instance.product_name} {key} to: {value}")
+            instance[key] = value
+            has_changes = True
+
+        creator_attributes = instance.creator_attributes
+        for key, value in creator_attribute_values.items():
+            if (
+                    key not in creator_attributes
+                    or creator_attributes[key] == value
+            ):
+                continue
+
+            # Update instance creator attribute value
+            print(f"Updating {instance.product_name} {key} to: {value}")
+            creator_attributes[key] = value
+            has_changes = True
+
+    if has_changes:
+        create_context.save_changes()
