@@ -160,8 +160,8 @@ def link_collection(
         bpy.types.Collection: The loaded collection datablock.
     """
     asset_container = get_collection(group_name)
-    # Rule: remove the second token if it is exactly two digits (e.g. "_01_").
-    target_name = re.sub(r"^([^_]+)_\d{2}_(.+)$", r"\1_\2", group_name)
+    # Rule: remove the second token if it is exactly two digits (e.g. "_01_" or "_01:").
+    target_name = re.sub(r"_\d{2}[:_]", "_", group_name)
 
     directory = os.path.join(filepath, "Collection") + os.sep
     op_filepath = directory + target_name
