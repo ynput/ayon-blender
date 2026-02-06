@@ -139,9 +139,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
             "productType": context["product"]["productType"],
             "objectName": group_name,
             "project_name": context["project"]["name"],
-            "always_add_cache_reader": options.get(
-                "always_add_cache_reader", self.always_add_cache_reader
-            )
+            "options": options or {}
         }
 
         self[:] = objects

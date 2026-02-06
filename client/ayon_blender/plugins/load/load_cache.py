@@ -218,8 +218,7 @@ class CacheModelLoader(plugin.BlenderLoader):
             "productType": product_type,
             "objectName": group_name,
             "project_name": context["project"]["name"],
-            "always_add_cache_reader": options.get(
-                "always_add_cache_reader", self.always_add_cache_reader),
+            "options": options or {}
         }
 
         self[:] = objects
@@ -285,11 +284,7 @@ class CacheModelLoader(plugin.BlenderLoader):
             mat = asset_group.matrix_basis.copy()
             self._remove(asset_group)
 
-            options = {
-                "always_add_cache_reader": container.get(
-                    "always_add_cache_reader", self.always_add_cache_reader
-                )
-            }
+            options = container.get("options", {})
             objects = self._process(str(libpath), asset_group, object_name, options)
 
             container = get_ayon_container()
