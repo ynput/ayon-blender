@@ -52,6 +52,6 @@ DEFAULT_LOADERS_SETTINGS = {
         "create_animation_instance_on_load": True
     },
     "CacheModelLoader": {
-        "always_add_cache_reader": True
+        "always_add_cache_reader": False
     }
 }
