@@ -42,7 +42,7 @@ class LoadersModel(BaseSettingsModel):
 
 DEFAULT_LOADERS_SETTINGS = {
     "AbcCameraLoader": {
-        "always_add_cache_reader": True
+        "always_add_cache_reader": False
     },
     "BlendLinkLoaderFlat": {
         "instance_collections": False,
