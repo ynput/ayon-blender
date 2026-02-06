@@ -43,7 +43,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         return [
             BoolDef("always_add_cache_reader",
                     default=cls.always_add_cache_reader,
-                    label="Always Add Cache Reader")
+                    label="Always Add Cache Reader (Alembic)")
         ]
 
     def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
