@@ -36,7 +36,7 @@ class CacheModelLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    always_add_cache_reader = True
+    always_add_cache_reader = False
 
     @classmethod
     def get_options(cls, contexts):
