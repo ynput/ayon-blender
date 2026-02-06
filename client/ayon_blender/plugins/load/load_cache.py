@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import bpy
 import os
 
+from ayon_core.lib import BoolDef
 from ayon_core.pipeline import AYON_CONTAINER_ID
 
 from ayon_blender.api.constants import (
@@ -34,6 +35,16 @@ class CacheModelLoader(plugin.BlenderLoader):
     label = "Load Cache"
     icon = "code-fork"
     color = "orange"
+
+    always_add_cache_reader = True
+
+    @classmethod
+    def get_options(cls, contexts):
+        return [
+            BoolDef("always_add_cache_reader",
+                    default=cls.always_add_cache_reader,
+                    label="Always Add Cache Reader")
+        ]
 
     def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
         """search and update path in the transform cache modifier
@@ -89,7 +100,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         for empty in empties:
             bpy.data.objects.remove(empty)
 
-    def _process(self, libpath, asset_group, group_name):
+    def _process(self, libpath, asset_group, group_name, options=None):
         plugin.deselect_all()
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
@@ -106,9 +117,14 @@ class CacheModelLoader(plugin.BlenderLoader):
             bpy.ops.wm.obj_import(filepath=libpath)
         else:
             # Alembic
+            always_add_cache_reader = options.get(
+                "always_add_cache_reader",
+                self.always_add_cache_reader
+            ) if options else self.always_add_cache_reader
             bpy.ops.wm.alembic_import(
                 filepath=libpath,
-                relative_path=relative
+                relative_path=relative,
+                always_add_cache_reader=always_add_cache_reader
             )
 
         objects = lib.get_selection()
@@ -180,7 +196,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         asset_group.empty_display_type = 'SINGLE_ARROW'
         add_to_ayon_container(asset_group)
-        objects = self._process(libpath, asset_group, group_name)
+        objects = self._process(libpath, asset_group, group_name, options)
 
         # Link the asset group to the active collection
         collection = bpy.context.view_layer.active_layer_collection.collection
@@ -202,6 +218,8 @@ class CacheModelLoader(plugin.BlenderLoader):
             "productType": product_type,
             "objectName": group_name,
             "project_name": context["project"]["name"],
+            "always_add_cache_reader": options.get(
+                "always_add_cache_reader", self.always_add_cache_reader),
         }
 
         self[:] = objects
@@ -267,7 +285,12 @@ class CacheModelLoader(plugin.BlenderLoader):
             mat = asset_group.matrix_basis.copy()
             self._remove(asset_group)
 
-            objects = self._process(str(libpath), asset_group, object_name)
+            options = {
+                "always_add_cache_reader": container.get(
+                    "always_add_cache_reader", self.always_add_cache_reader
+                )
+            }
+            objects = self._process(str(libpath), asset_group, object_name, options)
 
             container = get_ayon_container()
             self._link_objects(objects, asset_group, container)

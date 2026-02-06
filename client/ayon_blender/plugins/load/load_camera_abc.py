@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import os
 import bpy
 
+from ayon_core.lib import BoolDef
 from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.constants import (
@@ -29,6 +30,17 @@ class AbcCameraLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
+    always_add_cache_reader = True
+
+    @classmethod
+    def get_options(cls, contexts):
+        return [
+            BoolDef("always_add_cache_reader",
+                    default=cls.always_add_cache_reader,
+                    label="Always Add Cache Reader")
+        ]
+
+
     def _remove(self, asset_group):
         objects = list(asset_group.children)
 
@@ -39,13 +51,18 @@ class AbcCameraLoader(plugin.BlenderLoader):
                 objects.extend(obj.children)
                 bpy.data.objects.remove(obj)
 
-    def _process(self, libpath, asset_group, group_name):
+    def _process(self, libpath, asset_group, group_name, options=None):
         plugin.deselect_all()
 
         # Force the creation of the transform cache even if the camera
         # doesn't have an animation. We use the cache to update the camera.
+        always_add_cache_reader = options.get(
+            "always_add_cache_reader", self.always_add_cache_reader
+        ) if options else self.always_add_cache_reader
         bpy.ops.wm.alembic_import(
-            filepath=libpath, always_add_cache_reader=True)
+            filepath=libpath,
+            always_add_cache_reader=always_add_cache_reader
+        )
 
         objects = lib.get_selection()
 
@@ -98,7 +115,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         add_to_ayon_container(asset_group)
-        self._process(libpath, asset_group, group_name)
+        self._process(libpath, asset_group, group_name, options)
 
         objects = []
         nodes = list(asset_group.children)
@@ -122,6 +139,9 @@ class AbcCameraLoader(plugin.BlenderLoader):
             "productType": context["product"]["productType"],
             "objectName": group_name,
             "project_name": context["project"]["name"],
+            "always_add_cache_reader": options.get(
+                "always_add_cache_reader", self.always_add_cache_reader
+            )
         }
 
         self[:] = objects
