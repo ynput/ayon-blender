@@ -30,6 +30,10 @@ class BlendLoaderModel(BaseSettingsModel):
     )
 
 class LoadersModel(BaseSettingsModel):
+    AbcCameraLoader: dict = SettingsField(
+        default_factory=dict,
+        title="Alembic Camera Loader"
+    )
     BlendLinkLoaderFlat: BlendLinkLoaderFlatModel = SettingsField(
         default_factory=BlendLinkLoaderFlatModel,
         title="Link Blend (Flat)"
@@ -37,6 +41,10 @@ class LoadersModel(BaseSettingsModel):
     BlendLoader: BlendLoaderModel = SettingsField(
         default_factory=BlendLoaderModel,
         title="Reference Loader"
+    )
+    CacheModelLoader: dict = SettingsField(
+        default_factory=dict,
+        title="Cache Model Loader"
     )
 
 
