@@ -188,7 +188,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
             return
 
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        new_cachefile = bpy.data.cache_files[-1]  # TODO: cache may not be the last on?
+        new_cachefile = bpy.data.cache_files[-1]  # TODO: cache may not be the last one?
         new_cachefile.scale = 1.0
 
         remove_unused_caches = set()
