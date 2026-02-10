@@ -1,11 +1,9 @@
 """Load an asset in Blender from an Alembic file."""
 
 from pathlib import Path
-from pprint import pformat
 from typing import Dict, List, Optional
 
 import bpy
-import os
 
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline import AYON_CONTAINER_ID
@@ -46,41 +44,40 @@ class CacheModelLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader (Alembic)")
         ]
 
-    def _update_transform_cache_path(self, asset_group, libpath, prev_filename):
+    def _update_transform_cache_path(self, asset_group, libpath):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
         """
+        # Load new cache file
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        for obj in asset_group.children:
-            asset_name = obj.name.rsplit(":", 1)[-1]
-            names = [modifier.name for modifier in obj.modifiers
-                     if modifier.type == "MESH_SEQUENCE_CACHE"]
-            file_list = [file for file in bpy.data.cache_files
-                         if file.name.startswith(prev_filename)]
-            if names:
-                for name in names:
-                    obj.modifiers.remove(obj.modifiers.get(name))
-            if file_list:
-                bpy.data.batch_remove(file_list)
+        new_cachefile = bpy.data.cache_files[-1]
 
-            obj.modifiers.new(name='MeshSequenceCache', type='MESH_SEQUENCE_CACHE')
+        # set scale to 1.0 to avoid transform cache defaulting to 0 scale
+        new_cachefile.scale = 1.0
 
-            modifiers = lib.get_cache_modifiers(obj)
-            for asset_name, modifier_list in modifiers.items():
-                for modifier in modifier_list:
-                    if modifier.type == "MESH_SEQUENCE_CACHE":
-                        modifier.cache_file = bpy.data.cache_files[-1]
-                        cache_file_name = os.path.basename(libpath.as_posix())
-                        modifier.cache_file.name = cache_file_name
-                        modifier.cache_file.filepath = libpath.as_posix()
-                        modifier.cache_file.scale = 1.0
-                        for object_path in modifier.cache_file.object_paths:
-                            base_object_name = os.path.basename(object_path.path)
-                            asset_name = asset_name.rsplit(":", 1)[-1]
-                            if base_object_name.endswith(asset_name):
-                                modifier.object_path = object_path.path
-                        bpy.context.evaluated_depsgraph_get()
+        remove_caches = set()
+        for obj in asset_group.children_recursive:
+            # TODO: The user may have parented other objects under the asset
+            #  group that may not be related to this cache file. We should
+            #  find a better way to identify the correct objects to update.
+            for modifier in obj.modifiers:
+                if modifier.type != "MESH_SEQUENCE_CACHE":
+                    continue
+                if not modifier.cache_file:
+                    continue
+                remove_caches.add(modifier.cache_file)
+                modifier.cache_file = new_cachefile
+            for constraint in obj.constraints:
+                if constraint.type == 'TRANSFORM_CACHE':
+                    constraint.cache_file = new_cachefile
+
+        bpy.context.evaluated_depsgraph_get()
+
+        # Remove dangling cache files that are not used anymore
+        remove_caches = {cache for cache in remove_caches if not cache.users}
+        if remove_caches:
+            bpy.data.batch_remove(remove_caches)
 
         return libpath
 
@@ -212,12 +209,13 @@ class CacheModelLoader(plugin.BlenderLoader):
             "namespace": namespace or '',
             "loader": str(self.__class__.__name__),
             "representation": context["representation"]["id"],
+            "project_name": context["project"]["name"],
+            # Blender-specific metadata
             "libpath": libpath,
             "asset_name": asset_name,
             "parent": context["representation"]["versionId"],
             "productType": product_type,
             "objectName": group_name,
-            "project_name": context["project"]["name"],
             "options": options or {}
         }
 
@@ -242,18 +240,6 @@ class CacheModelLoader(plugin.BlenderLoader):
         libpath = Path(self.filepath_from_context(context))
         extension = libpath.suffix.lower()
 
-        self.log.info(
-            "Container: %s\nRepresentation: %s",
-            pformat(container, indent=2),
-            pformat(repre_entity, indent=2),
-        )
-
-        assert asset_group, (
-            f"The asset is not loaded: {container['objectName']}"
-        )
-        assert libpath, (
-            "No existing library file found for {container['objectName']}"
-        )
         assert libpath.is_file(), (
             f"The file doesn't exist: {libpath}"
         )
@@ -279,8 +265,8 @@ class CacheModelLoader(plugin.BlenderLoader):
             self.log.info("Library already loaded, not updating...")
             return
 
-        if any(str(libpath).lower().endswith(ext)
-               for ext in [".usd", ".usda", ".usdc"]):
+        if extension in {".usd", ".usda", ".usdc"}:
+            # Special behavior for USD files
             mat = asset_group.matrix_basis.copy()
             self._remove(asset_group)
 
@@ -292,9 +278,8 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             asset_group.matrix_basis = mat
         else:
-            prev_filename = os.path.basename(container["libpath"])
-            libpath = self._update_transform_cache_path(asset_group, libpath, prev_filename)
-
+            self._update_transform_cache_path(asset_group,
+                                              libpath)
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
@@ -320,7 +305,6 @@ class CacheModelLoader(plugin.BlenderLoader):
             return False
 
         self._remove(asset_group)
-
         bpy.data.objects.remove(asset_group)
 
         return True

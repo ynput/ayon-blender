@@ -1,7 +1,6 @@
 """Load an asset in Blender from an Alembic file."""
 
 from pathlib import Path
-from pprint import pformat
 from typing import Dict, List, Optional
 
 import os
@@ -164,12 +163,6 @@ class AbcCameraLoader(plugin.BlenderLoader):
         prev_filename = os.path.basename(container["libpath"])
         extension = libpath.suffix.lower()
 
-        self.log.info(
-            "Container: %s\nRepresentation: %s",
-            pformat(container, indent=2),
-            pformat(repre_entity, indent=2),
-        )
-
         assert asset_group, (
             f"The asset is not loaded: {container['objectName']}")
         assert libpath, (
@@ -195,29 +188,39 @@ class AbcCameraLoader(plugin.BlenderLoader):
             return
 
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        for obj in asset_group.children:
-            asset_name = obj.name.rsplit(":", 1)[-1]
-            names = [constraint.name for constraint in obj.constraints
-                     if constraint.type == "TRANSFORM_CACHE"]
-            file_list = [file for file in bpy.data.cache_files
-                        if file.name.startswith(prev_filename)]
-            if names:
-                for name in names:
-                    obj.constraints.remove(obj.constraints.get(name))
-            if file_list:
-                bpy.data.batch_remove(file_list)
+        new_cachefile = bpy.data.cache_files[-1]  # TODO: cache may not be the last on?
+        new_cachefile.scale = 1.0
 
-            constraint = obj.constraints.new("TRANSFORM_CACHE")
-            constraint.cache_file = bpy.data.cache_files[-1]
-            constraint.cache_file.name = os.path.basename(libpath)
-            constraint.cache_file.filepath = libpath.as_posix()
-            constraint.cache_file.scale = 1.0
-            for object_path in constraint.cache_file.object_paths:
-                base_object_name = os.path.basename(object_path.path)
-                asset_name = asset_name.rsplit(":", 1)[-1]
-                if base_object_name.endswith(asset_name):
-                    constraint.object_path = object_path.path
-            bpy.context.evaluated_depsgraph_get()
+        remove_unused_caches = set()
+
+        # Update transform cache constraints
+        for obj in asset_group.children:
+            for constraint in obj.constraints:
+                if constraint.type != "TRANSFORM_CACHE":
+                    continue
+
+                if not constraint.cache_file:
+                    continue
+
+                remove_unused_caches.add(constraint.cache_file)
+                constraint.cache_file = new_cachefile
+
+                # Update the object path if object not found in cache file
+                if constraint.object_path not in new_cachefile.object_paths:
+                    self.log.warning(
+                        "Object path '%s' not found in new cache file, "
+                        "trying to update it...", constraint.object_path
+                    )
+                    # Find matching object name (instead of full path)
+                    print(set(new_cachefile.object_paths))
+
+        remove_unused_caches = {
+            cache for cache in remove_unused_caches if not cache.users
+        }
+        if remove_unused_caches:
+            bpy.data.batch_remove(remove_unused_caches)
+
+        bpy.context.evaluated_depsgraph_get()
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
