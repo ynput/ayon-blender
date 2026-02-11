@@ -44,7 +44,7 @@ class CacheModelLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader (Alembic)")
         ]
 
-    def _update_transform_cache_path(self, asset_group, libpath, has_no_modifier=False):
+    def _update_transform_cache_path(self, asset_group, libpath):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
