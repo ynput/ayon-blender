@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import os
 import bpy
 
 from ayon_core.lib import BoolDef
