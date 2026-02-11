@@ -160,7 +160,6 @@ class AbcCameraLoader(plugin.BlenderLoader):
         object_name = container["objectName"]
         asset_group = bpy.data.objects.get(object_name)
         libpath = Path(self.filepath_from_context(context))
-        prev_filename = os.path.basename(container["libpath"])
         extension = libpath.suffix.lower()
 
         assert asset_group, (
