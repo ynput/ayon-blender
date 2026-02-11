@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
+
 import bpy
 
 from ayon_core.lib import BoolDef
@@ -186,7 +187,11 @@ class AbcCameraLoader(plugin.BlenderLoader):
             return
 
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        new_cachefile = bpy.data.cache_files[-1]  # TODO: cache may not be the last one?
+        new_cachefile = next(iter(
+            cache_file for cache_file in bpy.data.cache_files
+            if cache_file.filepath == libpath.as_posix()),
+            None
+        )
         new_cachefile.scale = 1.0
 
         remove_unused_caches = set()

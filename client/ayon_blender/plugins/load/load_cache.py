@@ -44,15 +44,18 @@ class CacheModelLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader (Alembic)")
         ]
 
-    def _update_transform_cache_path(self, asset_group, libpath):
+    def _update_transform_cache_path(self, asset_group, libpath, has_no_modifier=False):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
         """
         # Load new cache file
         bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        new_cachefile = bpy.data.cache_files[-1]
-
+        new_cachefile = next(iter(
+            cache_file for cache_file in bpy.data.cache_files
+            if cache_file.filepath == libpath.as_posix()),
+            None
+        )
         # set scale to 1.0 to avoid transform cache defaulting to 0 scale
         new_cachefile.scale = 1.0
 
@@ -68,9 +71,6 @@ class CacheModelLoader(plugin.BlenderLoader):
                     continue
                 remove_caches.add(modifier.cache_file)
                 modifier.cache_file = new_cachefile
-            for constraint in obj.constraints:
-                if constraint.type == 'TRANSFORM_CACHE':
-                    constraint.cache_file = new_cachefile
 
         bpy.context.evaluated_depsgraph_get()
 
