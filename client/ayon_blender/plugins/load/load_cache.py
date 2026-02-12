@@ -146,7 +146,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         # Remove dangling cache files that are not used anymore
         remove_caches = {
             cache for cache in remove_caches if not cache.users
-            or not cache.use_fake_user
+            or not lib.has_users(cache)
         }
         if remove_caches:
             bpy.data.batch_remove(remove_caches)

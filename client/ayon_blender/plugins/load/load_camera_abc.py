@@ -39,7 +39,6 @@ class AbcCameraLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader")
         ]
 
-
     def _remove(self, asset_group):
         objects = list(asset_group.children)
 
@@ -214,7 +213,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
 
         remove_unused_caches = {
             cache for cache in remove_unused_caches if not cache.users
-            or not cache.use_fake_user
+            or not lib.has_users(cache)
         }
         if remove_unused_caches:
             bpy.data.batch_remove(remove_unused_caches)

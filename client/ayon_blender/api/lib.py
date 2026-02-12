@@ -805,6 +805,29 @@ def get_scene_node_tree(ensure_exists=False):
         return bpy.context.scene.node_tree
 
 
+def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
+    """Check if a cache file has users.
+
+    Args:
+        cache (bpy.types.CacheFile): Cache File from datablock
+
+    Returns:
+        bool: True if the cache has users, False otherwise.
+    """
+    if not cache.users:
+        return False
+    # But there's an edge cases where
+    # Blender still reports users but they
+    # aren't actually there
+    def get_users(datablock):
+        return bpy.data.user_map(subset={datablock})[datablock]
+
+    if not cache.use_fake_user:
+        if not get_users(cache):
+            return False
+        return True
+
+
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
     """Create animation instances for the given rigs.
 
