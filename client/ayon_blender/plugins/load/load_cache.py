@@ -19,6 +19,40 @@ from ayon_blender.api.pipeline import (
 )
 
 
+class ObjectPathMatcher:
+    """Build a lookup to find the longest matching suffix of an object path
+    among a large list of object paths.
+
+    The lookup helps because we may be doing a large number of lookups to the
+    same set of object paths.
+    """
+    def __init__(self, object_paths: list[str]):
+        self._lookup: dict[tuple[str, ...], str] = {}
+        self._object_paths: list[str] = object_paths
+        self._is_dirty: bool = True
+
+    def _build_lookup(self):
+        # Reverse so first objects are added to the lookup last and thus are
+        # found first in case of multiple matches
+        for path in reversed(self._object_paths):
+            parts = path.split("/")
+            for i in range(len(parts)):
+                self._lookup[tuple(parts[i:])] = path
+        self._is_dirty = False
+
+    def find_best_match(self, path: str) -> Optional[str]:
+        """Return best match with the longest matching suffix in the lookup."""
+        if self._is_dirty:
+            self._build_lookup()
+        parts = path.split("/")
+        for i in range(len(parts)):
+            key  = tuple(parts[i:])
+            match = self._lookup.get(key, None)
+            if match is not None:
+                return match
+        return None
+
+
 class CacheModelLoader(plugin.BlenderLoader):
     """Load cache models.
 
@@ -54,6 +88,31 @@ class CacheModelLoader(plugin.BlenderLoader):
         # set scale to 1.0 to avoid transform cache defaulting to 0 scale
         new_cachefile.scale = 1.0
 
+        object_path_matcher = ObjectPathMatcher(
+            list(new_cachefile.object_paths)
+        )
+
+        def _match_object_path(object_path: str) -> Optional[str]:
+            if object_path not in new_cachefile.object_paths:
+                self.log.warning(
+                    "Object path '%s' not found in new cache file '%s'",
+                    object_path,
+                    new_cachefile.filepath
+                )
+                new_path = object_path_matcher.find_best_match(object_path)
+                if new_path is not None:
+                    self.log.info(
+                        "Found replacement object path '%s' for "
+                        "missing path '%s'", new_path, object_path
+                    )
+                    return new_path
+                else:
+                    self.log.info(
+                        "No replacement found for object path '%s'",
+                        object_path
+                    )
+            return None
+
         remove_caches = set()
         for obj in asset_group.children_recursive:
             # TODO: The user may have parented other objects under the asset
@@ -67,12 +126,20 @@ class CacheModelLoader(plugin.BlenderLoader):
                 remove_caches.add(modifier.cache_file)
                 modifier.cache_file = new_cachefile
 
+                new_object_path = _match_object_path(modifier.object_path)
+                if new_object_path:
+                    modifier.object_path = new_object_path
             for constraint in obj.constraints:
                 if constraint.type != "TRANSFORM_CACHE":
                     continue
                 if not constraint.cache_file:
                     continue
+                remove_caches.add(constraint.cache_file)
                 constraint.cache_file = new_cachefile
+
+                new_object_path = _match_object_path(constraint.object_path)
+                if new_object_path:
+                    constraint.object_path = new_object_path
 
         bpy.context.evaluated_depsgraph_get()
 
