@@ -50,12 +50,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         to update the filepath of the alembic.
         """
         # Load new cache file
-        bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        new_cachefile = next(iter(
-            cache_file for cache_file in bpy.data.cache_files
-            if cache_file.filepath == libpath.as_posix()),
-            None
-        )
+        new_cachefile = lib.add_cache_file(libpath.as_posix())
         # set scale to 1.0 to avoid transform cache defaulting to 0 scale
         new_cachefile.scale = 1.0
 
@@ -72,12 +67,19 @@ class CacheModelLoader(plugin.BlenderLoader):
                 remove_caches.add(modifier.cache_file)
                 modifier.cache_file = new_cachefile
 
-        bpy.context.evaluated_depsgraph_get()
+            for constraint in obj.constraints:
+                if constraint.type != "TRANSFORM_CACHE":
+                    continue
+                if not constraint.cache_file:
+                    continue
+                constraint.cache_file = new_cachefile
 
         # Remove dangling cache files that are not used anymore
         remove_caches = {cache for cache in remove_caches if not cache.users}
         if remove_caches:
             bpy.data.batch_remove(remove_caches)
+
+        bpy.context.evaluated_depsgraph_get()
 
         return libpath
 

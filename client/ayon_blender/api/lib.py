@@ -587,6 +587,21 @@ def collect_animation_defs(create_context, step=True, fps=False):
     return defs
 
 
+def add_cache_file(path: str) -> bpy.types.CacheFile:
+    """Add new CacheFile datablock.
+
+    bpy.ops.cachefile.open does not return the new cache file.
+    As such, we need to query what was there before and using
+    that find out what's new
+    """
+    before = set(bpy.data.cache_files)
+    bpy.ops.cachefile.open(filepath=path)
+    after = set(bpy.data.cache_files) - before
+    new = list(after - before)
+    assert len(new) == 1, f"A single CacheFile must be loaded, got: {new}"
+    return new[-1]
+
+
 def get_blender_version():
     """Get Blender Version
     """

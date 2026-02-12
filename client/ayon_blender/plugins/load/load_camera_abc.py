@@ -186,12 +186,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
             self.log.info("Library already loaded, not updating...")
             return
 
-        bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        new_cachefile = next(iter(
-            cache_file for cache_file in bpy.data.cache_files
-            if cache_file.filepath == libpath.as_posix()),
-            None
-        )
+        new_cachefile = lib.add_cache_file(libpath.as_posix())
         new_cachefile.scale = 1.0
 
         remove_unused_caches = set()
