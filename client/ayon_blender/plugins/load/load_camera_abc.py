@@ -214,6 +214,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
 
         remove_unused_caches = {
             cache for cache in remove_unused_caches if not cache.users
+            or not cache.use_fake_user
         }
         if remove_unused_caches:
             bpy.data.batch_remove(remove_unused_caches)

@@ -77,7 +77,10 @@ class CacheModelLoader(plugin.BlenderLoader):
         bpy.context.evaluated_depsgraph_get()
 
         # Remove dangling cache files that are not used anymore
-        remove_caches = {cache for cache in remove_caches if not cache.users}
+        remove_caches = {
+            cache for cache in remove_caches if not cache.users
+            or not cache.use_fake_user
+        }
         if remove_caches:
             bpy.data.batch_remove(remove_caches)
 
