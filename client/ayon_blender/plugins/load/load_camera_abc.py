@@ -192,7 +192,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
         remove_unused_caches = set()
 
         # Update transform cache constraints
-        for obj in asset_group.children:
+        for obj in asset_group.children_recursive:
             for constraint in obj.constraints:
                 if constraint.type != "TRANSFORM_CACHE":
                     continue
