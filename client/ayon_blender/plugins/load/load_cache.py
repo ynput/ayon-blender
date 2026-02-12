@@ -1,7 +1,7 @@
 """Load an asset in Blender from an Alembic file."""
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import bpy
 
@@ -28,7 +28,7 @@ class ObjectPathMatcher:
     """
     def __init__(self, object_paths: list[str]):
         self._lookup: dict[tuple[str, ...], str] = {}
-        self._object_paths: list[str] = object_paths
+        self._object_paths: list[str] = [str(p) for p in object_paths]
         self._is_dirty: bool = True
 
     def _build_lookup(self):
@@ -88,11 +88,44 @@ class CacheModelLoader(plugin.BlenderLoader):
         # set scale to 1.0 to avoid transform cache defaulting to 0 scale
         new_cachefile.scale = 1.0
 
+        remove_caches = set()
+        datablocks: set[
+            Union[
+                bpy.types.MeshCacheModifier,
+                bpy.types.TransformCacheConstraint
+            ]
+        ] = set()
+        for obj in asset_group.children_recursive:
+            # TODO: The user may have parented other objects under the asset
+            #  group that may not be related to this cache file. We should
+            #  find a better way to identify the correct objects to update.
+            for modifier in obj.modifiers:
+                if modifier.type != "MESH_SEQUENCE_CACHE":
+                    continue
+                if not modifier.cache_file:
+                    continue
+                remove_caches.add(modifier.cache_file)
+                modifier.cache_file = new_cachefile
+                datablocks.add(modifier)
+
+            for constraint in obj.constraints:
+                if constraint.type != "TRANSFORM_CACHE":
+                    continue
+                if not constraint.cache_file:
+                    continue
+                remove_caches.add(constraint.cache_file)
+                constraint.cache_file = new_cachefile
+                datablocks.add(constraint)
+
+        # Start updating object path. Note that CacheFile.object_paths is only
+        # after modifier changes were made (e.g. new cache file is assigned)
+        # That's why we do it after the loop above.
+        bpy.context.evaluated_depsgraph_get()
         object_path_matcher = ObjectPathMatcher(
             list(new_cachefile.object_paths)
         )
 
-        def _match_object_path(object_path: str) -> Optional[str]:
+        def _match_object_path(object_path) -> Optional[str]:
             if object_path not in new_cachefile.object_paths:
                 self.log.warning(
                     "Object path '%s' not found in new cache file '%s'",
@@ -107,41 +140,16 @@ class CacheModelLoader(plugin.BlenderLoader):
                     )
                     return new_path
                 else:
-                    self.log.info(
+                    self.log.warning(
                         "No replacement found for object path '%s'",
                         object_path
                     )
             return None
 
-        remove_caches = set()
-        for obj in asset_group.children_recursive:
-            # TODO: The user may have parented other objects under the asset
-            #  group that may not be related to this cache file. We should
-            #  find a better way to identify the correct objects to update.
-            for modifier in obj.modifiers:
-                if modifier.type != "MESH_SEQUENCE_CACHE":
-                    continue
-                if not modifier.cache_file:
-                    continue
-                remove_caches.add(modifier.cache_file)
-                modifier.cache_file = new_cachefile
-
-                new_object_path = _match_object_path(modifier.object_path)
-                if new_object_path:
-                    modifier.object_path = new_object_path
-            for constraint in obj.constraints:
-                if constraint.type != "TRANSFORM_CACHE":
-                    continue
-                if not constraint.cache_file:
-                    continue
-                remove_caches.add(constraint.cache_file)
-                constraint.cache_file = new_cachefile
-
-                new_object_path = _match_object_path(constraint.object_path)
-                if new_object_path:
-                    constraint.object_path = new_object_path
-
-        bpy.context.evaluated_depsgraph_get()
+        for datablock in datablocks:
+            new_object_path = _match_object_path(datablock.object_path)
+            if new_object_path:
+               datablock.object_path = new_object_path
 
         # Remove dangling cache files that are not used anymore
         remove_caches = {
