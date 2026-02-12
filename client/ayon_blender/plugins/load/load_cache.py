@@ -67,6 +67,14 @@ class CacheModelLoader(plugin.BlenderLoader):
                 remove_caches.add(modifier.cache_file)
                 modifier.cache_file = new_cachefile
 
+                if modifier.object_path not in new_cachefile.object_paths:
+                    self.log.warning(
+                        f"Object path '{modifier.object_path}' not found in new "
+                        "cache file, trying to update it."
+                    )
+                    print(f"Object paths in new cache file: {set(new_cachefile.object_paths)}")
+                    # Try to find the correct object path by matching the name
+
             for constraint in obj.constraints:
                 if constraint.type != "TRANSFORM_CACHE":
                     continue
@@ -74,16 +82,21 @@ class CacheModelLoader(plugin.BlenderLoader):
                     continue
                 constraint.cache_file = new_cachefile
 
+                if constraint.object_path not in new_cachefile.object_paths:
+                    self.log.warning(
+                        f"Object path '{constraint.object_path}' not found in new "
+                        "cache file, trying to update it."
+                    )
         bpy.context.evaluated_depsgraph_get()
 
         # Remove dangling cache files that are not used anymore
         remove_caches = {
             cache for cache in remove_caches if not cache.users
-            or not cache.use_fake_user
+            or not lib.has_users(cache)
         }
         if remove_caches:
             bpy.data.batch_remove(remove_caches)
-
+                # Update the object path if object not found in cache file
         return libpath
 
     def _remove(self, asset_group):
