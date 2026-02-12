@@ -74,12 +74,12 @@ class CacheModelLoader(plugin.BlenderLoader):
                     continue
                 constraint.cache_file = new_cachefile
 
+        bpy.context.evaluated_depsgraph_get()
+
         # Remove dangling cache files that are not used anymore
         remove_caches = {cache for cache in remove_caches if not cache.users}
         if remove_caches:
             bpy.data.batch_remove(remove_caches)
-
-        bpy.context.evaluated_depsgraph_get()
 
         return libpath
 
