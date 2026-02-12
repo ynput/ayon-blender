@@ -39,7 +39,6 @@ class AbcCameraLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader")
         ]
 
-
     def _remove(self, asset_group):
         objects = list(asset_group.children)
 
