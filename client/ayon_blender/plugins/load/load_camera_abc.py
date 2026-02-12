@@ -210,13 +210,13 @@ class AbcCameraLoader(plugin.BlenderLoader):
                         "cache file, trying to update it."
                     )
 
+        bpy.context.evaluated_depsgraph_get()
+
         remove_unused_caches = {
             cache for cache in remove_unused_caches if not cache.users
         }
         if remove_unused_caches:
             bpy.data.batch_remove(remove_unused_caches)
-
-        bpy.context.evaluated_depsgraph_get()
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
