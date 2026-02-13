@@ -95,7 +95,7 @@ class CacheModelLoader(plugin.BlenderLoader):
                 bpy.types.TransformCacheConstraint
             ]
         ] = set()
-        for obj in asset_group.children_recursive:
+        for obj in asset_group.children:
             # TODO: The user may have parented other objects under the asset
             #  group that may not be related to this cache file. We should
             #  find a better way to identify the correct objects to update.
@@ -116,7 +116,6 @@ class CacheModelLoader(plugin.BlenderLoader):
                 remove_caches.add(constraint.cache_file)
                 constraint.cache_file = new_cachefile
                 datablocks.add(constraint)
-
         # Start updating object path. Note that CacheFile.object_paths is only
         # after modifier changes were made (e.g. new cache file is assigned)
         # That's why we do it after the loop above.
