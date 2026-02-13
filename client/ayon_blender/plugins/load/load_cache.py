@@ -138,7 +138,6 @@ class CacheModelLoader(plugin.BlenderLoader):
                         "Found replacement object path '%s' for "
                         "missing path '%s'", new_path, object_path
                     )
-                    self.log.info("new_cache object paths '%s'", new_path)
                     return new_path
                 else:
                     self.log.warning(
