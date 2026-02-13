@@ -89,68 +89,93 @@ class CacheModelLoader(plugin.BlenderLoader):
         new_cachefile.scale = 1.0
 
         remove_caches = set()
-        previous_object_path_by_cache = {}
-        datablocks: set[
+        datablock_object_paths: Dict[
+            Union[
+                bpy.types.MeshCacheModifier,
+                bpy.types.TransformCacheConstraint
+            ],
+            str
+        ] = {}
+        to_update: list[
             Union[
                 bpy.types.MeshCacheModifier,
                 bpy.types.TransformCacheConstraint
             ]
-        ] = set()
+        ] = []
         for obj in asset_group.children_recursive:
             # TODO: The user may have parented other objects under the asset
             #  group that may not be related to this cache file. We should
             #  find a better way to identify the correct objects to update.
-            for modifier in obj.modifiers:
-                if modifier.type != "MESH_SEQUENCE_CACHE":
-                    continue
-                if not modifier.cache_file:
-                    continue
-                remove_caches.add(modifier.cache_file)
-                self.log.info(set(modifier.cache_file.object_paths))
-                modifier.cache_file = new_cachefile
-                datablocks.add(modifier)
-                self.log.info(set(modifier.cache_file.object_paths))
+            # Find all datablocks to update cache file for and update the
+            # object path attribute for.
+            to_update.extend(
+                modifier for modifier in obj.modifiers
+                if modifier.type == "MESH_SEQUENCE_CACHE"
+            )
+            to_update.extend(
+                constraint for constraint in obj.constraints
+                if constraint.type == "TRANSFORM_CACHE"
+            )
 
-            for constraint in obj.constraints:
-                if constraint.type != "TRANSFORM_CACHE":
-                    continue
-                if not constraint.cache_file:
-                    continue
-                remove_caches.add(constraint.cache_file)
-                self.log.info(set(constraint.cache_file.object_paths))
-                constraint.cache_file = new_cachefile
-                datablocks.add(constraint)
-                self.log.info(set(constraint.cache_file.object_paths))
+        for datablock in to_update:
+            if not datablock.cache_file:
+                continue
+            remove_caches.add(datablock.cache_file)
+            datablock.cache_file = new_cachefile
+            datablock_object_paths[datablock] = datablock.object_path
 
-        # Start updating object path. Note that CacheFile.object_paths is only
-        # after modifier changes were made (e.g. new cache file is assigned)
-        # That's why we do it after the loop above.
-        self.log.info("new_cache object paths '%s'", new_cachefile.object_paths)
-        object_path_matcher = ObjectPathMatcher(
-            list(new_cachefile.object_paths)
-        )
+            # Temporarily clear the old object path just to avoid Blender's
+            # Alembic reader to spew out errors during the update. For paths
+            # that are not found in the new cache file but for whom we are able
+            # to find a replacement.
+            datablock.object_path = ""
+
+        # The new cache file does not return any `object_paths` unless it is
+        # currently applied to a modifier or constraint that gets evaluated
+        # in the depsgraph. So it needs to be assigned before we call this
+        # reload method. The alternative is to call
+        # `bpy.context.evaluated_depsgraph_get()` but that also only works
+        # if assigned to a scene object. Otherwise, both would
+        # always return an empty list directly after load.
+        bpy.ops.cachefile.reload()
+
+        # Start updating object paths that are not 1:1 found in new cache
+        # file. Like objects that may have moved in a hierarchy. New objects
+        # or objects that have been removed or renamed cannot be matched.
+        new_object_paths = [
+            object_path.path for object_path in new_cachefile.object_paths
+        ]
+        object_path_matcher = ObjectPathMatcher(new_object_paths)
 
         def _match_object_path(object_path) -> Optional[str]:
             if object_path not in new_cachefile.object_paths:
-                self.log.warning(
-                    "Object path '%s' not found in new cache file '%s'",
-                    object_path,
-                    new_cachefile.filepath
-                )
                 new_path = object_path_matcher.find_best_match(object_path)
                 if new_path is not None:
                     self.log.info(
-                        "Found replacement object path '%s' for "
-                        "missing path '%s'", new_path, object_path
+                        "Updating object path:\n"
+                        "- %s   <- before\n"
+                        "- %s   <- after",
+                        object_path,
+                        new_path
                     )
                     return new_path
+                else:
+                    self.log.warning(
+                        "Missing object path '%s' in cache "
+                        "file: %s", object_path, new_cachefile.filepath
+                    )
+                    return None
+            return object_path
 
-            return None
-
-        for datablock in datablocks:
-            new_object_path = _match_object_path(datablock.object_path)
+        for datablock, old_object_path in datablock_object_paths.items():
+            new_object_path = _match_object_path(old_object_path)
             if new_object_path:
-               datablock.object_path = new_object_path
+                datablock.object_path = new_object_path
+            else:
+                # Path is missing in the new cache file, keep the old path
+                # just to keep a trace of the missing paths, e.g. for when
+                # updating back to the old version
+                datablock.object_path = old_object_path
 
         # Remove dangling cache files that are not used anymore
         remove_caches = {
