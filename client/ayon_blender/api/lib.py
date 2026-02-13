@@ -814,7 +814,7 @@ def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
     Returns:
         bool: True if the cache has users, False otherwise.
     """
-    if not cache.users:
+    if cache.users == 0:
         return False
     # But there's an edge cases where
     # Blender still reports users but they

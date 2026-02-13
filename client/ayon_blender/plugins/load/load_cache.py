@@ -78,7 +78,7 @@ class CacheModelLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader (Alembic)")
         ]
 
-    def _update_transform_cache_path(self, asset_group, libpath):
+    def _update_transform_cache_path(self, asset_group, libpath, options=None):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
@@ -153,9 +153,16 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         # Remove dangling cache files that are not used anymore
         remove_caches = {
-            cache for cache in remove_caches if not cache.users
-            or not lib.has_users(cache)
+            cache for cache in remove_caches
+            if not lib.has_users(cache)
         }
+
+        if not options.get("always_add_cache_reader"):
+            remove_caches = {
+                cache for cache in bpy.data.cache_files
+                if cache in remove_caches and not lib.has_users(cache)
+            }
+
         if remove_caches:
             bpy.data.batch_remove(remove_caches)
 
@@ -358,8 +365,7 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             asset_group.matrix_basis = mat
         else:
-            self._update_transform_cache_path(asset_group,
-                                              libpath)
+            self._update_transform_cache_path(asset_group, libpath, options)
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
