@@ -89,13 +89,14 @@ class CacheModelLoader(plugin.BlenderLoader):
         new_cachefile.scale = 1.0
 
         remove_caches = set()
+        previous_object_path_by_cache = {}
         datablocks: set[
             Union[
                 bpy.types.MeshCacheModifier,
                 bpy.types.TransformCacheConstraint
             ]
         ] = set()
-        for obj in asset_group.children:
+        for obj in asset_group.children_recursive:
             # TODO: The user may have parented other objects under the asset
             #  group that may not be related to this cache file. We should
             #  find a better way to identify the correct objects to update.
@@ -105,8 +106,10 @@ class CacheModelLoader(plugin.BlenderLoader):
                 if not modifier.cache_file:
                     continue
                 remove_caches.add(modifier.cache_file)
+                self.log.info(set(modifier.cache_file.object_paths))
                 modifier.cache_file = new_cachefile
                 datablocks.add(modifier)
+                self.log.info(set(modifier.cache_file.object_paths))
 
             for constraint in obj.constraints:
                 if constraint.type != "TRANSFORM_CACHE":
@@ -114,8 +117,11 @@ class CacheModelLoader(plugin.BlenderLoader):
                 if not constraint.cache_file:
                     continue
                 remove_caches.add(constraint.cache_file)
+                self.log.info(set(constraint.cache_file.object_paths))
                 constraint.cache_file = new_cachefile
                 datablocks.add(constraint)
+                self.log.info(set(constraint.cache_file.object_paths))
+
         # Start updating object path. Note that CacheFile.object_paths is only
         # after modifier changes were made (e.g. new cache file is assigned)
         # That's why we do it after the loop above.
@@ -138,11 +144,7 @@ class CacheModelLoader(plugin.BlenderLoader):
                         "missing path '%s'", new_path, object_path
                     )
                     return new_path
-                else:
-                    self.log.warning(
-                        "No replacement found for object path '%s'",
-                        object_path
-                    )
+
             return None
 
         for datablock in datablocks:
