@@ -78,7 +78,7 @@ class CacheModelLoader(plugin.BlenderLoader):
                     label="Always Add Cache Reader (Alembic)")
         ]
 
-    def _update_transform_cache_path(self, asset_group, libpath, options=None):
+    def _update_transform_cache_path(self, asset_group, libpath):
         """search and update path in the transform cache modifier
         If there is no transform cache modifier, it will create one
         to update the filepath of the alembic.
@@ -120,7 +120,6 @@ class CacheModelLoader(plugin.BlenderLoader):
         # Start updating object path. Note that CacheFile.object_paths is only
         # after modifier changes were made (e.g. new cache file is assigned)
         # That's why we do it after the loop above.
-        bpy.context.evaluated_depsgraph_get()
         object_path_matcher = ObjectPathMatcher(
             list(new_cachefile.object_paths)
         )
@@ -157,12 +156,6 @@ class CacheModelLoader(plugin.BlenderLoader):
             if not lib.has_users(cache)
         }
 
-        if not options.get("always_add_cache_reader"):
-            remove_caches = {
-                cache for cache in bpy.data.cache_files
-                if cache in remove_caches and not lib.has_users(cache)
-            }
-
         if remove_caches:
             bpy.data.batch_remove(remove_caches)
 
@@ -184,7 +177,8 @@ class CacheModelLoader(plugin.BlenderLoader):
         for empty in empties:
             bpy.data.objects.remove(empty)
 
-    def _process(self, libpath, asset_group, group_name, options=None):
+    def _process(self, libpath, asset_group, group_name,
+                 options: Optional[Dict] = None):
         plugin.deselect_all()
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
@@ -354,10 +348,10 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         if extension in {".usd", ".usda", ".usdc"}:
             # Special behavior for USD files
+            options = container.get("options", {})
             mat = asset_group.matrix_basis.copy()
             self._remove(asset_group)
 
-            options = container.get("options", {})
             objects = self._process(str(libpath), asset_group, object_name, options)
 
             container = get_ayon_container()
@@ -365,7 +359,8 @@ class CacheModelLoader(plugin.BlenderLoader):
 
             asset_group.matrix_basis = mat
         else:
-            self._update_transform_cache_path(asset_group, libpath, options)
+            self._update_transform_cache_path(asset_group,
+                                              libpath)
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
