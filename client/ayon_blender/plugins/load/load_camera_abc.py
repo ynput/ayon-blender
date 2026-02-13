@@ -208,6 +208,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
                         f"Object path '{constraint.object_path}' not found in new "
                         "cache file, trying to update it."
                     )
+                    self.log.info("new_cache object paths '%s'", new_cachefile.object_paths)
 
         remove_unused_caches = {
             cache for cache in remove_unused_caches if

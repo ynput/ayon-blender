@@ -120,6 +120,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         # Start updating object path. Note that CacheFile.object_paths is only
         # after modifier changes were made (e.g. new cache file is assigned)
         # That's why we do it after the loop above.
+        self.log.info("new_cache object paths '%s'", new_cachefile.object_paths)
         object_path_matcher = ObjectPathMatcher(
             list(new_cachefile.object_paths)
         )
@@ -137,6 +138,7 @@ class CacheModelLoader(plugin.BlenderLoader):
                         "Found replacement object path '%s' for "
                         "missing path '%s'", new_path, object_path
                     )
+                    self.log.info("new_cache object paths '%s'", new_path)
                     return new_path
                 else:
                     self.log.warning(
@@ -177,8 +179,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         for empty in empties:
             bpy.data.objects.remove(empty)
 
-    def _process(self, libpath, asset_group, group_name,
-                 options: Optional[Dict] = None):
+    def _process(self, libpath, asset_group, group_name, options: Dict):
         plugin.deselect_all()
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
