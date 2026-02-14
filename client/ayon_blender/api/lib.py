@@ -587,19 +587,19 @@ def collect_animation_defs(create_context, step=True, fps=False):
     return defs
 
 
-def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
-    modifiers_dict = {}
-    modifiers = [modifier for modifier in obj.modifiers
-                 if modifier.type == modifier_type]
-    if modifiers:
-        modifiers_dict[obj.name] = modifiers
-    else:
-        for sub_obj in obj.children:
-            for ob in sub_obj.children:
-                cache_modifiers = [modifier for modifier in ob.modifiers
-                                   if modifier.type == modifier_type]
-                modifiers_dict[ob.name] = cache_modifiers
-    return modifiers_dict
+def add_cache_file(path: str) -> bpy.types.CacheFile:
+    """Add new CacheFile datablock.
+
+    bpy.ops.cachefile.open does not return the new cache file.
+    As such, we need to query what was there before and using
+    that find out what's new
+    """
+    before = set(bpy.data.cache_files)
+    bpy.ops.cachefile.open(filepath=path)
+    after = set(bpy.data.cache_files) - before
+    new = list(after - before)
+    assert len(new) == 1, f"A single CacheFile must be loaded, got: {new}"
+    return new[-1]
 
 
 def get_blender_version():
@@ -803,6 +803,29 @@ def get_scene_node_tree(ensure_exists=False):
             bpy.context.scene.use_nodes = True
 
         return bpy.context.scene.node_tree
+
+
+def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
+    """Check if a cache file has users.
+
+    Args:
+        cache (bpy.types.CacheFile): Cache File from datablock
+
+    Returns:
+        bool: True if the cache has users, False otherwise.
+    """
+    if cache.users == 0:
+        return False
+    # But there's an edge cases where
+    # Blender still reports users but they
+    # aren't actually there
+    def get_users(datablock):
+        return bpy.data.user_map(subset={datablock})[datablock]
+
+    if not cache.use_fake_user:
+        if not get_users(cache):
+            return False
+        return True
 
 
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):

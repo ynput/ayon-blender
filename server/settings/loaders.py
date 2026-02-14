@@ -29,7 +29,22 @@ class BlendLoaderModel(BaseSettingsModel):
         ),
     )
 
+
+class CacheLoaderModel(BaseSettingsModel):
+    always_add_cache_reader: bool = SettingsField(
+        False,
+        title="Always Add Cache Reader (Alembic)",
+        description=(
+            "Always add a cache reader when importing Alembic files."
+        ),
+    )
+
+
 class LoadersModel(BaseSettingsModel):
+    AbcCameraLoader: CacheLoaderModel = SettingsField(
+        default_factory=CacheLoaderModel,
+        title="Alembic Camera Loader"
+    )
     BlendLinkLoaderFlat: BlendLinkLoaderFlatModel = SettingsField(
         default_factory=BlendLinkLoaderFlatModel,
         title="Link Blend (Flat)"
@@ -38,14 +53,24 @@ class LoadersModel(BaseSettingsModel):
         default_factory=BlendLoaderModel,
         title="Reference Loader"
     )
+    CacheModelLoader: CacheLoaderModel = SettingsField(
+        default_factory=CacheLoaderModel,
+        title="Cache Model Loader"
+    )
 
 
 DEFAULT_LOADERS_SETTINGS = {
+    "AbcCameraLoader": {
+        "always_add_cache_reader": False
+    },
     "BlendLinkLoaderFlat": {
         "instance_collections": False,
         "instance_object_data": False
     },
     "BlendLoader": {
         "create_animation_instance_on_load": True
+    },
+    "CacheModelLoader": {
+        "always_add_cache_reader": False
     }
 }
