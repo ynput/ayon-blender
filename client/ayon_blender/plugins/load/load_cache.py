@@ -62,7 +62,8 @@ class CacheModelLoader(plugin.BlenderLoader):
         At least for now it only supports Alembic files.
     """
     product_types = {"model", "pointcache", "animation", "usd"}
-    representations = {"abc", "usd", "obj"}
+    representations = {"*"}
+    extensions = {"abc", "usd", "usda", "usdc", "obj"}
 
     label = "Load Cache"
     icon = "code-fork"

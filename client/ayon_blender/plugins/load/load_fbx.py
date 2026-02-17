@@ -22,7 +22,8 @@ class FbxModelLoader(plugin.BlenderLoader):
     """
 
     product_types = {"model", "rig"}
-    representations = {"fbx"}
+    representations = {"*"}
+    extensions = {"fbx"}
 
     label = "Load FBX"
     icon = "code-fork"
