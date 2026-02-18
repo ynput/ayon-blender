@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 from platform import system
+import time
 
 from ayon_applications import LaunchTypes, PreLaunchHook
 
@@ -269,18 +270,20 @@ class InstallPySideToBlender(PreLaunchHook):
 
     def is_pyside_installed(self, python_executable, qt_binding):
         """Check if there is a Qt Binding that is importable with blender python."""
-
-        env = self.launch_context.env.copy()
-
         args = [
             python_executable,
             "-c",
             f"import {qt_binding}",
         ]
+        start_time = time.time()
         returncode = subprocess.call(
             args,
+            env=self.launch_context.env,
+            text=True,
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
+        duration = time.time() - start_time
+        self.log.info("Importing check %s took %.2f seconds.", qt_binding, duration)
         if returncode == 0:
             self.log.debug(
                 "%s imported with blender's python.", qt_binding
