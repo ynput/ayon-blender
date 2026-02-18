@@ -2,7 +2,6 @@ import os
 import re
 import subprocess
 from platform import system
-import time
 
 from ayon_applications import LaunchTypes, PreLaunchHook
 
