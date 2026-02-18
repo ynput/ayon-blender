@@ -66,15 +66,13 @@ class InstallPySideToBlender(PreLaunchHook):
             return
 
         if len(version_subfolders) > 1:
+            joined_subfolders = ", ".join([
+                f'"./{name}"' for name in version_subfolders
+            ])
             self.log.info(
-                (
-                    "Found more than one version subfolder next"
-                    " to blender executable. {}"
-                ).format(
-                    ", ".join(
-                        ['"./{}"'.format(name) for name in version_subfolders]
-                    )
-                )
+                "Found more than one version subfolder next"
+                " to blender executable. %s",
+                joined_subfolders
             )
             return
 
@@ -210,7 +208,9 @@ class InstallPySideToBlender(PreLaunchHook):
                 args.extend(["--prefix", site_packages_prefix])
 
             parameters = (
-                subprocess.list2cmdline(args).lstrip(fake_exe).lstrip(" ")
+                subprocess.list2cmdline(args)
+                .removeprefix(fake_exe)
+                .lstrip(" ")
             )
 
             # Execute command and ask for administrator's rights
@@ -260,7 +260,7 @@ class InstallPySideToBlender(PreLaunchHook):
             return process.returncode == 0
         except PermissionError:
             self.log.warning(
-                'Permission denied with command:"{}".'.format(" ".join(args))
+                'Permission denied with command:"%s".', " ".join(args)
             )
         except OSError as error:
             self.log.warning('OS error has occurred: "%s".', error)
@@ -275,26 +275,17 @@ class InstallPySideToBlender(PreLaunchHook):
         args = [
             python_executable,
             "-c",
-            f"import {qt_binding}; print('{qt_binding} found')",
+            f"import {qt_binding}",
         ]
-
-        try:
-            process = subprocess.Popen(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                universal_newlines=True,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+        returncode = subprocess.call(
+            args,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        if returncode == 0:
+            self.log.debug(
+                "%s imported with blender's python.", qt_binding
             )
-            stdout, _ = process.communicate()
-            if process.returncode == 0 and f"{qt_binding} found" in stdout:
-                self.log.debug(
-                    "%s imported with blender's python.", qt_binding
-                )
-                return True
-        except Exception:
-            pass
+            return True
         self.log.error(
             "Failed to import %s via subprocess.",
             qt_binding,
