@@ -2,7 +2,8 @@ import os
 import re
 import subprocess
 from platform import system
-from ayon_applications import PreLaunchHook, LaunchTypes
+
+from ayon_applications import LaunchTypes, PreLaunchHook
 
 
 class InstallPySideToBlender(PreLaunchHook):
@@ -26,7 +27,7 @@ class InstallPySideToBlender(PreLaunchHook):
         except Exception:
             self.log.warning(
                 "Processing of {} crashed.".format(self.__class__.__name__),
-                exc_info=True
+                exc_info=True,
             )
 
     def inner_execute(self):
@@ -40,11 +41,12 @@ class InstallPySideToBlender(PreLaunchHook):
             expected_executable += ".exe"
 
         if os.path.basename(executable).lower() != expected_executable:
-            self.log.info((
-                f"Executable does not lead to {expected_executable} file."
+            self.log.info(
+                "Executable does not lead to %s file."
                 "Can't determine blender's python to check/install"
-                " Qt binding."
-            ))
+                " Qt binding.",
+                expected_executable,
+            )
             return
 
         versions_dir = os.path.dirname(executable)
@@ -64,13 +66,16 @@ class InstallPySideToBlender(PreLaunchHook):
             return
 
         if len(version_subfolders) > 1:
-            self.log.info((
-                "Found more than one version subfolder next"
-                " to blender executable. {}"
-            ).format(", ".join([
-                '"./{}"'.format(name)
-                for name in version_subfolders
-            ])))
+            self.log.info(
+                (
+                    "Found more than one version subfolder next"
+                    " to blender executable. {}"
+                ).format(
+                    ", ".join(
+                        ['"./{}"'.format(name) for name in version_subfolders]
+                    )
+                )
+            )
             return
 
         version_subfolder = version_subfolders[0]
@@ -147,11 +152,11 @@ class InstallPySideToBlender(PreLaunchHook):
 
         if result:
             self.log.info(
-                f"Successfully installed {qt_binding} module to blender."
+                "Successfully installed %s module to blender.", qt_binding
             )
         else:
             self.log.warning(
-                f"Failed to install {qt_binding} module to blender."
+                "Failed to install %s module to blender.", qt_binding
             )
 
     def install_pyside_windows(
@@ -168,14 +173,14 @@ class InstallPySideToBlender(PreLaunchHook):
         administration rights.
         """
         try:
-            import win32con
-            import win32process
-            import win32event
             import pywintypes
-            from win32comext.shell.shell import ShellExecuteEx
+            import win32con
+            import win32event
+            import win32process
             from win32comext.shell import shellcon
+            from win32comext.shell.shell import ShellExecuteEx
         except Exception:
-            self.log.warning("Couldn't import \"pywin32\" modules")
+            self.log.warning('Couldn\'t import "pywin32" modules')
             return
 
         if qt_binding_version:
@@ -205,9 +210,7 @@ class InstallPySideToBlender(PreLaunchHook):
                 args.extend(["--prefix", site_packages_prefix])
 
             parameters = (
-                subprocess.list2cmdline(args)
-                .lstrip(fake_exe)
-                .lstrip(" ")
+                subprocess.list2cmdline(args).lstrip(fake_exe).lstrip(" ")
             )
 
             # Execute command and ask for administrator's rights
@@ -217,7 +220,7 @@ class InstallPySideToBlender(PreLaunchHook):
                 lpVerb="runas",
                 lpFile=python_executable,
                 lpParameters=parameters,
-                lpDirectory=os.path.dirname(python_executable)
+                lpDirectory=os.path.dirname(python_executable),
             )
             process_handle = process_info["hProcess"]
             win32event.WaitForSingleObject(process_handle, win32event.INFINITE)
@@ -257,39 +260,42 @@ class InstallPySideToBlender(PreLaunchHook):
             return process.returncode == 0
         except PermissionError:
             self.log.warning(
-                "Permission denied with command:"
-                "\"{}\".".format(" ".join(args))
+                'Permission denied with command:"{}".'.format(" ".join(args))
             )
         except OSError as error:
-            self.log.warning(f"OS error has occurred: \"{error}\".")
+            self.log.warning('OS error has occurred: "%s".', error)
         except subprocess.SubprocessError:
             pass
 
     def is_pyside_installed(self, python_executable, qt_binding):
-        """Check if PySide2 module is in blender's pip list.
+        """Check if there is a Qt Binding that is importable with blender python."""
 
-        Check that PySide2 is installed directly in blender's site-packages.
-        It is possible that it is installed in user's site-packages but that
-        may be incompatible with blender's python.
-        """
+        env = self.launch_context.env.copy()
 
-        qt_binding_low = qt_binding.lower()
-        # Get pip list from blender's python executable
-        args = [python_executable, "-m", "pip", "list"]
-        process = subprocess.Popen(args, stdout=subprocess.PIPE)
-        stdout, _ = process.communicate()
-        lines = stdout.decode().split(os.linesep)
-        # Second line contain dashes that define maximum length of module name.
-        #   Second column of dashes define maximum length of module version.
-        package_dashes, *_ = lines[1].split(" ")
-        package_len = len(package_dashes)
+        args = [
+            python_executable,
+            "-c",
+            f"import {qt_binding}; print('{qt_binding} found')",
+        ]
 
-        # Got through printed lines starting at line 3
-        for idx in range(2, len(lines)):
-            line = lines[idx]
-            if not line:
-                continue
-            package_name = line[0:package_len].strip()
-            if package_name.lower() == qt_binding_low:
+        try:
+            process = subprocess.Popen(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                universal_newlines=True,
+            )
+            stdout, _ = process.communicate()
+            if process.returncode == 0 and f"{qt_binding} found" in stdout:
+                self.log.debug(
+                    "%s imported with blender's python.", qt_binding
+                )
                 return True
+        except Exception:
+            self.log.info(
+                "Failed to import %s via subprocess.",
+                qt_binding,
+                exc_info=True,
+            )
         return False
