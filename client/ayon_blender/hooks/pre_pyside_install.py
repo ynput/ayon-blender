@@ -275,15 +275,12 @@ class InstallPySideToBlender(PreLaunchHook):
             "-c",
             f"import {qt_binding}",
         ]
-        start_time = time.time()
         returncode = subprocess.call(
             args,
             env=self.launch_context.env,
             text=True,
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
-        duration = time.time() - start_time
-        self.log.info("Importing check %s took %.2f seconds.", qt_binding, duration)
         if returncode == 0:
             self.log.debug(
                 "%s imported with blender's python.", qt_binding
