@@ -285,6 +285,7 @@ class InstallPySideToBlender(PreLaunchHook):
                 stderr=subprocess.PIPE,
                 env=env,
                 universal_newlines=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
             stdout, _ = process.communicate()
             if process.returncode == 0 and f"{qt_binding} found" in stdout:
@@ -293,9 +294,9 @@ class InstallPySideToBlender(PreLaunchHook):
                 )
                 return True
         except Exception:
-            self.log.info(
-                "Failed to import %s via subprocess.",
-                qt_binding,
-                exc_info=True,
-            )
+            pass
+        self.log.error(
+            "Failed to import %s via subprocess.",
+            qt_binding,
+        )
         return False
