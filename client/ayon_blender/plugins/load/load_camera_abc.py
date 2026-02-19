@@ -23,7 +23,8 @@ class AbcCameraLoader(plugin.BlenderLoader):
     """
 
     product_types = {"camera"}
-    representations = {"abc"}
+    representations = {"*"}
+    extensions = {"abc"}
 
     label = "Load Camera (ABC)"
     icon = "code-fork"

@@ -22,7 +22,8 @@ class FbxCameraLoader(plugin.BlenderLoader):
     """
 
     product_types = {"camera"}
-    representations = {"fbx"}
+    representations = {"*"}
+    extensions = {"fbx"}
 
     label = "Load Camera (FBX)"
     icon = "code-fork"
