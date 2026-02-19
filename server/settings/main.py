@@ -96,7 +96,7 @@ class BlenderSettings(BaseSettingsModel):
     hooks: HooksModel = SettingsField(
         default_factory=HooksModel,
         title="Hooks",
-        description="Enable and disable hooks.",
+        description="Enable / disable hooks.",
     )
     imageio: BlenderImageIOModel = SettingsField(
         default_factory=BlenderImageIOModel,
