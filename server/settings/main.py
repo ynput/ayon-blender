@@ -68,13 +68,14 @@ class HookOptionalModel(BaseSettingsModel):
 
 
 class HooksModel(BaseSettingsModel):
-    execute_pyside_hook: HookOptionalModel = SettingsField(
+    install_pyside: HookOptionalModel = SettingsField(
         default_factory=HookOptionalModel,
         title="Execute PySide hook",
-        description="The hook checks for an importable qt binding in the launch "
-                    "environment, if it cannot find bindings it will attempt "
-                    "to install either PySide2/6 into blender, "
-                    "this can require admin privileges"
+        description=(
+            "When no available Qt bindings are found this hook will "
+            "install PySide into Blender.\n"
+            "**This may require admin privileges**"
+        )
     )
 
 
@@ -102,7 +103,7 @@ class BlenderSettings(BaseSettingsModel):
     hooks: HooksModel = SettingsField(
         default_factory=HooksModel,
         title="Hooks",
-        description="You can enable and disable hooks.",
+        description="Enable and disable hooks.",
     )
     imageio: BlenderImageIOModel = SettingsField(
         default_factory=BlenderImageIOModel,
@@ -147,7 +148,7 @@ DEFAULT_VALUES = {
         "profiles": []
     },
     "hooks": {
-        "execute_pyside_hook": {
+        "install_pyside": {
             "enabled": True
         },
     },
