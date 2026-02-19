@@ -68,13 +68,13 @@ class HookOptionalModel(BaseSettingsModel):
 
 
 class HooksModel(BaseSettingsModel):
-    ExecutePySideHook: HookOptionalModel = SettingsField(
+    execute_pyside_hook: HookOptionalModel = SettingsField(
         default_factory=HookOptionalModel,
         title="Execute PySide hook",
-        description="The hook checks for an importable qt binding in the launch"
-                    "environment, if it cannot find bindings it will attempt"
-                    "to install either PySide2/6 into blender,"
-                    "This can require admin privileges"
+        description="The hook checks for an importable qt binding in the launch "
+                    "environment, if it cannot find bindings it will attempt "
+                    "to install either PySide2/6 into blender, "
+                    "this can require admin privileges"
     )
 
 

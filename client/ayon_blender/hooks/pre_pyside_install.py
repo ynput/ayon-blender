@@ -25,7 +25,7 @@ class InstallPySideToBlender(PreLaunchHook):
         try:
             if not self.data["project_settings"]["blender"].get("hooks",
                                                                 {}).get(
-                "ExecutePySideHook", {}).get("enabled", True):
+                "execute_pyside_hook", {}).get("enabled", True):
                 self.log.debug("Skipping execution of %s.",
                                self.__class__.__name__)
                 return
