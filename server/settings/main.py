@@ -147,7 +147,7 @@ DEFAULT_VALUES = {
         "profiles": []
     },
     "hooks": {
-        "ExecutePySideHook": {
+        "execute_pyside_hook": {
             "enabled": True
         },
     },
