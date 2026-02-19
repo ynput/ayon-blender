@@ -23,10 +23,16 @@ class InstallPySideToBlender(PreLaunchHook):
     def execute(self):
         # Prelaunch hook is not crucial
         try:
+            if not self.data["project_settings"]["blender"].get("hooks",
+                                                                {}).get(
+                "ExecutePySideHook", {}).get("enabled", True):
+                self.log.debug("Skipping execution of %s.",
+                               self.__class__.__name__)
+                return
             self.inner_execute()
         except Exception:
             self.log.warning(
-                "Processing of {} crashed.".format(self.__class__.__name__),
+                "Processing of %s crashed.", self.__class__.__name__,
                 exc_info=True,
             )
 
@@ -274,19 +280,22 @@ class InstallPySideToBlender(PreLaunchHook):
             "-c",
             f"import {qt_binding}",
         ]
+        kwargs = {}
+        if system().lower() == "windows":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         returncode = subprocess.call(
             args,
             env=self.launch_context.env,
             text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            **kwargs,
         )
         if returncode == 0:
             self.log.debug(
                 "%s imported with blender's python.", qt_binding
             )
             return True
-        self.log.error(
-            "Failed to import %s via subprocess.",
+        self.log.warning(
+            "Could not import %s, will attempt to install it.",
             qt_binding,
         )
         return False

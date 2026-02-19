@@ -60,6 +60,24 @@ class IncludeHandlesModel(BaseSettingsModel):
     )
 
 
+class HookOptionalModel(BaseSettingsModel):
+    enabled: bool = SettingsField(
+        True,
+        title="Enabled"
+    )
+
+
+class HooksModel(BaseSettingsModel):
+    ExecutePySideHook: HookOptionalModel = SettingsField(
+        default_factory=HookOptionalModel,
+        title="Execute PySide hook",
+        description="The hook checks for an importable qt binding in the launch"
+                    "environment, if it cannot find bindings it will attempt"
+                    "to install either PySide2/6 into blender,"
+                    "This can require admin privileges"
+    )
+
+
 class BlenderSettings(BaseSettingsModel):
     unit_scale_settings: UnitScaleSettingsModel = SettingsField(
         default_factory=UnitScaleSettingsModel,
@@ -80,6 +98,11 @@ class BlenderSettings(BaseSettingsModel):
         default_factory=IncludeHandlesModel,
         title="Include/Exclude Handles in default playback & render range",
         description="You can disable using handles while still have them configured in AYON project.",
+    )
+    hooks: HooksModel = SettingsField(
+        default_factory=HooksModel,
+        title="Hooks",
+        description="You can enable and disable hooks.",
     )
     imageio: BlenderImageIOModel = SettingsField(
         default_factory=BlenderImageIOModel,
@@ -122,6 +145,11 @@ DEFAULT_VALUES = {
     "include_handles": {
         "include_handles_default": False,
         "profiles": []
+    },
+    "hooks": {
+        "ExecutePySideHook": {
+            "enabled": True
+        },
     },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "create": DEFAULT_CREATORS_SETTINGS,
