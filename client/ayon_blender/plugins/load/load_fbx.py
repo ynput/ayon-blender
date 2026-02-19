@@ -21,8 +21,9 @@ class FbxModelLoader(plugin.BlenderLoader):
     Stores the imported asset in an empty named after the asset.
     """
 
-    product_types = {"model", "rig"}
-    representations = {"fbx"}
+    product_types = {"*"}
+    representations = {"*"}
+    extensions = {"fbx"}
 
     label = "Load FBX"
     icon = "code-fork"
