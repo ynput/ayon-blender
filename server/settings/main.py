@@ -60,16 +60,9 @@ class IncludeHandlesModel(BaseSettingsModel):
     )
 
 
-class HookOptionalModel(BaseSettingsModel):
-    enabled: bool = SettingsField(
-        True,
-        title="Enabled"
-    )
-
-
 class HooksModel(BaseSettingsModel):
-    install_pyside: HookOptionalModel = SettingsField(
-        default_factory=HookOptionalModel,
+    install_pyside: bool = SettingsField(
+        default_factory=bool,
         title="Execute PySide hook",
         description=(
             "When no available Qt bindings are found this hook will "
@@ -148,9 +141,7 @@ DEFAULT_VALUES = {
         "profiles": []
     },
     "hooks": {
-        "install_pyside": {
-            "enabled": True
-        },
+        "install_pyside": True,
     },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "create": DEFAULT_CREATORS_SETTINGS,
