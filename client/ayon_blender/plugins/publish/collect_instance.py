@@ -27,8 +27,12 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin,
 
     order = pyblish.api.CollectorOrder
     hosts = ["blender"]
-    families = ["model", "pointcache", "animation", "rig", "camera", "layout",
-                "blendScene", "usd", "action"]
+    families = [
+        "model", "pointcache", "animation",
+        "rig", "camera", "layout",
+        "blendScene", "usd", "action",
+        "look"
+    ]
     label = "Collect Instance"
 
     def process(self, instance):
@@ -65,6 +69,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin,
                             child for child in obj.children
                             if child.type == 'ARMATURE'
                         )
+
         elif isinstance(instance_node, bpy.types.Object):
             members.update(instance_node.children_recursive)
         else:

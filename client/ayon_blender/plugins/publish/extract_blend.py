@@ -145,3 +145,27 @@ class ExtractBlendAction(ExtractBlend):
             action for action in bpy.data.actions
             if action.name == instance.data["productName"]
         }
+
+
+class ExtractBlendLook(ExtractBlend):
+    """Extract a blend file from the current scene.
+    """
+    families = ["look"]
+    label = "Extract Blend (Look)"
+    optional = False
+    # From settings
+    compress = False
+
+    def add_datablock(self, instance: pyblish.api.Instance) -> set:
+        """Add a data block to the blend file.
+
+        Args:
+            instance (pyblish.api.Instance): The instance to add.
+
+        Returns:
+            set: A set of data blocks added.
+        """
+        return {
+            material for material in bpy.data.materials
+            if material.name == instance.data["productName"]
+        }
