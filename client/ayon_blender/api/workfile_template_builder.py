@@ -50,7 +50,7 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
 
         placeholder_collection = bpy.data.collections.new(PLACEHOLDER_SET)
         bpy.context.scene.collection.children.link(placeholder_collection)
-        filepath = Path(path)
+        filepath = Path(path).resolve()
         if not filepath.exists():
             return False
 
