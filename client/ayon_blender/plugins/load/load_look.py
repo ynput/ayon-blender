@@ -8,77 +8,35 @@ import os
 import json
 import bpy
 
+from ayon_core.lib import BoolDef
+from ayon_core.pipeline.load import LoadError
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import containerise_existing
-from ayon_blender.api.constants import (
-    AYON_PROPERTY,
-    VALID_EXTENSIONS,
+from ayon_blender.api.pipeline import (
+    containerise_existing,
+    metadata_update
 )
+from ayon_blender.api.constants import AYON_PROPERTY
 
 
 class BlendLookLoader(plugin.BlenderLoader):
-    """Load models from a .blend file.
-
-    Because they come from a .blend file we can simply link the collection that
-    contains the model. There is no further need to 'containerise' it.
-    """
+    """Load material datablock from a .blend file."""
 
     product_types = {"look"}
-    representations = {"json"}
+    representations = {"blend"}
 
     label = "Load Look"
     icon = "code-fork"
     color = "orange"
 
-    def get_all_children(self, obj):
-        children = list(obj.children)
 
-        for child in children:
-            children.extend(child.children)
-
-        return children
-
-    def _process(self, libpath, container_name, objects):
-        with open(libpath, "r") as fp:
-            data = json.load(fp)
-
-        path = os.path.dirname(libpath)
-        materials_path = f"{path}/resources"
-
-        materials = []
-
-        for entry in data:
-            file = entry.get('fbx_filename')
-            if file is None:
-                continue
-
-            bpy.ops.import_scene.fbx(filepath=f"{materials_path}/{file}")
-
-            mesh = [o for o in bpy.context.scene.objects if o.select_get()][0]
-            material = mesh.data.materials[0]
-            material.name = f"{material.name}:{container_name}"
-
-            texture_file = entry.get('tga_filename')
-            if texture_file:
-                node_tree = material.node_tree
-                pbsdf = node_tree.nodes['Principled BSDF']
-                base_color = pbsdf.inputs[0]
-                tex_node = base_color.links[0].from_node
-                tex_node.image.filepath = f"{materials_path}/{texture_file}"
-
-            materials.append(material)
-
-            for obj in objects:
-                for child in self.get_all_children(obj):
-                    mesh_name = child.name.split(':')[0]
-                    if mesh_name == material.name.split(':')[0]:
-                        child.data.materials.clear()
-                        child.data.materials.append(material)
-                        break
-
-            bpy.data.objects.remove(mesh)
-
-        return materials, objects
+    options = [
+        BoolDef(
+            "use_fake_user",
+            label="Use Fake User",
+            default=True,
+            tooltip="Set the fake user for the loaded asset.",
+        )
+    ]
 
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
@@ -95,20 +53,9 @@ class BlendLookLoader(plugin.BlenderLoader):
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
-
-        lib_container = plugin.prepare_scene_name(
-            folder_name, product_name
-        )
-        unique_number = plugin.get_unique_number(
-            folder_name, product_name
-        )
-        namespace = namespace or f"{folder_name}_{unique_number}"
-        container_name = plugin.prepare_scene_name(
-            folder_name, product_name, unique_number
-        )
+        lib_container = plugin.prepare_scene_name(folder_name, product_name)
 
         container = bpy.data.collections.new(lib_container)
-        container.name = container_name
         containerise_existing(
             container,
             name,
@@ -117,109 +64,86 @@ class BlendLookLoader(plugin.BlenderLoader):
             self.__class__.__name__,
         )
 
-        metadata = container.get(AYON_PROPERTY)
+        container_metadata = container.get(AYON_PROPERTY)
 
-        metadata["libpath"] = libpath
-        metadata["lib_container"] = lib_container
 
-        selected = [o for o in bpy.context.scene.objects if o.select_get()]
+        relative = bpy.context.preferences.filepaths.use_relative_paths
+        with bpy.data.libraries.load(
+            libpath, link=True, relative=relative
+        ) as (data_from, data_to):
+            data_to.materials = data_from.materials
+        if not data_to.materials:
+            raise LoadError(
+                "No material found in the file, please check if "
+                "there is any material datablock in the blend file."
+            )
+        container = data_to.materials[0]
 
-        materials, objects = self._process(libpath, container_name, selected)
+        empty_obj = bpy.data.objects.new(name=name, object_data=None)
+        empty_obj.active_material = container
+        empty_obj.active_material.use_nodes = True
+        empty_obj.active_material.use_fake_user = options.get(
+            "use_fake_user", True
+        )
+        # Save the list of objects in the metadata container
+        container_metadata["libpath"] = libpath
+        container_metadata["lib_container"] = lib_container
+        container_metadata["objects"] = empty_obj
+        container_metadata["material"] = empty_obj.active_material
+        empty_obj.data.materials.append(empty_obj.active_material)
 
-        # Save the list of imported materials in the metadata container
-        metadata["objects"] = objects
-        metadata["materials"] = materials
+        metadata_update(container, container_metadata)
+        bpy.ops.object.select_all(action='DESELECT')
+        self[:] = [empty_obj]
 
-        metadata["parent"] = context["representation"]["versionId"]
-        metadata["product_type"] = context["product"]["productType"]
-        metadata["project_name"] = context["project"]["name"]
-
-        nodes = list(container.objects)
-        nodes.append(container)
-        self[:] = nodes
-        return nodes
+        return container
 
     def update(self, container: Dict, context: Dict):
-        collection = bpy.data.collections.get(container["objectName"])
+        """Update the loaded asset.
+
+        This will remove all objects of the current collection, load the new
+        ones and add them to the collection.
+        If the objects of the collection are used in another collection they
+        will not be removed, only unlinked. Normally this should not be the
+        case though.
+
+        Warning:
+            No nested collections are supported at the moment!
+        """
         repre_entity = context["representation"]
-        libpath = Path(self.filepath_from_context(context))
-        extension = libpath.suffix.lower()
+        collection = container["node"]
+        libpath = self.filepath_from_context(context)
+        material = container["material"]
+        if material.library:
+            material.library.name = os.path.basename(libpath)
+            material.library.filepath = libpath
 
-        self.log.info(
-            "Container: %s\nRepresentation: %s",
-            pformat(container, indent=2),
-            pformat(repre_entity, indent=2),
+        metadata_update(
+            collection, {"representation": str(repre_entity["id"])}
         )
-
-        assert collection, (
-            f"The asset is not loaded: {container['objectName']}"
-        )
-        assert not (collection.children), (
-            "Nested collections are not supported."
-        )
-        assert libpath, (
-            "No existing library file found for {container['objectName']}"
-        )
-        assert libpath.is_file(), (
-            f"The file doesn't exist: {libpath}"
-        )
-        assert extension in VALID_EXTENSIONS, (
-            f"Unsupported file: {libpath}"
-        )
-
-        collection_metadata = collection.get(AYON_PROPERTY)
-        collection_libpath = collection_metadata["libpath"]
-
-        normalized_collection_libpath = (
-            str(Path(bpy.path.abspath(collection_libpath)).resolve())
-        )
-        normalized_libpath = (
-            str(Path(bpy.path.abspath(str(libpath))).resolve())
-        )
-        self.log.debug(
-            "normalized_collection_libpath:\n  %s\nnormalized_libpath:\n  %s",
-            normalized_collection_libpath,
-            normalized_libpath,
-        )
-        if normalized_collection_libpath == normalized_libpath:
-            self.log.info("Library already loaded, not updating...")
-            return
-
-        for obj in collection_metadata['objects']:
-            for child in self.get_all_children(obj):
-                child.data.materials.clear()
-
-        for material in collection_metadata['materials']:
-            bpy.data.materials.remove(material)
-
-        namespace = collection_metadata['namespace']
-        name = collection_metadata['name']
-
-        container_name = f"{namespace}_{name}"
-
-        materials, objects = self._process(
-            libpath, container_name, collection_metadata['objects'])
-
-        collection_metadata["objects"] = objects
-        collection_metadata["materials"] = materials
-        collection_metadata["libpath"] = str(libpath)
-        collection_metadata["representation"] = repre_entity["id"]
-        collection_metadata["project_name"] = context["project"]["name"]
 
     def remove(self, container: Dict) -> bool:
-        collection = bpy.data.collections.get(container["objectName"])
+        """Remove an existing container from a Blender scene.
+
+        Arguments:
+            container (ayon:container-1.0): Container to remove,
+                from `host.ls()`.
+
+        Returns:
+            bool: Whether the container was deleted.
+
+        Warning:
+            No nested collections are supported at the moment!
+        """
+
+        collection = bpy.data.collections.get(
+            container["objectName"]
+        )
         if not collection:
             return False
 
-        collection_metadata = collection.get(AYON_PROPERTY)
-
-        for obj in collection_metadata['objects']:
-            for child in self.get_all_children(obj):
-                child.data.materials.clear()
-
-        for material in collection_metadata['materials']:
-            bpy.data.materials.remove(material)
-
+        material = container["material"]
+        bpy.data.materials.remove(material)
         bpy.data.collections.remove(collection)
 
         return True

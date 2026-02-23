@@ -28,9 +28,6 @@ class ValidateNoMaterial(plugin.BlenderInstancePlugin):
         for data in instance:
             child = data.children[0] if data.children else data
             product_name = instance.data["productName"]
-            if not child.data.materials:
-                cls.log.error(f"No Material data: {child.name}")
-                invalid.append(child)
             if not child.active_material:
                 cls.log.error(f"No active material: {child.name}")
                 invalid.append(child)
@@ -65,7 +62,7 @@ class ValidateNoMaterial(plugin.BlenderInstancePlugin):
         product_name = instance.data["productName"]
         invalid_object = cls.get_invalid(instance)
         for obj in invalid_object:
-            if not obj.data.materials or not obj.active_material:
+            if not obj.active_material:
                 empty_material = bpy.data.materials.new(name=product_name)
                 empty_material.use_nodes = True
                 obj.data.materials.append(empty_material)

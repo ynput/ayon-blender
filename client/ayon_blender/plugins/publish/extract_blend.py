@@ -148,8 +148,7 @@ class ExtractBlendAction(ExtractBlend):
 
 
 class ExtractBlendLook(ExtractBlend):
-    """Extract a blend file from the current scene.
-    """
+    """Extract a blend file from the current scene."""
     families = ["look"]
     label = "Extract Blend (Look)"
     optional = False
