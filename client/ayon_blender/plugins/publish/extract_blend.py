@@ -170,6 +170,6 @@ class ExtractBlendLook(ExtractBlend):
                 continue
             if not hasattr(obj.data, "materials"):
                 continue
-            if obj.active_material:
-                materials.add(obj.active_material)
+            materials.update(obj.data.materials)
+
         return materials
