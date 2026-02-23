@@ -63,7 +63,8 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
         with bpy.data.libraries.load(
-            libpath, link=True, relative=relative
+            libpath, link=True, relative=relative,
+            set_fake=options.get("use_fake_user", True)
         ) as (data_from, data_to):
             data_to.materials = data_from.materials
         if not data_to.materials:
@@ -76,10 +77,6 @@ class BlendLookLoader(plugin.BlenderLoader):
             material.library for material
             in materials if material.library
         ]
-        for material in materials:
-            material.use_fake_user = options.get("use_fake_user", True)
-        # Save the list of objects in the metadata container
-        container_metadata["libpath"] = libpath
         container_metadata["lib_container"] = lib_container
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
@@ -104,10 +101,7 @@ class BlendLookLoader(plugin.BlenderLoader):
                 library.filepath = libpath
 
         metadata_update(
-            collection, {
-                "representation": str(repre_entity["id"]),
-                "libpath": libpath
-            }
+            collection, {"representation": str(repre_entity["id"])}
         )
 
     def remove(self, container: Dict) -> bool:
