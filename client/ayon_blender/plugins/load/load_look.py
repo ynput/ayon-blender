@@ -1,11 +1,7 @@
 """Load a model asset in Blender."""
-
-from pathlib import Path
-from pprint import pformat
 from typing import Dict, List, Optional
 
 import os
-import json
 import bpy
 
 from ayon_core.lib import BoolDef
