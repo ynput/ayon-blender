@@ -24,7 +24,6 @@ class BlendLookLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-
     options = [
         BoolDef(
             "use_fake_user",
@@ -73,7 +72,12 @@ class BlendLookLoader(plugin.BlenderLoader):
                 "there is any material datablock in the blend file."
             )
         materials = data_to.materials
-        container_metadata["materials"] = materials
+        container_metadata["libraries"] = [
+            material.library for material
+            in materials if material.library
+        ]
+        for material in materials:
+            material.use_fake_user = options.get("use_fake_user", True)
         # Save the list of objects in the metadata container
         container_metadata["libpath"] = libpath
         container_metadata["lib_container"] = lib_container
@@ -93,14 +97,17 @@ class BlendLookLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         collection = container["node"]
         libpath = self.filepath_from_context(context)
-        materials = container["materials"]
-        for material in materials:
-            if material.library:
-                material.library.name = os.path.basename(libpath)
-                material.library.filepath = libpath
+        libraries = container["libraries"]
+        for library in libraries:
+            if library:
+                library.name = os.path.basename(libpath)
+                library.filepath = libpath
 
         metadata_update(
-            collection, {"representation": str(repre_entity["id"])}
+            collection, {
+                "representation": str(repre_entity["id"]),
+                "libpath": libpath
+            }
         )
 
     def remove(self, container: Dict) -> bool:
@@ -123,9 +130,9 @@ class BlendLookLoader(plugin.BlenderLoader):
         if not collection:
             return False
 
-        materials = container["materials"]
-        for material in materials:
-            bpy.data.materials.remove(material)
+        libraries = container["libraries"]
+        for library in libraries:
+            bpy.data.libraries.remove(library)
         bpy.data.collections.remove(collection)
 
         return True
