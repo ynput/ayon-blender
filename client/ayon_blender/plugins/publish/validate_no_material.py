@@ -20,29 +20,21 @@ class ValidateNoMaterial(plugin.BlenderInstancePlugin):
     label = "No Material"
     actions = [SelectInvalidAction, RepairAction]
 
-
     @classmethod
     def get_invalid(cls, instance):
         invalid = []
-        product_name = instance.data["productName"]
-        for data in instance:
+        for obj in instance:
             if not (
-                isinstance(data, bpy.types.Object) and data.type in {
+                isinstance(obj, bpy.types.Object)
+                and obj.type in {
                     "MESH", "MATERIAL"
                 }
+                and hasattr(obj.data, "materials")
             ):
                 continue
-            child = data.children[0] if data.children else data
-            cls.log.debug(f"Checking object: {child.name} with material: ")
-            if not child.active_material:
-                cls.log.error(f"No active material: {child.name}")
-                invalid.append(child)
-            if child.active_material.name != product_name:
-                cls.log.error(
-                    f"Material name mismatch: {product_name} "
-                    f"({child.active_material.name})"
-                )
-                invalid.append(child)
+            if not obj.active_material:
+                cls.log.error(f"No active material: {obj.name}")
+                invalid.append(obj)
         return invalid
 
     def process(self, instance):
@@ -73,5 +65,3 @@ class ValidateNoMaterial(plugin.BlenderInstancePlugin):
                 empty_material = bpy.data.materials.new(name=product_name)
                 empty_material.use_nodes = True
                 obj.data.materials.append(empty_material)
-            if obj.active_material.name != instance.data["productName"]:
-                obj.active_material.name = product_name

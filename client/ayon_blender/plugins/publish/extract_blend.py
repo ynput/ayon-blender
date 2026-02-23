@@ -156,7 +156,7 @@ class ExtractBlendLook(ExtractBlend):
     compress = False
 
     def add_datablock(self, instance: pyblish.api.Instance) -> set:
-        """Add a data block to the blend file.
+        """Add the material data block to the blend file.
 
         Args:
             instance (pyblish.api.Instance): The instance to add.
@@ -164,7 +164,12 @@ class ExtractBlendLook(ExtractBlend):
         Returns:
             set: A set of data blocks added.
         """
-        return {
-            material for material in bpy.data.materials
-            if material.name == instance.data["productName"]
-        }
+        materials = set()
+        for obj in instance:
+            if not isinstance(obj, bpy.types.Object):
+                continue
+            if not hasattr(obj.data, "materials"):
+                continue
+            if obj.active_material:
+                materials.add(obj.active_material)
+        return materials

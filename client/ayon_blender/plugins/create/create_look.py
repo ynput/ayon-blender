@@ -24,13 +24,6 @@ class CreateLook(plugin.BlenderCreator):
         )
         if pre_create_data.get("use_selection"):
             for obj in lib.get_selection():
-                if not obj.active_material:
-                    empty_material = bpy.data.materials.new(name=product_name)
-                    empty_material.use_nodes = True
-                    obj.data.materials.append(empty_material)
-                else:
-                    obj.active_material.name = product_name
-
                 if isinstance(obj, bpy.types.Object):
                     collection.objects.link(obj)
 

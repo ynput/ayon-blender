@@ -62,7 +62,6 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         container_metadata = container.get(AYON_PROPERTY)
 
-
         relative = bpy.context.preferences.filepaths.use_relative_paths
         with bpy.data.libraries.load(
             libpath, link=True, relative=relative
@@ -73,45 +72,32 @@ class BlendLookLoader(plugin.BlenderLoader):
                 "No material found in the file, please check if "
                 "there is any material datablock in the blend file."
             )
-        container = data_to.materials[0]
-
-        empty_obj = bpy.data.objects.new(name=name, object_data=None)
-        empty_obj.active_material = container
-        empty_obj.active_material.use_fake_user = options.get(
-            "use_fake_user", True
-        )
+        materials = data_to.materials
+        container_metadata["materials"] = materials
         # Save the list of objects in the metadata container
         container_metadata["libpath"] = libpath
         container_metadata["lib_container"] = lib_container
-        container_metadata["objects"] = empty_obj
-        container_metadata["material"] = empty_obj.active_material
-        empty_obj.data.materials.append(empty_obj.active_material)
-
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
-        self[:] = [empty_obj]
+        self[:] = [materials]
 
         return container
 
     def update(self, container: Dict, context: Dict):
-        """Update the loaded asset.
+        """Update the loaded material datalock.
 
-        This will remove all objects of the current collection, load the new
-        ones and add them to the collection.
-        If the objects of the collection are used in another collection they
-        will not be removed, only unlinked. Normally this should not be the
-        case though.
-
-        Warning:
-            No nested collections are supported at the moment!
+        Args:
+            container (Dict): The container to update.
+            context (Dict): The context of the update.
         """
         repre_entity = context["representation"]
         collection = container["node"]
         libpath = self.filepath_from_context(context)
-        material = container["material"]
-        if material.library:
-            material.library.name = os.path.basename(libpath)
-            material.library.filepath = libpath
+        materials = container["materials"]
+        for material in materials:
+            if material.library:
+                material.library.name = os.path.basename(libpath)
+                material.library.filepath = libpath
 
         metadata_update(
             collection, {"representation": str(repre_entity["id"])}
@@ -137,8 +123,9 @@ class BlendLookLoader(plugin.BlenderLoader):
         if not collection:
             return False
 
-        material = container["material"]
-        bpy.data.materials.remove(material)
+        materials = container["materials"]
+        for material in materials:
+            bpy.data.materials.remove(material)
         bpy.data.collections.remove(collection)
 
         return True
