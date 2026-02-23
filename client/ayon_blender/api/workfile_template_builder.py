@@ -1,6 +1,5 @@
 """Blender workfile template builder implementation"""
 import bpy
-import os
 
 import itertools
 from ayon_core.pipeline import registered_host
