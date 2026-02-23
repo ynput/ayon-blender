@@ -22,7 +22,7 @@ class InstallPySideToBlender(PreLaunchHook):
 
     def execute(self):
         # Prelaunch hook is not crucial
-        if not self.data["project_settings"]["blender"]["hooks"].get(
+        if not self.data["project_settings"]["blender"].get("hooks", {}).get(
                 "install_pyside", True):
             self.log.debug("Skipping execution of %s.",
                            self.__class__.__name__)
