@@ -1,6 +1,6 @@
 """Blender workfile template builder implementation"""
 import bpy
-from platform import system
+import os
 
 import itertools
 from ayon_core.pipeline import registered_host
@@ -54,10 +54,7 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         filepath = Path(path).resolve()
         if not filepath.exists():
             return False
-        if system().lower() == "windows":
-            filepath = filepath.as_posix().replace('/', '\\')
-        else:
-            filepath = filepath.as_posix()
+        filepath = os.path.normpath(filepath.as_posix())
 
         with bpy.data.libraries.load(filepath) as (data_src, data_dst):
             data_dst.collections = data_src.collections
