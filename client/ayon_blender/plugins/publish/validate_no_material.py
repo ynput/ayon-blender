@@ -24,8 +24,6 @@ class ValidateNoMaterial(plugin.BlenderInstancePlugin):
     @classmethod
     def get_invalid(cls, instance):
         invalid = []
-        # just in case the instance node contains either Armature or top empty
-
         product_name = instance.data["productName"]
         for data in instance:
             if not (
