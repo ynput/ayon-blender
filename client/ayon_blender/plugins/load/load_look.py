@@ -77,7 +77,6 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         empty_obj = bpy.data.objects.new(name=name, object_data=None)
         empty_obj.active_material = container
-        empty_obj.active_material.use_nodes = True
         empty_obj.active_material.use_fake_user = options.get(
             "use_fake_user", True
         )
