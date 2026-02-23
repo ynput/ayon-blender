@@ -54,9 +54,8 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         filepath = Path(path).resolve()
         if not filepath.exists():
             return False
-        filepath = os.path.normpath(filepath.as_posix())
 
-        with bpy.data.libraries.load(filepath) as (data_src, data_dst):
+        with bpy.data.libraries.load(str(filepath)) as (data_src, data_dst):
             data_dst.collections = data_src.collections
             data_dst.objects = data_src.objects
 
