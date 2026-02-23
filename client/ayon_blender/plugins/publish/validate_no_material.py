@@ -26,9 +26,6 @@ class ValidateNoMaterial(plugin.BlenderInstancePlugin):
         for obj in instance:
             if not (
                 isinstance(obj, bpy.types.Object)
-                and obj.type in {
-                    "MESH", "MATERIAL"
-                }
                 and hasattr(obj.data, "materials")
             ):
                 continue
