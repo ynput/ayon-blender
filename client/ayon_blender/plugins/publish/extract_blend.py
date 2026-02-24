@@ -174,6 +174,5 @@ class ExtractBlendLook(ExtractBlend):
                 continue
             datablock_to_be_exported.add(obj)
             datablock_to_be_exported.update(obj.data.materials)
-        
 
         return datablock_to_be_exported
