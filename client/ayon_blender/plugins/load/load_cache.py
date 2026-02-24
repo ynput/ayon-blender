@@ -70,13 +70,17 @@ class CacheModelLoader(plugin.BlenderLoader):
     color = "orange"
 
     always_add_cache_reader = False
+    add_namespace = True
 
     @classmethod
     def get_options(cls, contexts):
         return [
             BoolDef("always_add_cache_reader",
                     default=cls.always_add_cache_reader,
-                    label="Always Add Cache Reader (Alembic)")
+                    label="Always Add Cache Reader (Alembic)"),
+            BoolDef("add_namespace",
+                    default=cls.add_namespace,
+                    label="Add namespace to objects"),
         ]
 
     def _update_transform_cache_path(self, asset_group, libpath):
@@ -206,6 +210,9 @@ class CacheModelLoader(plugin.BlenderLoader):
             bpy.data.objects.remove(empty)
 
     def _process(self, libpath, asset_group, group_name, options: Dict):
+        if options is None:
+            options = {}
+
         plugin.deselect_all()
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
@@ -225,7 +232,7 @@ class CacheModelLoader(plugin.BlenderLoader):
             always_add_cache_reader = options.get(
                 "always_add_cache_reader",
                 self.always_add_cache_reader
-            ) if options else self.always_add_cache_reader
+            )
             bpy.ops.wm.alembic_import(
                 filepath=libpath,
                 relative_path=relative,
@@ -244,14 +251,18 @@ class CacheModelLoader(plugin.BlenderLoader):
             for collection in collections:
                 collection.objects.unlink(obj)
             name = obj.name
-            obj.name = f"{group_name}:{name}"
-            if obj.type != 'EMPTY':
-                name_data = obj.data.name
-                obj.data.name = f"{group_name}:{name_data}"
 
-                for material_slot in obj.material_slots:
-                    name_mat = material_slot.material.name
-                    material_slot.material.name = f"{group_name}:{name_mat}"
+            if options.get("add_namespace", self.add_namespace):
+                obj.name = f"{group_name}:{name}"
+                if obj.type != 'EMPTY':
+                    name_data = obj.data.name
+                    obj.data.name = f"{group_name}:{name_data}"
+
+                    for material_slot in obj.material_slots:
+                        name_mat = material_slot.material.name
+                        material_slot.material.name = (
+                            f"{group_name}:{name_mat}"
+                        )
 
             if not obj.get(AYON_PROPERTY):
                 obj[AYON_PROPERTY] = {}
