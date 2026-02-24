@@ -73,12 +73,12 @@ class BlendLookLoader(plugin.BlenderLoader):
                 "there is any material datablock in the blend file."
             )
         materials = data_to.materials
+        for material in materials:
+            material.use_fake_user = options.get("use_fake_user", True)
         container_metadata["libraries"] = [
             material.library for material
             in materials if material.library
         ]
-        for material in materials:
-            material.use_fake_user = options.get("use_fake_user", True)
         container_metadata["lib_container"] = lib_container
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
@@ -98,10 +98,9 @@ class BlendLookLoader(plugin.BlenderLoader):
         libpath = self.filepath_from_context(context)
         libraries = container["libraries"]
         for library in libraries:
-            if library:
-                library.name = os.path.basename(libpath)
-                library.filepath = libpath
-                library.reload()
+            library.name = os.path.basename(libpath)
+            library.filepath = libpath
+            library.reload()
 
         metadata_update(
             collection, {"representation": str(repre_entity["id"])}
