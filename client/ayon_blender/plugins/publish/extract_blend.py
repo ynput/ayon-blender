@@ -157,6 +157,8 @@ class ExtractBlendLook(ExtractBlend):
 
     def add_datablock(self, instance: pyblish.api.Instance) -> set:
         """Add the material data block to the blend file.
+        The datablock needs to be exported along with its linked objects
+        to preserve the material's node tree and texture links.
 
         Args:
             instance (pyblish.api.Instance): The instance to add.
@@ -164,12 +166,14 @@ class ExtractBlendLook(ExtractBlend):
         Returns:
             set: A set of data blocks added.
         """
-        materials = set()
+        datablock_to_be_exported = set()
         for obj in instance:
             if not isinstance(obj, bpy.types.Object):
                 continue
             if not hasattr(obj.data, "materials"):
                 continue
-            materials.update(obj.data.materials)
+            datablock_to_be_exported.add(obj)
+            datablock_to_be_exported.update(obj.data.materials)
+        
 
-        return materials
+        return datablock_to_be_exported
