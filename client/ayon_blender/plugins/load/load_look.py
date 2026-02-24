@@ -65,6 +65,8 @@ class BlendLookLoader(plugin.BlenderLoader):
             libpath, link=True, relative=relative
         ) as (data_from, data_to):
             data_to.materials = data_from.materials
+            data_to.images = data_from.images
+
         if not data_to.materials:
             raise LoadError(
                 "No material found in the file, please check if "
