@@ -44,7 +44,6 @@ class BlendLookLoader(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
-
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
@@ -63,8 +62,7 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
         with bpy.data.libraries.load(
-            libpath, link=True, relative=relative,
-            set_fake=options.get("use_fake_user", True)
+            libpath, link=True, relative=relative
         ) as (data_from, data_to):
             data_to.materials = data_from.materials
         if not data_to.materials:
@@ -77,6 +75,8 @@ class BlendLookLoader(plugin.BlenderLoader):
             material.library for material
             in materials if material.library
         ]
+        for material in materials:
+            material.use_fake_user = options.get("use_fake_user", True)
         container_metadata["lib_container"] = lib_container
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
@@ -99,6 +99,7 @@ class BlendLookLoader(plugin.BlenderLoader):
             if library:
                 library.name = os.path.basename(libpath)
                 library.filepath = libpath
+                library.reload()
 
         metadata_update(
             collection, {"representation": str(repre_entity["id"])}
