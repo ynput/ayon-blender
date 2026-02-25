@@ -562,16 +562,12 @@ class BlenderLoader(LoaderPlugin):
             folder_name, product_name, unique_number
         )
 
-        nodes = self.process_asset(
+        return self.process_asset(
             context=context,
             name=name,
             namespace=namespace,
             options=options,
         )
-
-        # Only containerise if anything was loaded by the Loader.
-        if not nodes:
-            return None
 
     def exec_update(self, container: Dict, context: Dict):
         """Must be implemented by a subclass"""
