@@ -38,6 +38,14 @@ class CacheLoaderModel(BaseSettingsModel):
             "Always add a cache reader when importing Alembic files."
         ),
     )
+    add_namespace: bool = SettingsField(
+        True,
+        title="Add namespace on load",
+        description=(
+            "When enabled, prefix the loaded objects and data with a"
+            " namespace."
+        )
+    )
 
 
 class LoadersModel(BaseSettingsModel):
@@ -61,7 +69,8 @@ class LoadersModel(BaseSettingsModel):
 
 DEFAULT_LOADERS_SETTINGS = {
     "AbcCameraLoader": {
-        "always_add_cache_reader": False
+        "always_add_cache_reader": False,
+        "add_namespace": True
     },
     "BlendLinkLoaderFlat": {
         "instance_collections": False,
@@ -71,6 +80,7 @@ DEFAULT_LOADERS_SETTINGS = {
         "create_animation_instance_on_load": True
     },
     "CacheModelLoader": {
-        "always_add_cache_reader": False
+        "always_add_cache_reader": False,
+        "add_namespace": True
     }
 }

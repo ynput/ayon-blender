@@ -31,13 +31,17 @@ class AbcCameraLoader(plugin.BlenderLoader):
     color = "orange"
 
     always_add_cache_reader = True
+    add_namespace = True
 
     @classmethod
     def get_options(cls, contexts):
         return [
             BoolDef("always_add_cache_reader",
                     default=cls.always_add_cache_reader,
-                    label="Always Add Cache Reader")
+                    label="Always Add Cache Reader"),
+            BoolDef("add_namespace",
+                    default=cls.add_namespace,
+                    label="Add namespace to objects"),
         ]
 
     def _remove(self, asset_group):
@@ -51,13 +55,16 @@ class AbcCameraLoader(plugin.BlenderLoader):
                 bpy.data.objects.remove(obj)
 
     def _process(self, libpath, asset_group, group_name, options=None):
+        if options is None:
+            options = {}
+
         plugin.deselect_all()
 
         # Force the creation of the transform cache even if the camera
         # doesn't have an animation. We use the cache to update the camera.
         always_add_cache_reader = options.get(
             "always_add_cache_reader", self.always_add_cache_reader
-        ) if options else self.always_add_cache_reader
+        )
         bpy.ops.wm.alembic_import(
             filepath=libpath,
             always_add_cache_reader=always_add_cache_reader
@@ -68,13 +75,17 @@ class AbcCameraLoader(plugin.BlenderLoader):
         for obj in objects:
             obj.parent = asset_group
 
-        for obj in objects:
-            name = obj.name
-            obj.name = f"{group_name}:{name}"
-            if obj.type != "EMPTY":
-                name_data = obj.data.name
-                obj.data.name = f"{group_name}:{name_data}"
+        # Add namespace
+        if options.get("add_namespace", self.add_namespace):
+            for obj in objects:
+                name = obj.name
+                obj.name = f"{group_name}:{name}"
+                if obj.type != "EMPTY":
+                    name_data = obj.data.name
+                    obj.data.name = f"{group_name}:{name_data}"
 
+        # Add AYON metadata
+        for obj in objects:
             if not obj.get(AYON_PROPERTY):
                 obj[AYON_PROPERTY] = dict()
 
