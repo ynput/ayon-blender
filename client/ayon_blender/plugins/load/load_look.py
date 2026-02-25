@@ -128,7 +128,11 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         libraries = container["libraries"]
         for library in libraries:
-            bpy.data.libraries.remove(library)
+            # if library users is more than 1, it means
+            # that there are other materials or images
+            if library.users <= 1:
+                bpy.data.libraries.remove(library)
+
         bpy.data.collections.remove(collection)
 
         return True
