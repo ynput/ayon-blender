@@ -79,7 +79,6 @@ class BlendLookLoader(plugin.BlenderLoader):
             material.library for material
             in materials if material.library
         ]
-        container_metadata["lib_container"] = lib_container
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
         self[:] = [materials]
