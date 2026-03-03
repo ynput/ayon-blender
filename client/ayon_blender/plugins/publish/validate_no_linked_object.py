@@ -8,8 +8,7 @@ from ayon_core.pipeline import (
 from ayon_core.pipeline.publish import (
     RepairAction,
     ValidateContentsOrder,
-    PublishValidationError,
-    KnownPublishError
+    PublishValidationError
 )
 
 
