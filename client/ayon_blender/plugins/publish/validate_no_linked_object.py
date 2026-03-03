@@ -35,6 +35,9 @@ class ValidateNoLinkedObject(pyblish.api.InstancePlugin,
         Returns:
             list: A list of invalid objects.
         """
+        def _has_library(datablock) -> bool:
+            return getattr(datablock, "library", None) is not None
+
         invalid = []
         for obj in instance:
             if not (
@@ -42,11 +45,12 @@ class ValidateNoLinkedObject(pyblish.api.InstancePlugin,
                 and hasattr(obj.data, "materials")
             ):
                 continue
-            if hasattr(obj, "library") and obj.library is not None:
+
+            if _has_library(obj):
                 invalid.append(obj)
             for material in obj.data.materials:
-                if hasattr(material, "library") and material.library is not None:
-                    invalid.append(obj)
+                if _has_library(material):
+                    invalid.append(material)
 
         return invalid
 
