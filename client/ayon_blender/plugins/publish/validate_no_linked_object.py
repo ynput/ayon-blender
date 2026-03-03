@@ -14,9 +14,7 @@ from ayon_core.pipeline.publish import (
 
 class ValidateNoLinkedObject(pyblish.api.InstancePlugin,
                              OptionalPyblishPluginMixin):
-    """Validates object is not linked from other file.
-
-    """
+    """Validates object is not linked from other file."""
 
     label = "Validate No Linked Object"
     order = ValidateContentsOrder
