@@ -46,8 +46,13 @@ class ValidateNoLinkedObject(pyblish.api.InstancePlugin,
             ):
                 continue
 
+            # TODO: Technically this should consider 'library overrides'
+            #  accordingly. However, the better approach is likely to find
+            #  a way how to write out localized datablocks.
             if _has_library(obj):
                 invalid.append(obj)
+            if _has_library(obj.data):
+                invalid.append(obj.data)
             for material in obj.data.materials:
                 if _has_library(material):
                     invalid.append(material)
@@ -81,4 +86,10 @@ class ValidateNoLinkedObject(pyblish.api.InstancePlugin,
     def repair(cls, instance):
         invalid_objects = cls.get_invalid(instance)
         for invalid_object in invalid_objects:
-            invalid_object.make_local(clear_asset_data=True)
+            cls.log.debug(f"Making local: {invalid_object.name}")
+            local_object = invalid_object.make_local(clear_asset_data=True)
+            if local_object == invalid_object:
+                cls.log.error(
+                    f"Linked data-block {invalid_object.name} could not be"
+                    " made local. It may be an indirecft library data-block."
+                )
