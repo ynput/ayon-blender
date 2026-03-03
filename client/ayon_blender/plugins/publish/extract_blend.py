@@ -172,9 +172,6 @@ class ExtractBlendLook(ExtractBlend):
                 continue
             if not hasattr(obj.data, "materials"):
                 continue
-            # We want to export all materials linked to the objects in the instance,
-            # to preserve the node tree and texture links.
-            datablock_to_be_exported.add(obj)
             datablock_to_be_exported.update(obj.data.materials)
 
         return datablock_to_be_exported
