@@ -75,10 +75,10 @@ class BlendLookLoader(plugin.BlenderLoader):
         materials = data_to.materials
         for material in materials:
             material.use_fake_user = options.get("use_fake_user", True)
-        container_metadata["libraries"] = [
+        container_metadata["library"] = next(
             material.library for material
             in materials if material.library
-        ]
+        )
         metadata_update(container, container_metadata)
         bpy.ops.object.select_all(action='DESELECT')
         self[:] = [materials]
@@ -95,11 +95,11 @@ class BlendLookLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         collection = container["node"]
         libpath = self.filepath_from_context(context)
-        libraries = container["libraries"]
-        for library in libraries:
-            library.name = os.path.basename(libpath)
-            library.filepath = libpath
-            library.reload()
+
+        library = container["library"]
+        library.name = os.path.basename(libpath)
+        library.filepath = libpath
+        library.reload()
 
         metadata_update(
             collection, {"representation": str(repre_entity["id"])}
@@ -125,12 +125,11 @@ class BlendLookLoader(plugin.BlenderLoader):
         if not collection:
             return False
 
-        libraries = container["libraries"]
-        for library in libraries:
-            # if library users is more than 1, it means
-            # that there are other materials or images
-            if library and library.users <= 1:
-                bpy.data.libraries.remove(library)
+        library = container["library"]
+        # if library users is more than 1, it means
+        # that there are other materials or images
+        if library and library.users <= 1:
+            bpy.data.libraries.remove(library)
 
         bpy.data.collections.remove(collection)
 
