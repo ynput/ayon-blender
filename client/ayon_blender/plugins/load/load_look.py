@@ -9,7 +9,8 @@ from ayon_core.pipeline.load import LoadError
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import (
     containerise_existing,
-    metadata_update
+    metadata_update,
+    ls,
 )
 from ayon_blender.api.constants import AYON_PROPERTY
 
@@ -32,6 +33,27 @@ class BlendLookLoader(plugin.BlenderLoader):
             tooltip="Set the fake user for the loaded asset.",
         )
     ]
+
+    def _is_library_loaded(self, libpath: str) -> bool:
+        """Check if the library is already loaded in the current Blender session."""
+        return any(
+            lib.filepath == libpath for lib in bpy.data.libraries if lib
+        )
+
+    def get_existing_library(self, libpath: str) -> Optional[bpy.types.Library]:
+        """Get the existing library if it's already loaded."""
+        for library in bpy.data.libraries:
+            if library and library.filepath == libpath:
+                return library
+        return None
+
+    def _is_existing_container(self, libpath: str) -> bool:
+        """Check if there is an existing container for the given library path."""
+        for container in ls():
+            library = container.get("library")
+            if library and library.filepath == libpath:
+                return True
+        return False
 
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
@@ -95,11 +117,23 @@ class BlendLookLoader(plugin.BlenderLoader):
         repre_entity = context["representation"]
         collection = container["node"]
         libpath = self.filepath_from_context(context)
-
         library = container["library"]
-        library.name = os.path.basename(libpath)
-        library.filepath = libpath
-        library.reload()
+
+        new_lib_already_exists = self._is_library_loaded(libpath)
+        if library:
+            library.name = os.path.basename(libpath)
+            library.filepath = libpath
+            library.reload()
+
+        if new_lib_already_exists:
+            # We have merged into an existing container
+            # TODO: This should actually check whether the other library
+            #  is ACTUALLY containerized
+            if self._is_existing_container(libpath):
+                self.remove(container)
+                return
+            else:
+                container["library"] = self.get_existing_library(libpath)
 
         metadata_update(
             collection, {"representation": str(repre_entity["id"])}
