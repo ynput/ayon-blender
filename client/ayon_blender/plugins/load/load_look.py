@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 import os
 import bpy
 from pathlib import Path
+from typing import Any
 
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline.load import LoadError
