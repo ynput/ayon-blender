@@ -136,11 +136,19 @@ class BlendLookLoader(plugin.BlenderLoader):
                 # This library has now merged into the existing library
                 # and with that all its users have been remapped.
                 # Essentially containers would have merged.
+                self.log.info(
+                    "Library already exists."
+                    " Merging container with existing containerized library."
+                )
                 self.remove(container)
                 return
             else:
                 # Update current container to point to the
                 # existing library
+                self.log.info(
+                    "Library already exists."
+                    " Updating container library to use existing library."
+                )
                 new_metadata["library"] = existing_library
 
         new_metadata["representation"] = repre_entity["id"]
