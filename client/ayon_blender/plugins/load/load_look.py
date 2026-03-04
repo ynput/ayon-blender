@@ -117,6 +117,7 @@ class BlendLookLoader(plugin.BlenderLoader):
         libpath = self.filepath_from_context(context)
         library = container["library"]
         existing_library = self.get_existing_library(libpath)
+        new_metadata: dict[str, Any] = {}
         if existing_library:
             if self._is_containerized(existing_library):
                 # This library has now merged into the existing library
@@ -127,15 +128,14 @@ class BlendLookLoader(plugin.BlenderLoader):
             else:
                 # Update current container to point to the
                 # existing library
-                container["library"] = existing_library
+                new_metadata["library"] = existing_library
         else:
             library.name = os.path.basename(libpath)
             library.filepath = libpath
             library.reload()
 
-        metadata_update(
-            collection, {"representation": str(repre_entity["id"])}
-        )
+        new_metadata["representation"] = repre_entity["id"]
+        metadata_update(collection, new_metadata)
 
     def remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene.
