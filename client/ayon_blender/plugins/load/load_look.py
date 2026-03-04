@@ -1,10 +1,7 @@
 """Load a model asset in Blender."""
-from typing import Dict, List, Optional
-
 import os
-import bpy
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline.load import LoadError
@@ -15,6 +12,8 @@ from ayon_blender.api.pipeline import (
     ls,
 )
 from ayon_blender.api.constants import AYON_PROPERTY
+
+import bpy
 
 
 class BlendLookLoader(plugin.BlenderLoader):
