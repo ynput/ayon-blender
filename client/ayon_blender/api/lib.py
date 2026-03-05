@@ -351,21 +351,22 @@ def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
 
 
 @contextlib.contextmanager
-def make_path_absolute(material_datablock: set):
-    texture_dict = {}
-    for material in material_datablock:
+def make_path_absolute(material_datablocks: set[bpy.types.Material]):
+    original_image_paths = {}
+    for material in material_datablocks:
         if not material.use_nodes:
             continue
         for node in material.node_tree.nodes:
             if isinstance(node, bpy.types.ShaderNodeTexImage) and node.image:
-                texture_dict[node] = node.image.filepath
-                node.image.filepath = bpy.path.abspath(node.image.filepath)
+                image = node.image
+                filepath = image.filepath
+                original_image_paths[image] = filepath 
+                image.filepath = bpy.path.abspath(filepath)
     try:
         yield
-
     finally:
-        for node, path in texture_dict.items():
-            node.image.filepath = path
+        for image, path in original_image_paths.items():
+            image.filepath = path
 
 @contextlib.contextmanager
 def maintained_selection():
