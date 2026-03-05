@@ -379,8 +379,7 @@ def make_path_absolute(material_datablocks: set[bpy.types.Material]):
     for material in material_datablocks:
         if not material.use_nodes:
             continue
-        for node in iter_images_in_node_tree(material.node_tree):
-            image = node.image
+        for image in iter_images_in_node_tree(material.node_tree):
             filepath = image.filepath
             original_image_paths[image] = filepath 
             image.filepath = bpy.path.abspath(filepath)
