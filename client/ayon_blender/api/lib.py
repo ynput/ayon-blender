@@ -374,7 +374,7 @@ def iter_images_in_node_tree(tree: bpy.types.NodeTree):
             processed.update(children)
 
 @contextlib.contextmanager
-def make_path_absolute(material_datablocks: set[bpy.types.Material]):
+def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Material]):
     original_image_paths = {}
     for material in material_datablocks:
         if not material.use_nodes:
