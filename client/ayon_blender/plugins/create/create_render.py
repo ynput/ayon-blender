@@ -215,6 +215,10 @@ class CreateRender(plugin.BlenderCreator):
                     label="Review",
                     tooltip="Mark as reviewable",
                     default=True),
+            BoolDef("clean_local_render",
+                    label="Clean Local Render",
+                    tooltip="Remove render files after publishing",
+                    default=True),
         ])
         return defs
 
