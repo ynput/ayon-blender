@@ -1,6 +1,7 @@
 import os
 import contextlib
 
+
 import bpy
 import pyblish.api
 
@@ -12,6 +13,7 @@ from ayon_blender.api.lib import (
     strip_instance_data,
     strip_namespace,
     packed_images,
+    make_path_absolute,
 )
 
 
@@ -86,6 +88,7 @@ class ExtractBlend(
                         stack.enter_context(link_to_collection(
                             collection, list(missing_child_hierarchy)))
 
+
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_instance_data(asset_group))
             stack.enter_context(strip_namespace(containers))
@@ -93,6 +96,10 @@ class ExtractBlend(
                 stack.enter_context(
                     packed_images(data_blocks, logger=self.log)
                 )
+            # make sure all texture files are absolute paths
+            if instance.data["productBaseType"] == "look":
+                stack.enter_context(make_path_absolute(data_blocks))
+
             self.log.debug("Datablocks: %s", data_blocks)
             bpy.data.libraries.write(
                 filepath, data_blocks, compress=self.compress
@@ -172,10 +179,5 @@ class ExtractBlendLook(ExtractBlend):
                 continue
             if not hasattr(obj.data, "materials"):
                 continue
-
-            # We want to export all materials linked to the objects in the instance,
-            # to preserve the node tree and texture links.
-            datablock_to_be_exported.add(obj)
             datablock_to_be_exported.update(obj.data.materials)
-
         return datablock_to_be_exported
