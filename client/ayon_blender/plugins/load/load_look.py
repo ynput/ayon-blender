@@ -1,10 +1,7 @@
 """Load a model asset in Blender."""
-from typing import Dict, List, Optional
-
 import os
-import bpy
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from ayon_core.lib import BoolDef
 from ayon_core.pipeline.load import LoadError
@@ -15,6 +12,8 @@ from ayon_blender.api.pipeline import (
     ls,
 )
 from ayon_blender.api.constants import AYON_PROPERTY
+
+import bpy
 
 
 class BlendLookLoader(plugin.BlenderLoader):
@@ -115,25 +114,42 @@ class BlendLookLoader(plugin.BlenderLoader):
         """
         repre_entity = context["representation"]
         collection = container["node"]
-        libpath = self.filepath_from_context(context)
         library = container["library"]
+        libpath = self.filepath_from_context(context)
         existing_library = self.get_existing_library(libpath)
+
+        # The new path may be the same path the library is already set to when
+        # updating to same version (which would merely force a reload) but
+        # we'll need to account for that case.
+        is_same_library = existing_library == library
+
+        # Even if there is an existing library with the same path we want to
+        # set the path on this library to match the existing one. Then Blender
+        # will end up 'merging' the libraries together, remapping all usage.
+        library.name = os.path.basename(libpath)
+        library.filepath = libpath
+        library.reload()
+
         new_metadata: dict[str, Any] = {}
-        if existing_library:
+        if existing_library and not is_same_library:
             if self._is_containerized(existing_library):
                 # This library has now merged into the existing library
                 # and with that all its users have been remapped.
                 # Essentially containers would have merged.
+                self.log.info(
+                    "Library already exists."
+                    " Merging container with existing containerized library."
+                )
                 self.remove(container)
                 return
             else:
                 # Update current container to point to the
                 # existing library
+                self.log.info(
+                    "Library already exists."
+                    " Updating container library to use existing library."
+                )
                 new_metadata["library"] = existing_library
-        else:
-            library.name = os.path.basename(libpath)
-            library.filepath = libpath
-            library.reload()
 
         new_metadata["representation"] = repre_entity["id"]
         metadata_update(collection, new_metadata)
