@@ -349,6 +349,52 @@ def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
 
     return selection
 
+def iter_images_in_node_tree(tree: bpy.types.NodeTree):
+    """Iterate over all images in a node tree, including nested node groups.
+
+    Args:
+        tree (bpy.types.NodeTree): The node tree to iterate over.
+
+    Yields:
+        bpy.types.Image: Images found in the node tree.
+
+    """
+    nodes = list(tree.nodes)
+    processed = set(nodes)
+    for node in nodes:
+        if hasattr(node, "image"):
+            yield node.image
+        # Traverse down into node groups
+        if hasattr(node, "node_tree"):
+            children = node.node_tree.nodes
+            nodes.extend(
+                node for node in children
+                if node not in processed
+            )
+            processed.update(children)
+
+
+@contextlib.contextmanager
+def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Material]):
+    """Make image paths in materials absolute during context.
+
+    Args:
+        material_datablocks (set[bpy.types.Material]): material datablocks to make 
+            image paths absolute for during context
+    """
+    original_image_paths = {}
+    for material in material_datablocks:
+        if not material.use_nodes:
+            continue
+        for image in iter_images_in_node_tree(material.node_tree):
+            filepath = image.filepath
+            original_image_paths[image] = filepath 
+            image.filepath = bpy.path.abspath(filepath)
+    try:
+        yield
+    finally:
+        for image, path in original_image_paths.items():
+            image.filepath = path
 
 @contextlib.contextmanager
 def maintained_selection():
