@@ -245,6 +245,47 @@ def existing_aov_options(
 
     return aov_list
 
+def ensure_unique_output_node_names(tree: "bpy.types.NodeTree"):
+    """Iterate through all CompositorNodeOutputFile nodes and ensure
+    unique names.
+
+    Args:
+        tree (bpy.types.NodeTree): The node tree to process.
+
+    Returns:
+        list[bpy.types.CompositorNodeOutputFile]: The list of output nodes with
+            unique names.
+
+    """
+    output_nodes = []
+
+    # Collect all CompositorNodeOutputFile nodes
+    for node in tree.nodes:
+        if node.bl_idname == "CompositorNodeOutputFile":
+            output_nodes.append(node)
+
+    # Track used names and rename if duplicates found
+    used_names = {}
+    for node in output_nodes:
+        base_name = node.name
+        # Remove any Blender auto-named suffix (e.g., .001, .002)
+        if "." in base_name:
+            parts = base_name.rsplit(".", 1)
+            if parts[-1].isdigit():
+                base_name = parts[0]
+        counter = 0
+        unique_name = base_name
+
+        # If name already used, append counter with underscore
+        while unique_name in used_names:
+            counter += 1
+            unique_name = f"{base_name}_{counter}"
+
+        node.name = unique_name
+        node.label = unique_name
+        used_names[unique_name] = node
+
+    return output_nodes
 
 def get_base_render_output_path(
     variant_name: str,
@@ -316,6 +357,11 @@ def create_render_node_tree(
     output.name = variant_name
     output.label = variant_name
 
+    # Ensure the output node has a unique name
+    ensure_unique_output_node_names(tree)
+    # Get the updated unique name
+    unique_name = output.name
+
     # Multi-exr
     multi_exr: bool = ext == "exr" and multilayer
     blender_version = lib.get_blender_version()
@@ -329,7 +375,7 @@ def create_render_node_tree(
 
     # Define the base path for the File Output node.
     base_path = get_base_render_output_path(
-        variant_name, project_settings=project_settings
+        unique_name, project_settings=project_settings
     )
     if blender_version >= (5, 0, 0):
         base_path_dir, base_path_filename = os.path.split(base_path)
