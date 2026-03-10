@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import re
 from typing import Optional
 import bpy
 
