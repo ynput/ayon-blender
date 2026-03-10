@@ -263,11 +263,6 @@ def ensure_unique_output_node_name(
         str: The unique name assigned to the given output node.
 
     """
-    # Remove any Blender auto-named suffix (e.g., .001, .002)
-    if "." in variant_name:
-        parts = variant_name.rsplit(".", 1)
-        if parts[-1].isdigit():
-            variant_name = parts[0]
 
     used_names = {node.name for node in tree.nodes}
     counter = 1
