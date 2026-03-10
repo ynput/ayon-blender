@@ -269,27 +269,11 @@ def ensure_unique_output_node_name(
         if parts[-1].isdigit():
             variant_name = parts[0]
 
-    used_names = {
-        re.sub(r'\.#+$', '', node.file_name)
-        for node in tree.nodes
-        if node != output_node
-        and node.bl_idname == "CompositorNodeOutputFile"
-    }
-    suffix_pattern = re.compile(f"^{re.escape(variant_name)}_(\\d+)$")
-    existing_suffixes = [
-        int(m.group(1)) for name in used_names
-        if (m := suffix_pattern.match(name))
-    ]
-
+    used_names = {node.name for node in tree.nodes}
     counter = 1
-    while counter in existing_suffixes:
+    while unique_name in used_names:
+        unique_name = f"{variant_name}_{counter}"
         counter += 1
-
-    # If variant_name itself is unused, prefer that
-    unique_name = (
-        variant_name if variant_name not in used_names
-        else f"{variant_name}_{counter}"
-    )
 
     output_node.name = unique_name
     output_node.label = unique_name
