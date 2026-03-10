@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 from typing import Optional
 import bpy
 
@@ -245,47 +246,54 @@ def existing_aov_options(
 
     return aov_list
 
-def ensure_unique_output_node_names(tree: "bpy.types.NodeTree"):
-    """Iterate through all CompositorNodeOutputFile nodes and ensure
-    unique names.
+def ensure_unique_output_node_name(
+    tree: "bpy.types.NodeTree",
+    output_node: "bpy.types.CompositorNodeOutputFile",
+    variant_name: str,
+) -> str:
+    """Ensure the given CompositorNodeOutputFile node has a unique name.
 
     Args:
         tree (bpy.types.NodeTree): The node tree to process.
+        output_node (bpy.types.CompositorNodeOutputFile): The output node to
+            rename if needed.
+        variant_name (str): The variant name to use in the output node name.
 
     Returns:
-        list[bpy.types.CompositorNodeOutputFile]: The list of output nodes with
-            unique names.
+        str: The unique name assigned to the given output node.
 
     """
-    output_nodes = []
+    # Remove any Blender auto-named suffix (e.g., .001, .002)
+    if "." in variant_name:
+        parts = variant_name.rsplit(".", 1)
+        if parts[-1].isdigit():
+            variant_name = parts[0]
 
-    # Collect all CompositorNodeOutputFile nodes
-    for node in tree.nodes:
-        if node.bl_idname == "CompositorNodeOutputFile":
-            output_nodes.append(node)
+    used_names = {
+        re.sub(r'\.#+$', '', node.file_name)
+        for node in tree.nodes
+        if node != output_node
+        and node.bl_idname == "CompositorNodeOutputFile"
+    }
+    suffix_pattern = re.compile(f"^{re.escape(variant_name)}_(\\d+)$")
+    existing_suffixes = [
+        int(m.group(1)) for name in used_names
+        if (m := suffix_pattern.match(name))
+    ]
 
-    # Track used names and rename if duplicates found
-    used_names = {}
-    for node in output_nodes:
-        base_name = node.name
-        # Remove any Blender auto-named suffix (e.g., .001, .002)
-        if "." in base_name:
-            parts = base_name.rsplit(".", 1)
-            if parts[-1].isdigit():
-                base_name = parts[0]
-        counter = 0
-        unique_name = base_name
+    counter = 1
+    while counter in existing_suffixes:
+        counter += 1
 
-        # If name already used, append counter with underscore
-        while unique_name in used_names:
-            counter += 1
-            unique_name = f"{base_name}_{counter}"
+    # If variant_name itself is unused, prefer that
+    unique_name = (
+        variant_name if variant_name not in used_names
+        else f"{variant_name}_{counter}"
+    )
 
-        node.name = unique_name
-        node.label = unique_name
-        used_names[unique_name] = node
-
-    return output_nodes
+    output_node.name = unique_name
+    output_node.label = unique_name
+    return unique_name
 
 def get_base_render_output_path(
     variant_name: str,
@@ -354,13 +362,9 @@ def create_render_node_tree(
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
         "CompositorNodeOutputFile"
     )
-    output.name = variant_name
-    output.label = variant_name
 
     # Ensure the output node has a unique name
-    ensure_unique_output_node_names(tree)
-    # Get the updated unique name
-    unique_name = output.name
+    unique_name = ensure_unique_output_node_name(tree, output, variant_name)
 
     # Multi-exr
     multi_exr: bool = ext == "exr" and multilayer
