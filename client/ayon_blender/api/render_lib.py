@@ -265,14 +265,17 @@ def ensure_unique_output_node_name(
     """
 
     used_names = {node.name for node in tree.nodes}
-    counter = 1
-    while unique_name in used_names:
-        unique_name = f"{variant_name}_{counter}"
+    counter = 0
+    while variant_name in used_names:
+        if counter == 0:
+            unqiue_name = variant_name
+        else:
+            unqiue_name = f"{variant_name}_{counter}"
         counter += 1
 
-    output_node.name = unique_name
-    output_node.label = unique_name
-    return unique_name
+    output_node.name = unqiue_name
+    output_node.label = unqiue_name
+    return unqiue_name
 
 def get_base_render_output_path(
     variant_name: str,
