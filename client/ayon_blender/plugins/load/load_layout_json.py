@@ -27,7 +27,8 @@ from ayon_blender.api.pipeline import add_to_ayon_container
 class JsonLayoutLoader(plugin.BlenderLoader):
     """Load layout published from Unreal."""
 
-    product_types = {"layout"}
+    product_base_types = {"layout"}
+    product_types = product_base_types
     representations = {"json"}
 
     label = "Load Layout"
@@ -51,11 +52,11 @@ class JsonLayoutLoader(plugin.BlenderLoader):
                 if anim_collection:
                     bpy.data.collections.remove(anim_collection)
 
-    def _get_loader(self, loaders, product_type):
+    def _get_loader(self, loaders, product_base_type):
         name = ""
-        if product_type == 'rig':
+        if product_base_type == 'rig':
             name = "BlendRigLoader"
-        elif product_type == 'model':
+        elif product_base_type == 'model':
             name = "BlendModelLoader"
 
         if name == "":
@@ -77,12 +78,14 @@ class JsonLayoutLoader(plugin.BlenderLoader):
 
         for element in data:
             reference = element.get('reference')
-            product_type = element.get("product_type")
-            if product_type is None:
-                product_type = element.get("family")
+            product_base_type = (
+                element.get("product_base_type")
+                or element.get("product_type")
+                or element.get("family")
+            )
 
             loaders = loaders_from_representation(all_loaders, reference)
-            loader = self._get_loader(loaders, product_type)
+            loader = self._get_loader(loaders, product_base_type)
 
             if not loader:
                 continue
@@ -98,7 +101,7 @@ class JsonLayoutLoader(plugin.BlenderLoader):
                 'parent': asset_group,
                 'transform': element.get('transform'),
                 'action': action,
-                'create_animation': True if product_type == 'rig' else False,
+                'create_animation': product_base_type == "rig",
                 'animation_asset': asset
             }
 

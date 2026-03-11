@@ -145,12 +145,14 @@ class BlendLoader(plugin.BlenderLoader):
         """
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
-        product_name = context["product"]["name"]
+        product_entity = context["product"]
+        product_name = product_entity["name"]
 
-        try:
-            product_type = context["product"]["productType"]
-        except ValueError:
-            product_type = "model"
+        product_base_type = product_entity.get("productBaseType")
+        if not product_base_type:
+            product_base_type = product_entity.get("productType")
+            if not product_base_type:
+                product_base_type = "model"
 
         representation = context["representation"]["id"]
 
@@ -164,10 +166,10 @@ class BlendLoader(plugin.BlenderLoader):
         container, members = self._process_data(libpath, group_name)
 
         if self.create_animation_instance_on_load:
-            if product_type == "layout":
+            if product_base_type == "layout":
                 self._post_process_layout(container, folder_name, representation)
 
-            if product_type == "rig":
+            if product_base_type == "rig":
                 create_animation_instance(container)
 
         add_to_ayon_container(container)
