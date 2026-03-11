@@ -6,6 +6,7 @@ from pprint import pformat
 from typing import Dict, Optional
 
 import bpy
+import ayon_api
 
 from ayon_core.pipeline import (
     discover_loader_plugins,
@@ -238,12 +239,33 @@ class JsonLayoutLoader(plugin.BlenderLoader):
 
         actions = {}
 
+        repre_ids = set()
         for obj in asset_group.children:
             obj_meta = obj.get(AYON_PROPERTY)
-            product_type = obj_meta.get("productType")
-            if product_type is None:
-                product_type = obj_meta.get("family")
-            if product_type == "rig":
+            repre_id = obj_meta.get("representation")
+            if repre_id:
+                repre_ids.add(repre_id)
+
+        project_name = context["project"]["name"]
+        hierarchy_by_repre_id = ayon_api.get_representations_hierarchy(
+            project_name,
+            repre_ids,
+            project_fields=[],
+            folder_fields=[],
+            task_fields=[],
+            product_fields={"productBaseType"},
+            version_fields=[],
+            representation_fields={"id"},
+        )
+
+        for obj in asset_group.children:
+            obj_meta = obj.get(AYON_PROPERTY)
+            repre_id = obj_meta.get("representation")
+            hierarchy = hierarchy_by_repre_id.get(repre_id)
+            if not hierarchy:
+                continue
+            product_base_type = hierarchy.product["productBaseType"]
+            if product_base_type == "rig":
                 rig = None
                 for child in obj.children:
                     if child.type == 'ARMATURE':
