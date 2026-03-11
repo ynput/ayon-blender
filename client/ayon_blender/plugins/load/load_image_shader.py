@@ -14,7 +14,8 @@ from ayon_core.pipeline import AYON_CONTAINER_ID
 class LoadImageShaderEditor(plugin.BlenderLoader):
     """Load a product to the Shader Editor for selected mesh in Blender."""
 
-    product_types = {"render", "image", "plate", "texture"}
+    product_base_types = {"render", "image", "plate", "texture"}
+    product_types = product_base_types
     representations = {"*"}
 
     label = "Load to Shader Editor"

@@ -23,7 +23,8 @@ from ayon_blender.api.pipeline import (
 class BlendSceneLoader(plugin.BlenderLoader):
     """Load assets from a .blend file."""
 
-    product_types = {"blendScene"}
+    product_base_types = {"blendScene"}
+    product_types = product_base_types
     representations = {"blend"}
 
     label = "Append Blend"

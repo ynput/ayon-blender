@@ -15,7 +15,8 @@ from ayon_blender.api.pipeline import add_to_ayon_container
 class AudioLoader(plugin.BlenderLoader):
     """Load audio in Blender."""
 
-    product_types = {"audio"}
+    product_base_types = {"audio"}
+    product_types = product_base_types
     representations = {"wav"}
 
     label = "Load Audio"

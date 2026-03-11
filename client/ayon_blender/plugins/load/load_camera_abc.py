@@ -22,7 +22,8 @@ class AbcCameraLoader(plugin.BlenderLoader):
     Stores the imported asset in an empty named after the asset.
     """
 
-    product_types = {"camera"}
+    product_base_types = {"camera"}
+    product_types = product_base_types
     representations = {"*"}
     extensions = {"abc"}
 

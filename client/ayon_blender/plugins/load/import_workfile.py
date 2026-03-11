@@ -44,7 +44,8 @@ class AppendBlendLoader(plugin.BlenderLoader):
     """
 
     representations = {"blend"}
-    product_types = {"workfile"}
+    product_base_types = {"workfile"}
+    product_types = product_base_types
 
     label = "Append Workfile"
     order = 9
