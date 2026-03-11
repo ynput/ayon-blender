@@ -248,7 +248,7 @@ def existing_aov_options(
 def ensure_unique_output_node_name(
     tree: "bpy.types.NodeTree",
     output_node: "bpy.types.CompositorNodeOutputFile",
-    variant_name: str,
+    name: str,
 ) -> str:
     """Ensure the given CompositorNodeOutputFile node has a unique name.
 
@@ -256,17 +256,16 @@ def ensure_unique_output_node_name(
         tree (bpy.types.NodeTree): The node tree to process.
         output_node (bpy.types.CompositorNodeOutputFile): The output node to
             rename if needed.
-        variant_name (str): The variant name to use in the output node name.
+        name (str): The variant name to use in the output node name.
 
     Returns:
         str: The unique name assigned to the given output node.
 
     """
-    base_name = variant_name
-    used_names = {node.name for node in tree.nodes}
+    base_name = name
     counter = 1
-    while base_name in used_names:
-        base_name = f"{variant_name}_{counter}"
+    while tree.nodes.get(base_name):
+        base_name = f"{name}_{counter}"
         counter += 1
 
     output_node.name = base_name
