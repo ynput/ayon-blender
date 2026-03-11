@@ -54,16 +54,6 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
                 "task": task_name,
                 "variant": self.default_variant,
             }
-            data.update(
-                self.get_dynamic_data(
-                    project_name,
-                    folder_entity,
-                    task_entity,
-                    task_name,
-                    host_name,
-                    workfile_instance,
-                )
-            )
             self.log.info("Auto-creating workfile instance...")
             workfile_instance = CreatedInstance(
                 self.product_type, product_name, data, self
