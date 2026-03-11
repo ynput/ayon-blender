@@ -220,7 +220,10 @@ class ExtractLayout(
                 )
                 if value
             }
+            # TODO stop filling 'product_type'.
+            #   - was added for backwards compatibility
             json_element["product_type"] = product_base_type
+            json_element["product_base_type"] = product_base_type
             json_element["instance_name"] = asset.name
             json_element["asset_name"] = metadata["asset_name"]
             json_element["file_path"] = metadata["libpath"]
