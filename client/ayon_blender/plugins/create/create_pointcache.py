@@ -9,8 +9,8 @@ class CreatePointcache(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.pointcache"
     label = "Point Cache"
     description = __doc__
-    product_type = "pointcache"
     product_base_type = "pointcache"
+    product_type = product_base_type
     icon = "cubes"
 
     def create(

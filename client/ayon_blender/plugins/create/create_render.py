@@ -40,8 +40,8 @@ class CreateRender(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.render"
     label = "Render"
     description = __doc__
-    product_type = "render"
     product_base_type = "render"
+    product_type = product_base_type
     icon = "eye"
 
     render_target = "farm"

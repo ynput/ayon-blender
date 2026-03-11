@@ -11,8 +11,8 @@ class CreateAction(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.action"
     label = "Action"
     description = __doc__
-    product_type = "action"
     product_base_type = "action"
+    product_type = product_base_type
     icon = "male"
 
     def create(
