@@ -321,7 +321,6 @@ class CacheModelLoader(plugin.BlenderLoader):
         container = get_ayon_container()
         self._link_objects(objects, asset_group, container)
 
-        product_type = context["product"]["productType"]
         asset_group[AYON_PROPERTY] = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
@@ -333,8 +332,6 @@ class CacheModelLoader(plugin.BlenderLoader):
             # Blender-specific metadata
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": product_type,
             "objectName": group_name,
             "options": options or {}
         }

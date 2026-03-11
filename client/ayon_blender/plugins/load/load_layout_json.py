@@ -176,8 +176,6 @@ class JsonLayoutLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "project_name": context["project"]["name"],
             "objectName": group_name,
         }

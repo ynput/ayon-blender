@@ -120,8 +120,6 @@ class FbxCameraLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "project_name": context["project"]["name"],
         }

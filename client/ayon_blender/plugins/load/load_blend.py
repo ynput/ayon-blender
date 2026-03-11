@@ -181,8 +181,6 @@ class BlendLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "members": members,
             "project_name": context["project"]["name"],
@@ -253,7 +251,6 @@ class BlendLoader(plugin.BlenderLoader):
         new_data = {
             "libpath": libpath,
             "representation": repre_entity["id"],
-            "parent": repre_entity["versionId"],
             "members": members,
             "project_name": context["project"]["name"],
         }

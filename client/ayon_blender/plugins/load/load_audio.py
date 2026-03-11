@@ -77,8 +77,6 @@ class AudioLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "audio": audio,
             "project_name": context["project"]["name"],
@@ -169,7 +167,6 @@ class AudioLoader(plugin.BlenderLoader):
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
-        metadata["parent"] = repre_entity["versionId"]
         metadata["audio"] = new_audio
         metadata["project_name"] = context["project"]["name"]
 
