@@ -181,7 +181,6 @@ class BlenderExtractor(Extractor):
 
 class BlenderCreator(Creator):
     """Base class for Blender Creator plug-ins."""
-    defaults = ['Main']
 
     settings_category = "blender"
     create_as_asset_group = False
