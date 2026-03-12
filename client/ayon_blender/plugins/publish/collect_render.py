@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
+import re
 from typing import TypedDict, Optional
-
 import pyblish.api
 import clique
 
