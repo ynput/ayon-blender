@@ -8,6 +8,8 @@ import clique
 
 import bpy
 
+from ayon_core.lib import EnumDef
+from ayon_core.pipeline.publish import AYONPyblishPluginMixin
 from ayon_blender.api import colorspace, plugin, lib, render_lib
 
 
@@ -190,7 +192,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
     def get_expected_outputs(
         self,
         node: "bpy.types.CompositorNodeOutputFile",
-        instance: pyblish.api.Instance
+        instance: pyblish.api.Instance,
     ) -> dict[str, str]:
         """Return the expected output files from a compositor node output file.
 
@@ -206,9 +208,10 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             dict[str]: The full output image or sequence paths per identifier.
 
         """
+        viewlayers = instance.data.get("viewlayers", [])
         # Blender 5
         if lib.get_blender_version() >= (5, 0, 0):
-            return self._get_expected_outputs_blender_5(node)
+            return self._get_expected_outputs_blender_5(node, viewlayers)
 
         # Blender 4
         output_paths = self._get_expected_outputs_blender_4(node)
@@ -225,12 +228,25 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                     output_path,
                     instance
                 )
-            outputs_per_aov[aov_identifier] = output_path
+                if viewlayers and not self._aov_matches_viewlayers(
+                    aov_identifier,
+                    viewlayers
+                ):
+                    self.log.debug(
+                        "Skipping AOV '%s' because it does not match the "
+                        "selected view layers %s",
+                        aov_identifier,
+                        viewlayers,
+                    )
+                    continue
+
+                outputs_per_aov[aov_identifier] = output_path
         return outputs_per_aov
 
     def _get_expected_outputs_blender_5(
         self,
-        node: "bpy.types.CompositorNodeOutputFile"
+        node: "bpy.types.CompositorNodeOutputFile",
+        viewlayers: list[str]
     ) -> dict[str, str]:
         """Return output filepaths for CompositorNodeOutputFile in Blender 5"""
         directory: str = node.directory
@@ -260,6 +276,12 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
                 # Use the output item name as AOV identifier but remove any
                 # special characters like `#`, `_`, `.` and spaces.
+                if viewlayers and not lib.aov_identifier_by_viewlayers(
+                    node,
+                    output_item.name,
+                    viewlayers
+                ):
+                    continue
                 aov_identifier: str = re.sub("[#_. ]", "", output_item.name)
                 outputs[aov_identifier] = file_path
         return outputs
@@ -407,3 +429,76 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
         return aov_identifier
+
+    @staticmethod
+    def _normalize_viewlayer_name(name: str) -> str:
+        normalized = re.sub(r"[. ]+", "_", name)
+        normalized = re.sub(r"_+", "_", normalized)
+        return normalized.strip("_")
+
+    def _get_matching_viewlayer(self, aov_identifier: str) -> Optional[str]:
+        normalized_identifier = self._normalize_viewlayer_name(aov_identifier)
+        candidates = sorted(
+            (
+                self._normalize_viewlayer_name(viewlayer.name),
+                viewlayer.name,
+            )
+            for viewlayer in bpy.context.scene.view_layers
+        )
+        for normalized_viewlayer, viewlayer_name in sorted(
+            candidates,
+            key=lambda item: len(item[0]),
+            reverse=True,
+        ):
+            if normalized_identifier == normalized_viewlayer:
+                return viewlayer_name
+            if normalized_identifier.startswith(f"{normalized_viewlayer}_"):
+                return viewlayer_name
+        return None
+
+    def _aov_matches_viewlayers(
+        self,
+        aov_identifier: str,
+        viewlayers: list[str],
+    ) -> bool:
+        matched_viewlayer = self._get_matching_viewlayer(aov_identifier)
+        self.log.debug(
+            "Resolved AOV '%s' to view layer '%s' against selection %s",
+            aov_identifier,
+            matched_viewlayer,
+            viewlayers,
+        )
+        return matched_viewlayer in set(viewlayers)
+
+
+class CollectViewlayerForRender(plugin.BlenderInstancePlugin, AYONPyblishPluginMixin):
+    """Gather view layers for render instance."""
+
+    order = pyblish.api.CollectorOrder + 0.005
+    hosts = ["blender"]
+    families = ["render"]
+    label = "Collect Viewlayers for Render"
+
+    def process(self, instance: pyblish.api.Instance):
+        attr_data = self.get_attr_values_from_data(instance.data)
+        view_layers = attr_data.get("viewlayers", [])
+        instance.data["viewlayers"] = view_layers
+
+    @classmethod
+    def get_attr_defs_for_instance(
+        cls, create_context: "CreateContext", instance: "CreatedInstance"):  # noqa: F821
+        comp_node = instance.transient_data["instance_node"]
+        viewlayer_nodes = lib.get_viewlayer_nodes(comp_node)
+        if not viewlayer_nodes:
+            cls.log.warning("No view layer nodes found - returning empty items")
+            return []
+        items = list(viewlayer_nodes)
+        return [
+            EnumDef(
+                "viewlayers",
+                label="View Layers to be Rendered",
+                multiselection=True,
+                items=items,
+                tooltip="Selected view layers to include in the render",
+            )
+        ]

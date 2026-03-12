@@ -1,4 +1,5 @@
 import os
+import re
 import traceback
 import importlib
 import contextlib
@@ -349,6 +350,49 @@ def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
 
     return selection
 
+
+def get_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
+    """Get view layer nodes connected to a CompositorNodeOutputFile node.
+
+    Args:
+        node (bpy.types.CompositorNodeOutputFile): The output file node to check.
+
+    Returns:
+        set[str]: A set of view layer node names connected to the output node.
+    """
+    viewlayers = set()
+    if not hasattr(node, "inputs"):
+        return viewlayers
+    for input_node in node.inputs:
+        for link in input_node.links:
+            if link.from_node.type == "R_LAYERS":
+                if hasattr(link.from_node, "layer"):
+                    viewlayers.add(link.from_node.layer)
+    return viewlayers
+
+def aov_identifier_by_viewlayers(
+    node:"bpy.types.CompositorNodeOutputFile",
+    name: str,
+    viewlayers: list[str]) -> str:
+    """Filter AOV identifiers based on view layers.
+
+    Args:
+        node (bpy.types.CompositorNodeOutputFile): The output file node to check.
+        aov_identifier (str): The AOV identifier to filter.
+        viewlayers (list[str]): A list of view layer names to filter by.
+
+    Returns:
+        str: The AOV identifier if it is associated with the given view layers, otherwise an empty string.
+    """
+    for input_node in node.inputs:
+        for link in input_node.links:
+            if link.from_node.type == "R_LAYERS":
+                if link.from_node.layer in viewlayers:
+                    if input_node.name == name:
+                        return name
+    return ""
+
+
 def iter_images_in_node_tree(tree: bpy.types.NodeTree):
     """Iterate over all images in a node tree, including nested node groups.
 
@@ -379,7 +423,7 @@ def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Materi
     """Make image paths in materials absolute during context.
 
     Args:
-        material_datablocks (set[bpy.types.Material]): material datablocks to make 
+        material_datablocks (set[bpy.types.Material]): material datablocks to make
             image paths absolute for during context
     """
     original_image_paths = {}
@@ -388,7 +432,7 @@ def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Materi
             continue
         for image in iter_images_in_node_tree(material.node_tree):
             filepath = image.filepath
-            original_image_paths[image] = filepath 
+            original_image_paths[image] = filepath
             image.filepath = bpy.path.abspath(filepath)
     try:
         yield
