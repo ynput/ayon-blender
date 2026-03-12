@@ -23,7 +23,8 @@ class BlendLoader(plugin.BlenderLoader):
     """Load assets from a .blend file."""
 
     product_types = {"model", "rig", "layout", "camera", "animation"}
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Append Blend"
     icon = "code-fork"
