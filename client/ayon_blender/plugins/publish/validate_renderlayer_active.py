@@ -1,106 +1,106 @@
-import bpy
+# import bpy
 
-import inspect
-import pyblish.api
+# import inspect
+# import pyblish.api
 
-from ayon_core.pipeline.publish import (
-    RepairAction,
-    PublishValidationError
-)
+# from ayon_core.pipeline.publish import (
+#     RepairAction,
+#     PublishValidationError
+# )
 
-from ayon_blender.api import plugin
+# from ayon_blender.api import plugin
 
 
-class ValidateRenderlayerActive(plugin.BlenderInstancePlugin):
-    """Validate Renderlayer active or inactive when renderlayer attribute
-    definition has been filled.
-    - If view layer is in the viewlayers attribute, it should be active.
-    - If view layer is not in the viewlayers attribute, it should be inactive.
+# class ValidateRenderlayerActive(plugin.BlenderInstancePlugin):
+#     """Validate Renderlayer active or inactive when renderlayer attribute
+#     definition has been filled.
+#     - If view layer is in the viewlayers attribute, it should be active.
+#     - If view layer is not in the viewlayers attribute, it should be inactive.
 
-    """
+#     """
 
-    order = pyblish.api.ValidatorOrder
-    hosts = ["blender"]
-    families = ["render"]
-    label = "Validate Renderlayer Active"
-    actions = [RepairAction]
+#     order = pyblish.api.ValidatorOrder
+#     hosts = ["blender"]
+#     families = ["render"]
+#     label = "Validate Renderlayer Active"
+#     actions = [RepairAction]
 
-    def process(self, instance: pyblish.api.Instance):
-        viewlayers = instance.data.get("viewlayers")
-        if not viewlayers:
-            viewlayers = {
-                vl.name for vl in bpy.context.scene.view_layers
-            }
-        invalid_active = self.get_invalid_active_viewlayers(viewlayers)
-        invalid_inactive = self.get_invalid_inactive_viewlayers(viewlayers)
-        if invalid_active or invalid_inactive:
-            raise PublishValidationError(
-                title="Renderlayer active state does not match the viewlayers attribute",
-                message=(
-                    "Some view layers are active but should be inactive, or vice versa. "
-                    "Use the Repair action to set the correct active state for the "
-                    "view layers."
-                ),
-                description=self.get_description()
-            )
+#     def process(self, instance: pyblish.api.Instance):
+#         viewlayers = instance.data.get("viewlayers")
+#         if not viewlayers:
+#             viewlayers = {
+#                 vl.name for vl in bpy.context.scene.view_layers
+#             }
+#         invalid_active = self.get_invalid_active_viewlayers(viewlayers)
+#         invalid_inactive = self.get_invalid_inactive_viewlayers(viewlayers)
+#         if invalid_active or invalid_inactive:
+#             raise PublishValidationError(
+#                 title="Renderlayer active state does not match the viewlayers attribute",
+#                 message=(
+#                     "Some view layers are active but should be inactive, or vice versa. "
+#                     "Use the Repair action to set the correct active state for the "
+#                     "view layers."
+#                 ),
+#                 description=self.get_description()
+#             )
 
-    def get_invalid_active_viewlayers(self, viewlayers: list[str]):
-        """Get view layers that are inactive but should be active.
+#     def get_invalid_active_viewlayers(self, viewlayers: list[str]):
+#         """Get view layers that are inactive but should be active.
 
-        Args:
-            viewlayers (list[str]): viewlayers from the instance,
-            which defines the expected active view layers.
+#         Args:
+#             viewlayers (list[str]): viewlayers from the instance,
+#             which defines the expected active view layers.
 
-        Returns:
-            list[bpy.types.ViewLayer]: list of view layers that are inactive
-            but should be active.
-        """
-        invalid = [
-            vl for vl in bpy.context.scene.view_layers
-            if vl.name in viewlayers and not vl.use
-        ]
-        for vl in invalid:
-            self.log.debug(f"View layer {vl.name} is inactive but should be active.")
-        return invalid
+#         Returns:
+#             list[bpy.types.ViewLayer]: list of view layers that are inactive
+#             but should be active.
+#         """
+#         invalid = [
+#             vl for vl in bpy.context.scene.view_layers
+#             if vl.name in viewlayers and not vl.use
+#         ]
+#         for vl in invalid:
+#             self.log.debug(f"View layer {vl.name} is inactive but should be active.")
+#         return invalid
 
-    def get_invalid_inactive_viewlayers(self, viewlayers: list[str]):
-        """Get view layers that are active but should be inactive.
+#     def get_invalid_inactive_viewlayers(self, viewlayers: list[str]):
+#         """Get view layers that are active but should be inactive.
 
-        Args:
-            viewlayers (list[str]): viewlayers from the instance,
-            which defines the expected active view layers.
+#         Args:
+#             viewlayers (list[str]): viewlayers from the instance,
+#             which defines the expected active view layers.
 
-        Returns:
-            list[bpy.types.ViewLayer]: list of view layers that are active
-            but should be inactive.
-        """
-        invalid = [
-            vl for vl in bpy.context.scene.view_layers
-            if vl.name not in viewlayers and vl.use
-        ]
-        for vl in invalid:
-            self.log.debug(f"View layer {vl.name} is active but should be inactive.")
-        return invalid
+#         Returns:
+#             list[bpy.types.ViewLayer]: list of view layers that are active
+#             but should be inactive.
+#         """
+#         invalid = [
+#             vl for vl in bpy.context.scene.view_layers
+#             if vl.name not in viewlayers and vl.use
+#         ]
+#         for vl in invalid:
+#             self.log.debug(f"View layer {vl.name} is active but should be inactive.")
+#         return invalid
 
-    @classmethod
-    def repair(cls, instance: pyblish.api.Instance):
-        viewlayers = instance.data.get("viewlayers")
-        if not viewlayers:
-            viewlayers = {
-                vl.name for vl in bpy.context.scene.view_layers
-            }
-        for vl in bpy.context.scene.view_layers:
-            should_be_active = vl.name in viewlayers
-            if vl.use != should_be_active:
-                vl.use = should_be_active
-                state = "active" if should_be_active else "inactive"
-                cls.log.info(f"Set view layer {vl.name} to {state}.")
+#     @classmethod
+#     def repair(cls, instance: pyblish.api.Instance):
+#         viewlayers = instance.data.get("viewlayers")
+#         if not viewlayers:
+#             viewlayers = {
+#                 vl.name for vl in bpy.context.scene.view_layers
+#             }
+#         for vl in bpy.context.scene.view_layers:
+#             should_be_active = vl.name in viewlayers
+#             if vl.use != should_be_active:
+#                 vl.use = should_be_active
+#                 state = "active" if should_be_active else "inactive"
+#                 cls.log.info(f"Set view layer {vl.name} to {state}.")
 
-    @staticmethod
-    def get_description():
-        return inspect.cleandoc("""
-        "### Renderlayer Active State Mismatch
-        The active state of the view layers does not match the expected state based on the
-        viewlayers attribute. This can lead to incorrect rendering results.
-        Use the Repair action to set the correct active state for the view layers.
-        """)
+#     @staticmethod
+#     def get_description():
+#         return inspect.cleandoc("""
+#         "### Renderlayer Active State Mismatch
+#         The active state of the view layers does not match the expected state based on the
+#         viewlayers attribute. This can lead to incorrect rendering results.
+#         Use the Repair action to set the correct active state for the view layers.
+#         """)
