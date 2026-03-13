@@ -96,7 +96,12 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         )
 
         expected_files: dict[str, list[str]] = {}
-        outputs = self.get_expected_outputs(comp_output_node, instance)
+        viewlayers = lib.get_viewlayer_nodes(comp_output_node)
+        outputs = self.get_expected_outputs(
+            comp_output_node,
+            instance,
+            viewlayers
+        )
         for aov_identifier, output_path in outputs.items():
             aov_label = aov_identifier or "<beauty>"
             self.log.debug(f"AOV '{aov_label}': {output_path}")
@@ -136,6 +141,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "farm": not local_render,
             "expectedFiles": [expected_files],
             "renderProducts": render_products,
+            "viewlayers": viewlayers,
         })
 
     def get_colorspace_data(
@@ -192,6 +198,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         self,
         node: "bpy.types.CompositorNodeOutputFile",
         instance: pyblish.api.Instance,
+        viewlayers: list[str]
     ) -> dict[str, str]:
         """Return the expected output files from a compositor node output file.
 
@@ -207,7 +214,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             dict[str]: The full output image or sequence paths per identifier.
 
         """
-        viewlayers = instance.data.get("viewlayers", [])
         # Blender 5
         if lib.get_blender_version() >= (5, 0, 0):
             return self._get_expected_outputs_blender_5(node, viewlayers)
@@ -468,36 +474,3 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             viewlayers,
         )
         return matched_viewlayer in set(viewlayers)
-
-
-class CollectViewlayerForRender(plugin.BlenderInstancePlugin, AYONPyblishPluginMixin):
-    """Gather view layers for render instance."""
-
-    order = pyblish.api.CollectorOrder + 0.005
-    hosts = ["blender"]
-    families = ["render"]
-    label = "Collect Viewlayers for Render"
-
-    def process(self, instance: pyblish.api.Instance):
-        attr_data = self.get_attr_values_from_data(instance.data)
-        view_layers = attr_data.get("viewlayers", [])
-        instance.data["viewlayers"] = view_layers
-
-    @classmethod
-    def get_attr_defs_for_instance(
-        cls, create_context: "CreateContext", instance: "CreatedInstance"):  # noqa: F821
-        comp_node = instance.transient_data["instance_node"]
-        viewlayer_nodes = lib.get_viewlayer_nodes(comp_node)
-        if not viewlayer_nodes:
-            cls.log.warning("No view layer nodes found - returning empty items")
-            return []
-        items = list(viewlayer_nodes)
-        return [
-            EnumDef(
-                "viewlayers",
-                label="View Layers to be Rendered",
-                multiselection=True,
-                items=items,
-                tooltip="Selected view layers to include in the render",
-            )
-        ]
