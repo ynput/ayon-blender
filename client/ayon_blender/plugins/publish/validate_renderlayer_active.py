@@ -31,12 +31,28 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         for instance in context:
             viewlayers = instance.data.get("viewlayers")
             if not viewlayers:
-                continue
+                raise PublishValidationError(
+                    title="No viewlayer node found for instance",
+                    message=(
+                        f"Instance {instance.name} is missing the viewlayer node. "
+                        "Please define at least one viewlayernode on the instance to "
+                        "validate the active state."
+                    ),
+                )
             all_viewlayers.update(viewlayers)
         return all_viewlayers
 
     def process(self, context: pyblish.api.Context):
         all_viewlayers = self._get_expected_viewlayers(context)
+        if not all_viewlayers:
+            raise PublishValidationError(
+                title="No view layers defined in any instance",
+                message=(
+                    "No view layers are defined in any instance's viewlayers attribute. "
+                    "Please define view layers in the instance attributes to validate the active state."
+                ),
+                description=self.get_description()
+            )
         # TODO: find all the invalid view layers by instance node
         invalid_active = self.get_invalid_active_viewlayers(all_viewlayers)
         invalid_inactive = self.get_invalid_inactive_viewlayers(all_viewlayers)
