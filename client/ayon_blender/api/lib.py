@@ -362,41 +362,115 @@ def get_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
     viewlayers = set()
     if not hasattr(node, "inputs"):
         return viewlayers
-    for input_node in node.inputs:
-        for link in input_node.links:
-            vl_node = link.from_node
-            if vl_node.type == "R_LAYERS":
-                view_layer_name = vl_node.layer
-                for view_layer in bpy.context.scene.view_layers:
-                    if view_layer.name == view_layer_name:
-                        if not vl_node.mute:
-                            viewlayers.add(view_layer_name)
+    for vl_node in iter_viewlayer_nodes(node):
+        print(f"compute_node: {node}")
+        print(f"Found view layer node: {vl_node.name} with layer: {vl_node.layer}")
+        for view_layer in bpy.context.scene.view_layers:
+            if view_layer.name == vl_node.layer and not vl_node.mute:
+                    viewlayers.add(vl_node.layer)
     return viewlayers
 
 
 def aov_identifier_by_viewlayers(
-    node:"bpy.types.CompositorNodeOutputFile",
-    name: str,
-    viewlayers: list[str]) -> str:
+    node: "bpy.types.CompositorNodeOutputFile",
+    socket_name: str,
+    viewlayers: list[str]
+) -> str:
     """Filter AOV identifiers based on view layers.
 
+    Traces back through the node graph from a specific socket on a File Output
+    node to find all connected Render Layers nodes. If any of those Render Layers
+    nodes match the specified view layers, returns the socket name.
+
     Args:
-        node (bpy.types.CompositorNodeOutputFile): The output file node to check.
-        aov_identifier (str): The AOV identifier to filter.
-        viewlayers (list[str]): A list of view layer names to filter by.
+        node: The output file node to check.
+        socket_name: The name of the socket on the File Output node.
+        viewlayers: A list of view layer names to filter by.
 
     Returns:
-        str: The AOV identifier if it is associated with the given view layers, otherwise an empty string.
+        str: The socket name if it is associated with any of the given view layers,
+             otherwise an empty string.
     """
     if not viewlayers:
-        return name
+        return socket_name
 
-    for input_node in node.inputs:
-        for link in input_node.links:
-            if link.from_node.type == "R_LAYERS":
-                if link.from_node.layer in viewlayers:
-                    if input_node.name == name:
-                        return name
+    # Find the specific socket on the File Output node
+    target_socket = None
+    for input_socket in node.inputs:
+        if input_socket.name == socket_name:
+            target_socket = input_socket
+            break
+
+    if not target_socket or not target_socket.is_linked:
+        return ""
+
+    # Get all Render Layers nodes connected to this specific socket
+    # by traversing through the node graph
+    processed = set()
+    stack = [link.from_node for link in target_socket.links]
+
+    while stack:
+        current_node = stack.pop()
+
+        if current_node in processed:
+            continue
+
+        processed.add(current_node)
+
+        if current_node.type == "R_LAYERS":
+            if current_node.layer in viewlayers:
+                return socket_name
+        else:
+            # Add input nodes to stack for further traversal
+            for input_socket in current_node.inputs:
+                if input_socket.is_linked:
+                    stack.extend(link.from_node for link in input_socket.links)
+
+    return ""
+
+def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):
+    """
+    Iterate through all Render Layers nodes connected to a File Output node.
+
+    Traverses through all input connections, following through intermediate
+    nodes (like Mix, Composite, etc.) to find all connected Render Layers nodes.
+    Uses an iterative stack-based approach with a set to track processed nodes.
+
+    Args:
+        node: A CompositorNodeOutputFile node to find connected Render Layers
+              nodes from
+
+    Yields:
+        bpy.types.CompositorNodeRLayers: Each connected Render Layers node
+    """
+
+    processed = set()
+    # Stack contains tuples of (node, socket_index) or just nodes to process
+    stack = []
+
+    # Initialize stack with all connected input sockets of the File Output node
+    for input_socket in node.inputs:
+        if input_socket.is_linked:
+            for link in input_socket.links:
+                stack.append(link.from_node)
+
+    while stack:
+        current_node = stack.pop()
+
+        # Skip if already processed
+        if current_node in processed:
+            continue
+
+        processed.add(current_node)
+
+        if current_node.type == "R_LAYERS":
+            yield current_node
+        else:
+            # Add all input nodes to the stack for further traversal
+            for input_socket in current_node.inputs:
+                if input_socket.is_linked:
+                    for link in input_socket.links:
+                        stack.append(link.from_node)
 
 
 def iter_images_in_node_tree(tree: bpy.types.NodeTree):
