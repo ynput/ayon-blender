@@ -364,10 +364,15 @@ def get_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
         return viewlayers
     for input_node in node.inputs:
         for link in input_node.links:
-            if link.from_node.type == "R_LAYERS":
-                if hasattr(link.from_node, "layer"):
-                    viewlayers.add(link.from_node.layer)
+            vl_node = link.from_node
+            if vl_node.type == "R_LAYERS":
+                view_layer_name = vl_node.layer
+                for view_layer in bpy.context.scene.view_layers:
+                    if view_layer.name == view_layer_name:
+                        if not vl_node.mute:
+                            viewlayers.add(view_layer_name)
     return viewlayers
+
 
 def aov_identifier_by_viewlayers(
     node:"bpy.types.CompositorNodeOutputFile",
@@ -383,13 +388,15 @@ def aov_identifier_by_viewlayers(
     Returns:
         str: The AOV identifier if it is associated with the given view layers, otherwise an empty string.
     """
+    if not viewlayers:
+        return name
+
     for input_node in node.inputs:
         for link in input_node.links:
             if link.from_node.type == "R_LAYERS":
                 if link.from_node.layer in viewlayers:
                     if input_node.name == name:
                         return name
-    return ""
 
 
 def iter_images_in_node_tree(tree: bpy.types.NodeTree):
