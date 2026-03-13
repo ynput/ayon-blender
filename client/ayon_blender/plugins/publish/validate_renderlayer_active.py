@@ -31,7 +31,14 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         for instance in context:
             viewlayers = instance.data.get("viewlayers")
             if not viewlayers:
-                continue
+                raise PublishValidationError(
+                    title="Missing viewlayers node",
+                    message=(
+                        f"Instance '{instance.name}' is missing the 'viewlayers' node. "
+                        "This attribute is required to validate the active state of "
+                        "the view layers."
+                    ),
+                )
             all_viewlayers.update(viewlayers)
         return all_viewlayers
 
@@ -41,19 +48,17 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
             raise PublishValidationError(
                 title="No view layers defined in any instance",
                 message=(
-                    "No view layers are defined in any instance's viewlayers attribute. "
-                    "Please define view layers in the instance attributes to validate the active state."
+                    "No view layers are defined in any instance's viewlayers node. "
+                    "Please define view layers in the instance nodes to validate the active state."
                 ),
                 description=self.get_description()
             )
-        # TODO: find all the invalid view layers by instance node
-        invalid_active = self.get_invalid_active_viewlayers(all_viewlayers)
-        invalid_inactive = self.get_invalid_inactive_viewlayers(all_viewlayers)
-        if invalid_active or invalid_inactive:
+        invalid_inactive = self.get_invalid_active_viewlayers(all_viewlayers)
+        if  invalid_inactive:
             raise PublishValidationError(
-                title="Renderlayer active state does not match the viewlayers attribute",
+                title="No viewlayer node found for instance",
                 message=(
-                    "Some view layers are active but should be inactive, or vice versa. "
+                    "No viewlayer node found for instance. "
                     "Use the Repair action to set the correct active state for the "
                     "view layers."
                 ),
@@ -74,43 +79,27 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         invalid = [
             vl for vl in bpy.context.scene.view_layers
             if vl.name in viewlayers and not vl.use
+            and vl.mute
         ]
         for vl in invalid:
             self.log.debug(f"View layer {vl.name} is inactive but should be active.")
         return invalid
 
-    def get_invalid_inactive_viewlayers(self, viewlayers: list[str]):
-        """Get view layers that are active but should be inactive.
-
-        Args:
-            viewlayers (list[str]): viewlayers from the instance,
-            which defines the expected active view layers.
-
-        Returns:
-            list[bpy.types.ViewLayer]: list of view layers that are active
-            but should be inactive.
-        """
-        invalid = [
-            vl for vl in bpy.context.scene.view_layers
-            if vl.name not in viewlayers and vl.use
-        ]
-        for vl in invalid:
-            self.log.debug(f"View layer {vl.name} is active but should be inactive.")
-        return invalid
-
-
     @classmethod
     def repair(cls, context: pyblish.api.Context):
+        active = True
         all_viewlayers = cls._get_expected_viewlayers(context)
         for vl in bpy.context.scene.view_layers:
-            vl.use = bool(vl.name in all_viewlayers)
+            if vl.name in all_viewlayers:
+                vl.use = active
+                vl.mute = not active
             cls.log.info(f"Set view layer {vl.name} to {vl.use}.")
 
     @staticmethod
     def get_description():
         return inspect.cleandoc("""
-        "### Renderlayer Active State Mismatch
+        ### No viewlayer node found for instance
         The active state of the view layers does not match the expected state based on the
-        viewlayers attribute. This can lead to incorrect rendering results.
+        viewlayers node. This can lead to incorrect rendering results.
         Use the Repair action to set the correct active state for the view layers.
         """)
