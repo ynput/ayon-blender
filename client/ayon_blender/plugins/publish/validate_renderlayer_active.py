@@ -30,7 +30,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         for instance in context:
             viewlayers = instance.data.get("viewlayers")
             if not viewlayers:
-                all_viewlayers = {
+                viewlayers = {
                     vl.name for vl in bpy.context.scene.view_layers
                 }
             all_viewlayers.update(viewlayers)
@@ -75,7 +75,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         for instance in context:
             viewlayers = instance.data.get("viewlayers")
             if not viewlayers:
-                all_viewlayers = {
+                viewlayers = {
                     vl.name for vl in bpy.context.scene.view_layers
                 }
             all_viewlayers.update(viewlayers)
