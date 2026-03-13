@@ -79,7 +79,6 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         invalid = [
             vl for vl in bpy.context.scene.view_layers
             if vl.name in viewlayers and not vl.use
-            and vl.mute
         ]
         for vl in invalid:
             self.log.debug(f"View layer {vl.name} is inactive but should be active.")
