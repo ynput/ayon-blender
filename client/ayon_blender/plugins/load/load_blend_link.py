@@ -26,7 +26,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         "model", "camera", "rig",
         "layout", "animation", "workfile"
     }
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Link Blend Hierarchy"
     icon = "code-fork"

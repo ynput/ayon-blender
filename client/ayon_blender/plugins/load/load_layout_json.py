@@ -27,7 +27,8 @@ class JsonLayoutLoader(plugin.BlenderLoader):
     """Load layout published from Unreal."""
 
     product_types = {"layout"}
-    representations = {"json"}
+    representations = {"*"}
+    extensions = {"json"}
 
     label = "Load Layout"
     icon = "code-fork"
