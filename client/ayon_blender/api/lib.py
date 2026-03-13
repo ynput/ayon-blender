@@ -369,63 +369,6 @@ def get_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
     return viewlayers
 
 
-def aov_identifier_by_viewlayers(
-    node: "bpy.types.CompositorNodeOutputFile",
-    socket_name: str,
-    viewlayers: list[str]
-) -> str:
-    """Filter AOV identifiers based on view layers.
-
-    Traces back through the node graph from a specific socket on a File Output
-    node to find all connected Render Layers nodes. If any of those Render Layers
-    nodes match the specified view layers, returns the socket name.
-
-    Args:
-        node: The output file node to check.
-        socket_name: The name of the socket on the File Output node.
-        viewlayers: A list of view layer names to filter by.
-
-    Returns:
-        str: The socket name if it is associated with any of the given view layers,
-             otherwise an empty string.
-    """
-    if not viewlayers:
-        return socket_name
-
-    # Find the specific socket on the File Output node
-    target_socket = None
-    for input_socket in node.inputs:
-        if input_socket.name == socket_name:
-            target_socket = input_socket
-            break
-
-    if not target_socket or not target_socket.is_linked:
-        return ""
-
-    # Get all Render Layers nodes connected to this specific socket
-    # by traversing through the node graph
-    processed = set()
-    stack = [link.from_node for link in target_socket.links]
-
-    while stack:
-        current_node = stack.pop()
-
-        if current_node in processed:
-            continue
-
-        processed.add(current_node)
-
-        if current_node.type == "R_LAYERS":
-            if current_node.layer in viewlayers:
-                return socket_name
-        else:
-            # Add input nodes to stack for further traversal
-            for input_socket in current_node.inputs:
-                if input_socket.is_linked:
-                    stack.extend(link.from_node for link in input_socket.links)
-
-    return ""
-
 def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):
     """
     Iterate through all Render Layers nodes connected to a File Output node.

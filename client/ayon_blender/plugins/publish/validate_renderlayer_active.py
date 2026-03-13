@@ -31,14 +31,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
         for instance in context:
             viewlayers = instance.data.get("viewlayers")
             if not viewlayers:
-                raise PublishValidationError(
-                    title="No viewlayer node found for instance",
-                    message=(
-                        f"Instance {instance.name} is missing the viewlayer node. "
-                        "Please define at least one viewlayernode on the instance to "
-                        "validate the active state."
-                    ),
-                )
+                continue
             all_viewlayers.update(viewlayers)
         return all_viewlayers
 

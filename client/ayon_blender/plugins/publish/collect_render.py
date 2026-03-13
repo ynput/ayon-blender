@@ -94,12 +94,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         )
 
         expected_files: dict[str, list[str]] = {}
-        viewlayers = lib.get_viewlayer_nodes(comp_output_node)
-        outputs = self.get_expected_outputs(
-            comp_output_node,
-            instance,
-            viewlayers
-        )
+        outputs = self.get_expected_outputs(comp_output_node, instance)
         for aov_identifier, output_path in outputs.items():
             aov_label = aov_identifier or "<beauty>"
             self.log.debug(f"AOV '{aov_label}': {output_path}")
@@ -139,7 +134,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             "farm": not local_render,
             "expectedFiles": [expected_files],
             "renderProducts": render_products,
-            "viewlayers": viewlayers,
         })
 
     def get_colorspace_data(
@@ -196,7 +190,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         self,
         node: "bpy.types.CompositorNodeOutputFile",
         instance: pyblish.api.Instance,
-        viewlayers: list[str]
     ) -> dict[str, str]:
         """Return the expected output files from a compositor node output file.
 
@@ -214,7 +207,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         """
         # Blender 5
         if lib.get_blender_version() >= (5, 0, 0):
-            return self._get_expected_outputs_blender_5(node, viewlayers)
+            return self._get_expected_outputs_blender_5(node)
 
         # Blender 4
         output_paths = self._get_expected_outputs_blender_4(node)
@@ -231,25 +224,13 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                     output_path,
                     instance
                 )
-                if viewlayers and not self._aov_matches_viewlayers(
-                    aov_identifier,
-                    viewlayers
-                ):
-                    self.log.debug(
-                        "Skipping AOV '%s' because it does not match the "
-                        "selected view layers %s",
-                        aov_identifier,
-                        viewlayers,
-                    )
-                    continue
 
                 outputs_per_aov[aov_identifier] = output_path
         return outputs_per_aov
 
     def _get_expected_outputs_blender_5(
         self,
-        node: "bpy.types.CompositorNodeOutputFile",
-        viewlayers: list[str]
+        node: "bpy.types.CompositorNodeOutputFile"
     ) -> dict[str, str]:
         """Return output filepaths for CompositorNodeOutputFile in Blender 5"""
         directory: str = node.directory
@@ -279,12 +260,6 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
                 # Use the output item name as AOV identifier but remove any
                 # special characters like `#`, `_`, `.` and spaces.
-                if viewlayers and not lib.aov_identifier_by_viewlayers(
-                    node,
-                    output_item.name,
-                    viewlayers
-                ):
-                    continue
                 aov_identifier: str = re.sub("[#_. ]", "", output_item.name)
                 outputs[aov_identifier] = file_path
         return outputs
@@ -432,43 +407,3 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
             )
             aov_identifier = aov_identifier.removeprefix(variant_prefix)
         return aov_identifier
-
-    @staticmethod
-    def _normalize_viewlayer_name(name: str) -> str:
-        normalized = re.sub(r"[. ]+", "_", name)
-        normalized = re.sub(r"_+", "_", normalized)
-        return normalized.strip("_")
-
-    def _get_matching_viewlayer(self, aov_identifier: str) -> Optional[str]:
-        normalized_identifier = self._normalize_viewlayer_name(aov_identifier)
-        candidates = sorted(
-            (
-                self._normalize_viewlayer_name(viewlayer.name),
-                viewlayer.name,
-            )
-            for viewlayer in bpy.context.scene.view_layers
-        )
-        for normalized_viewlayer, viewlayer_name in sorted(
-            candidates,
-            key=lambda item: len(item[0]),
-            reverse=True,
-        ):
-            if normalized_identifier == normalized_viewlayer:
-                return viewlayer_name
-            if normalized_identifier.startswith(f"{normalized_viewlayer}_"):
-                return viewlayer_name
-        return None
-
-    def _aov_matches_viewlayers(
-        self,
-        aov_identifier: str,
-        viewlayers: list[str],
-    ) -> bool:
-        matched_viewlayer = self._get_matching_viewlayer(aov_identifier)
-        self.log.debug(
-            "Resolved AOV '%s' to view layer '%s' against selection %s",
-            aov_identifier,
-            matched_viewlayer,
-            viewlayers,
-        )
-        return matched_viewlayer in set(viewlayers)
