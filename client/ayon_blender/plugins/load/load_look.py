@@ -20,7 +20,8 @@ class BlendLookLoader(plugin.BlenderLoader):
     """Load material datablock from a .blend file."""
 
     product_types = {"look"}
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Load Look"
     icon = "code-fork"
