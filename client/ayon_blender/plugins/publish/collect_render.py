@@ -7,8 +7,6 @@ import clique
 
 import bpy
 
-from ayon_core.lib import EnumDef
-from ayon_core.pipeline.publish import AYONPyblishPluginMixin
 from ayon_blender.api import colorspace, plugin, lib, render_lib
 
 
