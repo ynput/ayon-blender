@@ -350,23 +350,26 @@ def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
     return selection
 
 
-def get_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
+def get_viewlayer_nodes(
+        node: bpy.types.CompositorNodeOutputFile
+    )-> dict[str, bpy.types.CompositorNodeRLayers]:
     """Get view layer nodes connected to a CompositorNodeOutputFile node.
 
     Args:
         node (bpy.types.CompositorNodeOutputFile): The output file node to check.
 
     Returns:
-        set[str]: A set of view layer node names connected to the output node.
+        dict[str, bpy.types.CompositorNodeRLayers]: A dictionary mapping view layer names to their
+            corresponding Render Layers nodes.
     """
-    viewlayers = set()
+    vl_nodes_by_viewlayer = {}
     if not hasattr(node, "inputs"):
-        return viewlayers
+        return vl_nodes_by_viewlayer
     for vl_node in iter_viewlayer_nodes(node):
         for view_layer in bpy.context.scene.view_layers:
-            if view_layer.name == vl_node.layer and not vl_node.mute:
-                viewlayers.add(vl_node.layer)
-    return viewlayers
+            if view_layer.name == vl_node.layer:
+                vl_nodes_by_viewlayer[vl_node.layer] = vl_node
+    return vl_nodes_by_viewlayer
 
 
 def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):

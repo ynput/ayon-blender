@@ -46,6 +46,24 @@ class CreateRender(plugin.BlenderCreator):
 
     render_target = "farm"
 
+    def _sync_viewlayers_active_state(
+        self,
+        vl_node_by_viewlayer: dict,
+        active: bool,
+    ):
+        for viewlayer in bpy.context.scene.view_layers:
+            if viewlayer.name not in vl_node_by_viewlayer:
+                continue
+
+            self.log.info(
+                "Setting view layer %s active state to %s",
+                viewlayer.name,
+                active,
+            )
+            viewlayer.use = active
+            vl_node = vl_node_by_viewlayer[viewlayer.name]
+            vl_node.mute = not active
+
     def _find_compositor_node_from_create_render_setup(self) -> Optional["bpy.types.CompositorNodeOutputFile"]:
         tree = lib.get_scene_node_tree()
         for node in tree.nodes:
@@ -146,14 +164,6 @@ class CreateRender(plugin.BlenderCreator):
                 raise RuntimeError("No compositor node found")
 
             instance.transient_data["instance_node"] = comp_node
-            viewlayers = lib.get_viewlayer_nodes(comp_node)
-            instance.data["viewlayers"] = list(viewlayers)
-            active = instance.data.get("active")
-            for viewlayer in bpy.context.scene.view_layers:
-                if viewlayer.name in viewlayers:
-                    viewlayer.use = active
-                    viewlayer.mute = not active
-
             self.imprint(comp_node, instance.data_to_store())
 
             # Delete the original object
@@ -185,13 +195,11 @@ class CreateRender(plugin.BlenderCreator):
                 host_name=self.create_context.host_name,
             )
             instance_data = self.read(node)
-            viewlayers = lib.get_viewlayer_nodes(node)
             instance_data.update({
                 "folderPath": folder_entity["path"],
                 "task": task_entity["name"],
                 "productName": product_name,
                 "variant": variant,
-                "viewlayers": list(viewlayers),
             })
 
             instance = CreatedInstance(
@@ -253,5 +261,9 @@ class CreateRender(plugin.BlenderCreator):
         # that are not Compositor nodes but Collection objects.
         if isinstance(node, bpy.types.CompositorNodeOutputFile):
             data["active"] = not node.mute
+            vl_node_by_viewlayer = lib.get_viewlayer_nodes(node)
+            self._sync_viewlayers_active_state(
+                vl_node_by_viewlayer, active=data["active"]
+            )
 
         return data

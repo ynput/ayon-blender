@@ -4,14 +4,14 @@ import inspect
 import pyblish.api
 
 from ayon_core.pipeline.publish import (
-    RepairContextAction,
+    RepairAction,
     PublishValidationError
 )
 
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 
 
-class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
+class ValidateRenderlayerActive(plugin.BlenderInstancePlugin):
     """Validate Renderlayer active or inactive when renderlayer attribute
     definition has been filled.
     - If view layer is in the viewlayers attribute, it should be active.
@@ -23,75 +23,50 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
     hosts = ["blender"]
     families = ["render"]
     label = "Validate Renderlayer Active"
-    actions = [RepairContextAction]
+    actions = [RepairAction]
 
-    @staticmethod
-    def _get_expected_viewlayers(context: pyblish.api.Context) -> set[str]:
-        all_viewlayers = set()
-        for instance in context:
-            viewlayers = instance.data.get("viewlayers")
-            if not viewlayers:
+    def process(self, instance: pyblish.api.Instance):
+        invalid = self.get_invalid(instance)
+        if invalid:
+            raise PublishValidationError(
+                "Some view layers are not in the expected state.",
+                message=(
+                    "Some view layers are not in the expected state. "
+                    "Please see description for details."
+                ),
+                description=self.get_description(),
+            )
+
+    @classmethod
+    def get_invalid(cls, instance: pyblish.api.Instance):
+        invalid = []
+        comp_output_node: "bpy.types.CompositorNodeOutputFile" = (
+            instance.data["transientData"]["instance_node"])
+        vl_node_by_viewlayer = lib.get_viewlayer_nodes(comp_output_node)
+        for viewlayer in bpy.context.scene.view_layers:
+            if viewlayer.name not in vl_node_by_viewlayer:
                 continue
-            all_viewlayers.update(viewlayers)
-        return all_viewlayers
 
-    def process(self, context: pyblish.api.Context):
-        all_viewlayers = self._get_expected_viewlayers(context)
-        if not all_viewlayers:
-            raise PublishValidationError(
-                title="No view layers defined in any instance",
-                message=(
-                    "No view layers are defined in any instance's viewlayers node. "
-                    "Please define view layers in the instance nodes to validate the active state."
-                ),
-                description=self.get_description()
-            )
-        invalid_inactive = self.get_invalid_active_viewlayers(all_viewlayers)
-        if  invalid_inactive:
-            raise PublishValidationError(
-                title="No viewlayer node found for instance",
-                message=(
-                    "No viewlayer node found for instance. "
-                    "Use the Repair action to set the correct active state for the "
-                    "view layers."
-                ),
-                description=self.get_description()
-            )
+            vl_node = vl_node_by_viewlayer[viewlayer.name]
+            if not viewlayer.use or vl_node.mute:
+                invalid.append((viewlayer, vl_node))
 
-    def get_invalid_active_viewlayers(self, viewlayers: list[str]):
-        """Get view layers that are inactive but should be active.
-
-        Args:
-            viewlayers (list[str]): viewlayers from the instance,
-            which defines the expected active view layers.
-
-        Returns:
-            list[bpy.types.ViewLayer]: list of view layers that are inactive
-            but should be active.
-        """
-        invalid = [
-            vl for vl in bpy.context.scene.view_layers
-            if vl.name in viewlayers and not vl.use
-        ]
-        for vl in invalid:
-            self.log.debug(f"View layer {vl.name} is inactive but should be active.")
         return invalid
 
     @classmethod
-    def repair(cls, context: pyblish.api.Context):
-        active = True
-        all_viewlayers = cls._get_expected_viewlayers(context)
-        for vl in bpy.context.scene.view_layers:
-            if vl.name in all_viewlayers:
-                vl.use = active
-                vl.mute = not active
-            cls.log.info(f"Set view layer {vl.name} to {vl.use}.")
+    def repair(cls, instance: pyblish.api.Instance):
+        invalid = cls.get_invalid(instance)
+        for viewlayer, vl_node in invalid:
+            viewlayer.use = True
+            vl_node.mute = False
 
-    @staticmethod
-    def get_description():
-        return inspect.cleandoc("""
-        ### No viewlayer node found for instance
-        The active state of the view layers does not match the expected state based on the
-        viewlayers node. This can lead to incorrect rendering results.
-        Use the Repair action to set the correct active state for the view layers.
-        """)
+    def get_description(self):
+        return inspect.cleandoc(
+            """### Some view layers are not in the expected state.
+            This validation checks the state of view layers based on the instance's
+            view layer definitions. If a view layer is expected to be active
+            but is inactive, or vice versa, it will be flagged as invalid.
+            Repair action would fix this issue by setting the view layers
+            to their expected states according to the instance's definitions.
+            """
+    )
