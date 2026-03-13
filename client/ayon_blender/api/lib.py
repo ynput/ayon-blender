@@ -363,11 +363,9 @@ def get_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
     if not hasattr(node, "inputs"):
         return viewlayers
     for vl_node in iter_viewlayer_nodes(node):
-        print(f"compute_node: {node}")
-        print(f"Found view layer node: {vl_node.name} with layer: {vl_node.layer}")
         for view_layer in bpy.context.scene.view_layers:
             if view_layer.name == vl_node.layer and not vl_node.mute:
-                    viewlayers.add(vl_node.layer)
+                viewlayers.add(vl_node.layer)
     return viewlayers
 
 

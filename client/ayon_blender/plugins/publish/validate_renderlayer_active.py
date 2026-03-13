@@ -4,7 +4,7 @@ import inspect
 import pyblish.api
 
 from ayon_core.pipeline.publish import (
-    RepairAction,
+    RepairContextAction,
     PublishValidationError
 )
 
@@ -23,18 +23,20 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
     hosts = ["blender"]
     families = ["render"]
     label = "Validate Renderlayer Active"
-    actions = [RepairAction]
+    actions = [RepairContextAction]
 
-    def process(self, context: pyblish.api.Context):
+    @staticmethod
+    def _get_expected_viewlayers(context: pyblish.api.Context) -> set[str]:
         all_viewlayers = set()
         for instance in context:
             viewlayers = instance.data.get("viewlayers")
             if not viewlayers:
-                viewlayers = {
-                    vl.name for vl in bpy.context.scene.view_layers
-                }
+                continue
             all_viewlayers.update(viewlayers)
+        return all_viewlayers
 
+    def process(self, context: pyblish.api.Context):
+        all_viewlayers = self._get_expected_viewlayers(context)
         # TODO: find all the invalid view layers by instance node
         invalid_active = self.get_invalid_active_viewlayers(all_viewlayers)
         invalid_inactive = self.get_invalid_inactive_viewlayers(all_viewlayers)
@@ -90,20 +92,10 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
 
     @classmethod
     def repair(cls, context: pyblish.api.Context):
-        all_viewlayers = set()
-        for instance in context:
-            viewlayers = instance.data.get("viewlayers")
-            if not viewlayers:
-                viewlayers = {
-                    vl.name for vl in bpy.context.scene.view_layers
-                }
-            all_viewlayers.update(viewlayers)
+        all_viewlayers = cls._get_expected_viewlayers(context)
         for vl in bpy.context.scene.view_layers:
-            should_be_active = vl.name in all_viewlayers
-            if vl.use != should_be_active:
-                vl.use = should_be_active
-                state = "active" if should_be_active else "inactive"
-                cls.log.info(f"Set view layer {vl.name} to {state}.")
+            vl.use = bool(vl.name in all_viewlayers)
+            cls.log.info(f"Set view layer {vl.name} to {vl.use}.")
 
     @staticmethod
     def get_description():
