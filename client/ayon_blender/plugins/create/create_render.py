@@ -146,9 +146,11 @@ class CreateRender(plugin.BlenderCreator):
                 raise RuntimeError("No compositor node found")
 
             instance.transient_data["instance_node"] = comp_node
-            instance.data["viewlayers"] = list(lib.get_viewlayer_nodes(comp_node))
-            if not instance.data.get("viewlayers"):
-                instance.data["active"] = False
+            viewlayers = list(lib.get_viewlayer_nodes(comp_node))
+            active = bool(viewlayers)
+            instance.data["viewlayers"] = viewlayers
+            instance.data["active"] = active
+            node.mute = not active
             self.imprint(comp_node, instance.data_to_store())
 
             # Delete the original object
@@ -180,14 +182,17 @@ class CreateRender(plugin.BlenderCreator):
                 host_name=self.create_context.host_name,
             )
             instance_data = self.read(node)
+            viewlayers = list(lib.get_viewlayer_nodes(node))
+            active = bool(viewlayers)
             instance_data.update({
                 "folderPath": folder_entity["path"],
                 "task": task_entity["name"],
                 "productName": product_name,
                 "variant": variant,
-                "viewlayers": list(lib.get_viewlayer_nodes(node)),
-                "active": bool(lib.get_viewlayer_nodes(node)),
+                "viewlayers": viewlayers,
+                "active": active,
             })
+            node.mute = not active
 
             instance = CreatedInstance(
                 self.product_type,
