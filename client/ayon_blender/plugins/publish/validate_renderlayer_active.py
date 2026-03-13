@@ -68,6 +68,25 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
             self.log.debug(f"View layer {vl.name} is inactive but should be active.")
         return invalid
 
+    def get_invalid_inactive_viewlayers(self, viewlayers: list[str]):
+        """Get view layers that are active but should be inactive.
+
+        Args:
+            viewlayers (list[str]): viewlayers from the instance,
+            which defines the expected active view layers.
+
+        Returns:
+            list[bpy.types.ViewLayer]: list of view layers that are active
+            but should be inactive.
+        """
+        invalid = [
+            vl for vl in bpy.context.scene.view_layers
+            if vl.name not in viewlayers and vl.use
+        ]
+        for vl in invalid:
+            self.log.debug(f"View layer {vl.name} is active but should be inactive.")
+        return invalid
+
 
     @classmethod
     def repair(cls, context: pyblish.api.Context):
