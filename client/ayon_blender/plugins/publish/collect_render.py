@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import re
 from typing import TypedDict, Optional
+
 import pyblish.api
 import clique
 
@@ -189,7 +190,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
     def get_expected_outputs(
         self,
         node: "bpy.types.CompositorNodeOutputFile",
-        instance: pyblish.api.Instance,
+        instance: pyblish.api.Instance
     ) -> dict[str, str]:
         """Return the expected output files from a compositor node output file.
 
@@ -224,8 +225,7 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
                     output_path,
                     instance
                 )
-
-                outputs_per_aov[aov_identifier] = output_path
+            outputs_per_aov[aov_identifier] = output_path
         return outputs_per_aov
 
     def _get_expected_outputs_blender_5(
