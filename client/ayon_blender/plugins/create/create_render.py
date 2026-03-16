@@ -40,8 +40,8 @@ class CreateRender(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.render"
     label = "Render"
     description = __doc__
-    product_type = "render"
     product_base_type = "render"
+    product_type = product_base_type
     icon = "eye"
 
     render_target = "farm"
@@ -113,8 +113,15 @@ class CreateRender(plugin.BlenderCreator):
         node.label = variant
 
         self.set_instance_data(product_name, instance_data)
+        product_type = instance_data.get("productType")
+        if not product_type:
+            product_type = self.product_base_type
         instance = CreatedInstance(
-            self.product_type, product_name, instance_data, self
+            product_base_type=self.product_base_type,
+            product_type=product_type,
+            product_name=product_name,
+            data=instance_data,
+            creator=self,
         )
         instance.transient_data["instance_node"] = node
         self._add_instance_to_context(instance)
@@ -186,6 +193,12 @@ class CreateRender(plugin.BlenderCreator):
             self.log.info("Found unregistered render output node: %s",
                           node.name)
             variant = clean_name(node.name)
+
+            instance_data = self.read(node)
+            product_type = instance_data.get("productType")
+            if not product_type:
+                product_type = self.product_base_type
+
             product_name = self.get_product_name(
                 project_name=project_name,
                 project_entity=project_entity,
@@ -193,8 +206,8 @@ class CreateRender(plugin.BlenderCreator):
                 task_entity=task_entity,
                 variant=variant,
                 host_name=self.create_context.host_name,
+                product_type=product_type,
             )
-            instance_data = self.read(node)
             instance_data.update({
                 "folderPath": folder_entity["path"],
                 "task": task_entity["name"],
@@ -203,8 +216,9 @@ class CreateRender(plugin.BlenderCreator):
             })
 
             instance = CreatedInstance(
-                self.product_type,
-                product_name,
+                product_base_type=self.product_base_type,
+                product_type=product_type,
+                product_name=product_name,
                 data=instance_data,
                 creator=self,
                 transient_data={

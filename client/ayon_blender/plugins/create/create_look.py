@@ -11,8 +11,8 @@ class CreateLook(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.look"
     label = "Look"
     description = __doc__
-    product_type = "look"
     product_base_type = "look"
+    product_type = product_base_type
     icon = "male"
 
     def create(

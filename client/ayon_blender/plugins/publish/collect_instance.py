@@ -62,7 +62,7 @@ class CollectBlenderInstanceData(plugin.BlenderInstancePlugin,
             members.update(instance_node.children_recursive)
 
             # Special case for animation instances, include armatures
-            if instance.data["productType"] in ["animation", "action"]:
+            if instance.data["productBaseType"] in ["animation", "action"]:
                 for obj in instance_node.objects:
                     if obj.type == 'EMPTY' and obj.get(AYON_PROPERTY):
                         members.update(

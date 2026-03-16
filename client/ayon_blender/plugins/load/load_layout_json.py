@@ -6,6 +6,7 @@ from pprint import pformat
 from typing import Dict, Optional
 
 import bpy
+import ayon_api
 
 from ayon_core.pipeline import (
     discover_loader_plugins,
@@ -26,7 +27,8 @@ from ayon_blender.api.pipeline import add_to_ayon_container
 class JsonLayoutLoader(plugin.BlenderLoader):
     """Load layout published from Unreal."""
 
-    product_types = {"layout"}
+    product_base_types = {"layout"}
+    product_types = product_base_types
     representations = {"*"}
     extensions = {"json"}
 
@@ -51,11 +53,11 @@ class JsonLayoutLoader(plugin.BlenderLoader):
                 if anim_collection:
                     bpy.data.collections.remove(anim_collection)
 
-    def _get_loader(self, loaders, product_type):
+    def _get_loader(self, loaders, product_base_type):
         name = ""
-        if product_type == 'rig':
+        if product_base_type == 'rig':
             name = "BlendRigLoader"
-        elif product_type == 'model':
+        elif product_base_type == 'model':
             name = "BlendModelLoader"
 
         if name == "":
@@ -77,12 +79,14 @@ class JsonLayoutLoader(plugin.BlenderLoader):
 
         for element in data:
             reference = element.get('reference')
-            product_type = element.get("product_type")
-            if product_type is None:
-                product_type = element.get("family")
+            product_base_type = (
+                element.get("product_base_type")
+                or element.get("product_type")
+                or element.get("family")
+            )
 
             loaders = loaders_from_representation(all_loaders, reference)
-            loader = self._get_loader(loaders, product_type)
+            loader = self._get_loader(loaders, product_base_type)
 
             if not loader:
                 continue
@@ -98,7 +102,7 @@ class JsonLayoutLoader(plugin.BlenderLoader):
                 'parent': asset_group,
                 'transform': element.get('transform'),
                 'action': action,
-                'create_animation': True if product_type == 'rig' else False,
+                'create_animation': product_base_type == "rig",
                 'animation_asset': asset
             }
 
@@ -176,8 +180,6 @@ class JsonLayoutLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "project_name": context["project"]["name"],
             "objectName": group_name,
         }
@@ -239,12 +241,33 @@ class JsonLayoutLoader(plugin.BlenderLoader):
 
         actions = {}
 
+        repre_ids = set()
         for obj in asset_group.children:
             obj_meta = obj.get(AYON_PROPERTY)
-            product_type = obj_meta.get("productType")
-            if product_type is None:
-                product_type = obj_meta.get("family")
-            if product_type == "rig":
+            repre_id = obj_meta.get("representation")
+            if repre_id:
+                repre_ids.add(repre_id)
+
+        project_name = context["project"]["name"]
+        hierarchy_by_repre_id = ayon_api.get_representations_hierarchy(
+            project_name,
+            repre_ids,
+            project_fields=[],
+            folder_fields=[],
+            task_fields=[],
+            product_fields={"productBaseType"},
+            version_fields=[],
+            representation_fields={"id"},
+        )
+
+        for obj in asset_group.children:
+            obj_meta = obj.get(AYON_PROPERTY)
+            repre_id = obj_meta.get("representation")
+            hierarchy = hierarchy_by_repre_id.get(repre_id)
+            if not hierarchy:
+                continue
+            product_base_type = hierarchy.product["productBaseType"]
+            if product_base_type == "rig":
                 rig = None
                 for child in obj.children:
                     if child.type == 'ARMATURE':
