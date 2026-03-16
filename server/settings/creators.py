@@ -75,6 +75,10 @@ class CreatorsModel(BaseSettingsModel):
         default_factory=BasicCreatorModel,
         title="Create Layout"
     )
+    CreateLook: BasicCreatorModel = SettingsField(
+        default_factory=BasicCreatorModel,
+        title="Create Look"
+    )
     CreateModel: BasicCreatorModel = SettingsField(
         default_factory=BasicCreatorModel,
         title="Create Model"
