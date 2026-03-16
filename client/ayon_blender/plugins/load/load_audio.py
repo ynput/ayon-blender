@@ -15,7 +15,8 @@ from ayon_blender.api.pipeline import add_to_ayon_container
 class AudioLoader(plugin.BlenderLoader):
     """Load audio in Blender."""
 
-    product_types = {"audio"}
+    product_base_types = {"audio"}
+    product_types = product_base_types
     representations = {"*"}
     extensions = {"wav"}
 
@@ -77,8 +78,6 @@ class AudioLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "audio": audio,
             "project_name": context["project"]["name"],
@@ -169,7 +168,6 @@ class AudioLoader(plugin.BlenderLoader):
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
-        metadata["parent"] = repre_entity["versionId"]
         metadata["audio"] = new_audio
         metadata["project_name"] = context["project"]["name"]
 

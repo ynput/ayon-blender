@@ -43,9 +43,10 @@ class AppendBlendLoader(plugin.BlenderLoader):
         so you could also use it as a new base.
     """
 
+    product_base_types = {"workfile"}
+    product_types = product_base_types
     representations = {"*"}
     extensions = {"blend"}
-    product_types = {"workfile"}
 
     label = "Append Workfile"
     order = 9

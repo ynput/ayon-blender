@@ -22,7 +22,8 @@ from ayon_blender.api.constants import AYON_PROPERTY
 class BlendLoader(plugin.BlenderLoader):
     """Load assets from a .blend file."""
 
-    product_types = {"model", "rig", "layout", "camera", "animation"}
+    product_base_types = {"model", "rig", "layout", "camera", "animation"}
+    product_types = product_base_types
     representations = {"*"}
     extensions = {"blend"}
 
@@ -145,12 +146,14 @@ class BlendLoader(plugin.BlenderLoader):
         """
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
-        product_name = context["product"]["name"]
+        product_entity = context["product"]
+        product_name = product_entity["name"]
 
-        try:
-            product_type = context["product"]["productType"]
-        except ValueError:
-            product_type = "model"
+        product_base_type = product_entity.get("productBaseType")
+        if not product_base_type:
+            product_base_type = product_entity.get("productType")
+            if not product_base_type:
+                product_base_type = "model"
 
         representation = context["representation"]["id"]
 
@@ -164,10 +167,10 @@ class BlendLoader(plugin.BlenderLoader):
         container, members = self._process_data(libpath, group_name)
 
         if self.create_animation_instance_on_load:
-            if product_type == "layout":
+            if product_base_type == "layout":
                 self._post_process_layout(container, folder_name, representation)
 
-            if product_type == "rig":
+            if product_base_type == "rig":
                 create_animation_instance(container)
 
         add_to_ayon_container(container)
@@ -181,8 +184,6 @@ class BlendLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "members": members,
             "project_name": context["project"]["name"],
@@ -253,7 +254,6 @@ class BlendLoader(plugin.BlenderLoader):
         new_data = {
             "libpath": libpath,
             "representation": repre_entity["id"],
-            "parent": repre_entity["versionId"],
             "members": members,
             "project_name": context["project"]["name"],
         }

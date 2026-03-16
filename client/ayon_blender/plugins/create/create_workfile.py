@@ -19,8 +19,8 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
     """
     identifier = "io.ayon.creators.blender.workfile"
     label = "Workfile"
-    product_type = "workfile"
     product_base_type = "workfile"
+    product_type = product_base_type
     icon = "fa5.file"
 
     def create(self):
@@ -34,10 +34,11 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
         )
 
         project_entity = self.create_context.get_current_project_entity()
-        project_name = project_entity["name"]
         folder_entity = self.create_context.get_current_folder_entity()
-        folder_path = folder_entity["path"]
         task_entity = self.create_context.get_current_task_entity()
+
+        project_name = project_entity["name"]
+        folder_path = folder_entity["path"]
         task_name = task_entity["name"]
         host_name = self.create_context.host_name
 
@@ -46,27 +47,23 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
                 project_name,
                 folder_entity,
                 task_entity,
-                task_name,
-                host_name,
+                variant=self.default_variant,
+                host_name=host_name,
+                product_type=self.product_type,
             )
             data = {
                 "folderPath": folder_path,
                 "task": task_name,
+                "productType": self.product_type,
                 "variant": self.default_variant,
             }
-            data.update(
-                self.get_dynamic_data(
-                    project_name,
-                    folder_entity,
-                    task_entity,
-                    task_name,
-                    host_name,
-                    workfile_instance,
-                )
-            )
             self.log.info("Auto-creating workfile instance...")
             workfile_instance = CreatedInstance(
-                self.product_type, product_name, data, self
+                product_base_type=self.product_base_type,
+                product_type=self.product_type,
+                product_name=product_name,
+                data=data,
+                creator=self,
             )
             self._add_instance_to_context(workfile_instance)
 
@@ -79,12 +76,14 @@ class CreateWorkfile(BlenderCreator, AutoCreator):
                 project_name,
                 folder_entity,
                 task_entity,
-                self.default_variant,
-                host_name,
+                variant=self.default_variant,
+                host_name=host_name,
+                product_type=self.product_type,
             )
 
             workfile_instance["folderPath"] = folder_path
             workfile_instance["task"] = task_name
+            workfile_instance["productType"] = self.product_type
             workfile_instance["productName"] = product_name
 
     def collect_instances(self):

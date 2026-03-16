@@ -23,7 +23,8 @@ from ayon_blender.api.pipeline import (
 class BlendSceneLoader(plugin.BlenderLoader):
     """Load assets from a .blend file."""
 
-    product_types = {"blendScene"}
+    product_base_types = {"blendScene"}
+    product_types = product_base_types
     representations = {"*"}
     extensions = {"blend"}
 
@@ -41,7 +42,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
         return None
 
-    def _process_data(self, libpath, group_name, product_type):
+    def _process_data(self, libpath, group_name):
         # Append all the data from the .blend file
         names_by_attr: dict[str, list[str]] = {}
         with bpy.data.libraries.load(
@@ -106,11 +107,6 @@ class BlendSceneLoader(plugin.BlenderLoader):
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
 
-        try:
-            product_type = context["product"]["productType"]
-        except ValueError:
-            product_type = "model"
-
         asset_name = plugin.prepare_scene_name(folder_name, product_name)
         unique_number = plugin.get_unique_number(folder_name, product_name)
         group_name = plugin.prepare_scene_name(
@@ -119,7 +115,7 @@ class BlendSceneLoader(plugin.BlenderLoader):
         namespace = namespace or f"{folder_name}_{unique_number}"
 
         container, members = self._process_data(
-            libpath, group_name, product_type
+            libpath, group_name
         )
 
         add_to_ayon_container(container)
@@ -133,8 +129,6 @@ class BlendSceneLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "members": members,
             "project_name": context["project"]["name"],
@@ -189,11 +183,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
         self.exec_remove(container)
 
-        product_type = container.get("productType")
-        if product_type is None:
-            product_type = container["family"]
         asset_group, members = self._process_data(
-            libpath, group_name, product_type
+            libpath, group_name
         )
 
         for member in members:
@@ -218,7 +209,6 @@ class BlendSceneLoader(plugin.BlenderLoader):
         new_data = {
             "libpath": libpath,
             "representation": repre_entity["id"],
-            "parent": repre_entity["versionId"],
             "members": members,
             "project_name": context["project"]["name"],
         }
