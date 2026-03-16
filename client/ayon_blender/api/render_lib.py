@@ -245,6 +245,32 @@ def existing_aov_options(
 
     return aov_list
 
+def ensure_unique_output_node_name(
+    tree: "bpy.types.NodeTree",
+    output_node: "bpy.types.CompositorNodeOutputFile",
+    name: str,
+) -> str:
+    """Ensure the given CompositorNodeOutputFile node has a unique name.
+
+    Args:
+        tree (bpy.types.NodeTree): The node tree to process.
+        output_node (bpy.types.CompositorNodeOutputFile): The output node to
+            rename if needed.
+        name (str): The variant name to use in the output node name.
+
+    Returns:
+        str: The unique name assigned to the given output node.
+
+    """
+    base_name = name
+    counter = 1
+    while tree.nodes.get(base_name):
+        base_name = f"{name}_{counter}"
+        counter += 1
+
+    output_node.name = base_name
+    output_node.label = base_name
+    return base_name
 
 def get_base_render_output_path(
     variant_name: str,
@@ -313,8 +339,9 @@ def create_render_node_tree(
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
         "CompositorNodeOutputFile"
     )
-    output.name = variant_name
-    output.label = variant_name
+
+    # Ensure the output node has a unique name
+    unique_name = ensure_unique_output_node_name(tree, output, variant_name)
 
     # Multi-exr
     multi_exr: bool = ext == "exr" and multilayer
@@ -329,7 +356,7 @@ def create_render_node_tree(
 
     # Define the base path for the File Output node.
     base_path = get_base_render_output_path(
-        variant_name, project_settings=project_settings
+        unique_name, project_settings=project_settings
     )
     if blender_version >= (5, 0, 0):
         base_path_dir, base_path_filename = os.path.split(base_path)

@@ -27,7 +27,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         "layout", "animation", "workfile"
     }
     product_types = product_base_types
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Link Blend Hierarchy"
     icon = "code-fork"

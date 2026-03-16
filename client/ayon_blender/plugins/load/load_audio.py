@@ -17,7 +17,8 @@ class AudioLoader(plugin.BlenderLoader):
 
     product_base_types = {"audio"}
     product_types = product_base_types
-    representations = {"wav"}
+    representations = {"*"}
+    extensions = {"wav"}
 
     label = "Load Audio"
     icon = "volume-up"

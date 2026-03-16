@@ -24,7 +24,8 @@ class BlendLoader(plugin.BlenderLoader):
 
     product_base_types = {"model", "rig", "layout", "camera", "animation"}
     product_types = product_base_types
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Append Blend"
     icon = "code-fork"

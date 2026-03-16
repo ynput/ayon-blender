@@ -21,7 +21,8 @@ class BlendLookLoader(plugin.BlenderLoader):
 
     product_base_types = {"look"}
     product_types = product_base_types
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Load Look"
     icon = "code-fork"

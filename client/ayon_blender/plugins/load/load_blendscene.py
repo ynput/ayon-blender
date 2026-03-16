@@ -25,7 +25,8 @@ class BlendSceneLoader(plugin.BlenderLoader):
 
     product_base_types = {"blendScene"}
     product_types = product_base_types
-    representations = {"blend"}
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Append Blend"
     icon = "code-fork"
