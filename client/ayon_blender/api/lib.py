@@ -389,14 +389,8 @@ def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):
     """
 
     processed = set()
-    # Stack contains tuples of (node, socket_index) or just nodes to process
-    stack = []
-
-    # Initialize stack with all connected input sockets of the File Output node
-    for input_socket in node.inputs:
-        if input_socket.is_linked:
-            for link in input_socket.links:
-                stack.append(link.from_node)
+    # Stack contains a queue of nodes to process
+    stack: list["bpy.types.CompositorNode"] = [node]
 
     while stack:
         current_node = stack.pop()
