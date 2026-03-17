@@ -68,7 +68,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
 
     @classmethod
     def get_invalid(
-        cls, context: pyblish.api.Context) -> list[tuple]:
+        cls, context: pyblish.api.Context) -> list[bpy.types.ViewLayer]:
         """Get the list of invalid view layers based on the instance's view
         layer definitions.
 
@@ -76,8 +76,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
             context (pyblish.api.Context): Context data
 
         Returns:
-            list[tuple]: A list of tuples containing the invalid view layers
-                and their corresponding compositor node.
+            list[bpy.types.ViewLayer]: A list of invalid view layers.
         """
         invalid = []
         required_vl_nodes = cls.get_required_viewlayers(context)
