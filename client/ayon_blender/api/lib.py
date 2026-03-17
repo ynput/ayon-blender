@@ -363,9 +363,7 @@ def get_upstream_viewlayers(node: bpy.types.CompositorNodeOutputFile)-> set[str]
     if not hasattr(node, "inputs"):
         return view_layers
     for vl_node in iter_viewlayer_nodes(node):
-        for view_layer in bpy.context.scene.view_layers:
-            if view_layer.name == vl_node.layer:
-                view_layers.add(vl_node.layer)
+        view_layers.add(vl_node.layer)
     return view_layers
 
 
