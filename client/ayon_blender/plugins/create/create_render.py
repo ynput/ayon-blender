@@ -40,29 +40,11 @@ class CreateRender(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.render"
     label = "Render"
     description = __doc__
+    product_type = "render"
     product_base_type = "render"
-    product_type = product_base_type
     icon = "eye"
 
     render_target = "farm"
-
-    def _sync_viewlayers_active_state(
-        self,
-        vl_node_by_viewlayer: dict,
-        active: bool,
-    ):
-        for viewlayer in bpy.context.scene.view_layers:
-            if viewlayer.name not in vl_node_by_viewlayer:
-                continue
-
-            self.log.info(
-                "Setting view layer %s active state to %s",
-                viewlayer.name,
-                active,
-            )
-            viewlayer.use = active
-            vl_node = vl_node_by_viewlayer[viewlayer.name]
-            vl_node.mute = not active
 
     def _find_compositor_node_from_create_render_setup(self) -> Optional["bpy.types.CompositorNodeOutputFile"]:
         tree = lib.get_scene_node_tree()
@@ -113,15 +95,8 @@ class CreateRender(plugin.BlenderCreator):
         node.label = variant
 
         self.set_instance_data(product_name, instance_data)
-        product_type = instance_data.get("productType")
-        if not product_type:
-            product_type = self.product_base_type
         instance = CreatedInstance(
-            product_base_type=self.product_base_type,
-            product_type=product_type,
-            product_name=product_name,
-            data=instance_data,
-            creator=self,
+            self.product_type, product_name, instance_data, self
         )
         instance.transient_data["instance_node"] = node
         self._add_instance_to_context(instance)
@@ -193,12 +168,6 @@ class CreateRender(plugin.BlenderCreator):
             self.log.info("Found unregistered render output node: %s",
                           node.name)
             variant = clean_name(node.name)
-
-            instance_data = self.read(node)
-            product_type = instance_data.get("productType")
-            if not product_type:
-                product_type = self.product_base_type
-
             product_name = self.get_product_name(
                 project_name=project_name,
                 project_entity=project_entity,
@@ -206,8 +175,8 @@ class CreateRender(plugin.BlenderCreator):
                 task_entity=task_entity,
                 variant=variant,
                 host_name=self.create_context.host_name,
-                product_type=product_type,
             )
+            instance_data = self.read(node)
             instance_data.update({
                 "folderPath": folder_entity["path"],
                 "task": task_entity["name"],
@@ -216,9 +185,8 @@ class CreateRender(plugin.BlenderCreator):
             })
 
             instance = CreatedInstance(
-                product_base_type=self.product_base_type,
-                product_type=product_type,
-                product_name=product_name,
+                self.product_type,
+                product_name,
                 data=instance_data,
                 creator=self,
                 transient_data={
@@ -275,9 +243,5 @@ class CreateRender(plugin.BlenderCreator):
         # that are not Compositor nodes but Collection objects.
         if isinstance(node, bpy.types.CompositorNodeOutputFile):
             data["active"] = not node.mute
-            vl_node_by_viewlayer = lib.get_viewlayer_nodes(node)
-            self._sync_viewlayers_active_state(
-                vl_node_by_viewlayer, active=data["active"]
-            )
 
         return data
