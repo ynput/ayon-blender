@@ -359,12 +359,11 @@ def get_upstream_viewlayers(node: bpy.types.CompositorNodeOutputFile)-> set[str]
     Returns:
         set[str]: A set of view layer names connected to the output file node.
     """
-    view_layers = set()
     if not hasattr(node, "inputs"):
-        return view_layers
-    for vl_node in iter_viewlayer_nodes(node):
-        view_layers.add(vl_node.layer)
-    return view_layers
+        return set()
+    return {
+        node.layer for node in  iter_viewlayer_nodes(node)
+    }
 
 
 def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):
