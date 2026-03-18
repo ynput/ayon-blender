@@ -12,11 +12,11 @@ from ayon_blender.api import plugin, lib
 
 
 class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
-    """Validate the state of view layers based on the instance's view layer definitions.
-    If a view layer is expected to be active but is inactive, it will be flagged as invalid.
-    Repair action would fix this issue by setting the view layers to their expected states
-    according to the instance's definitions.
-
+    """Validate the state of view layers based on the instance's view layer
+    definitions. If a view layer is expected to be active but is inactive, it
+    will be flagged as invalid. Repair action would fix this issue by setting
+    the view layers to their expected states according to the instance's
+    definitions.
     """
 
     order = pyblish.api.ValidatorOrder
