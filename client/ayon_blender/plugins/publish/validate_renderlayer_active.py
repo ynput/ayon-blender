@@ -104,11 +104,10 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
 
     def get_description(self):
         return inspect.cleandoc(
-            """### Some view layers are not in the expected state.
-            This validation checks the state of view layers based on the instance's
-            view layer definitions. If a view layer is expected to be active
-            but is inactive, or vice versa, it will be flagged as invalid.
-            Repair action would fix this issue by setting the view layers
-            to their expected states according to the instance's definitions.
+            """### View layers disabled when they are used for rendering outputs
+            Some view layers are disabled while being used for rendering outputs
+            through File Output nodes.
+            The repair action will enable them for rendering,
+            ensuring valid outputs are produced once submitted.
             """
     )

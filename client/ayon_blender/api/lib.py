@@ -362,7 +362,7 @@ def get_upstream_viewlayers(node: bpy.types.CompositorNodeOutputFile)-> set[str]
     if not hasattr(node, "inputs"):
         return set()
     return {
-        node.layer for node in  iter_viewlayer_nodes(node)
+        node.layer for node in iter_viewlayer_nodes(node)
     }
 
 
