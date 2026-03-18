@@ -79,9 +79,9 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
             list[bpy.types.ViewLayer]: A list of invalid view layers.
         """
         invalid = []
-        required_vl_nodes = cls.get_required_viewlayers(context)
+        required_viewlayers = cls.get_required_viewlayers(context)
         for viewlayer in bpy.context.scene.view_layers:
-            is_required = viewlayer.name in required_vl_nodes
+            is_required = viewlayer.name in required_viewlayers
             if is_required and not viewlayer.use:
                 cls.log.error(
                     f"View layer '{viewlayer.name}' is expected to be active but is inactive."
