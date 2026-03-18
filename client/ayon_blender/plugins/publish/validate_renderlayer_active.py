@@ -104,7 +104,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
 
     def get_description(self):
         return inspect.cleandoc(
-            """### View layers disabled when they are used for rendering outputs
+            """### Disabled view layers are required for rendering
             Some view layers are disabled while being used for rendering outputs
             through File Output nodes.
             The repair action will enable them for rendering,
