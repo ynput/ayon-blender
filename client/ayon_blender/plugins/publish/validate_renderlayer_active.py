@@ -93,8 +93,8 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
                 required_label = "active" if is_required else "inactive"
 
                 cls.log.error(
-                    f"View layer '{viewlayer.name}' is expected to"
-                    f" be {required_label} but is {active_label}."
+                    f"View layer '{viewlayer.name}' should be {required_label}"
+                    f" but is currently {active_label}."
                 )
                 invalid.append(viewlayer)
 
