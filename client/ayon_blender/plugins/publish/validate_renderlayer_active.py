@@ -56,7 +56,7 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
             if instance.data["productBaseType"] != "render":
                 continue
             # Skip disabled instances
-            if not instance.data.get("publish", True):
+            if not instance.data.get("active", True):
                 continue
             comp_output_node: "bpy.types.CompositorNodeOutputFile" = (
                 instance.data["transientData"]["instance_node"]
