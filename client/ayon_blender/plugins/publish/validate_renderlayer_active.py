@@ -109,7 +109,8 @@ class ValidateRenderlayerActive(plugin.BlenderContextPlugin):
             context (pyblish.api.Context): Context data
 
         """
-        invalid = cls.get_invalid(context)
+        enabled_compositor_nodes = cls.get_enabled_compositor_nodes(context)
+        invalid = cls.get_invalid(enabled_compositor_nodes)
         for viewlayer in invalid:
             # Toggle from the invalid state
             viewlayer.use = not viewlayer.use
