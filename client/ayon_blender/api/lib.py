@@ -349,6 +349,62 @@ def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
 
     return selection
 
+
+def get_upstream_viewlayers(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
+    """Get view layer nodes connected to a CompositorNodeOutputFile node.
+
+    Args:
+        node (bpy.types.CompositorNodeOutputFile): The output file node to check.
+
+    Returns:
+        set[str]: A set of view layer names connected to the output file node.
+    """
+    if not hasattr(node, "inputs"):
+        return set()
+    return {
+        node.layer for node in iter_viewlayer_nodes(node)
+    }
+
+
+def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):
+    """
+    Iterate through all Render Layers nodes connected to a File Output node.
+
+    Traverses through all input connections, following through intermediate
+    nodes (like Mix, Composite, etc.) to find all connected Render Layers nodes.
+    Uses an iterative stack-based approach with a set to track processed nodes.
+
+    Args:
+        node: A CompositorNodeOutputFile node to find connected Render Layers
+              nodes from
+
+    Yields:
+        bpy.types.CompositorNodeRLayers: Each connected Render Layers node
+    """
+
+    processed = set()
+    # Stack contains a queue of nodes to process
+    stack: list["bpy.types.CompositorNode"] = [node]
+
+    while stack:
+        current_node = stack.pop()
+
+        # Skip if already processed
+        if current_node in processed:
+            continue
+
+        processed.add(current_node)
+
+        if current_node.type == "R_LAYERS":
+            yield current_node
+        else:
+            # Add all input nodes to the stack for further traversal
+            for input_socket in current_node.inputs:
+                if input_socket.is_linked:
+                    for link in input_socket.links:
+                        stack.append(link.from_node)
+
+
 def iter_images_in_node_tree(tree: bpy.types.NodeTree):
     """Iterate over all images in a node tree, including nested node groups.
 
@@ -379,7 +435,7 @@ def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Materi
     """Make image paths in materials absolute during context.
 
     Args:
-        material_datablocks (set[bpy.types.Material]): material datablocks to make 
+        material_datablocks (set[bpy.types.Material]): material datablocks to make
             image paths absolute for during context
     """
     original_image_paths = {}
@@ -388,7 +444,7 @@ def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Materi
             continue
         for image in iter_images_in_node_tree(material.node_tree):
             filepath = image.filepath
-            original_image_paths[image] = filepath 
+            original_image_paths[image] = filepath
             image.filepath = bpy.path.abspath(filepath)
     try:
         yield
