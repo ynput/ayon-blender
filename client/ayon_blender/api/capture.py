@@ -163,9 +163,8 @@ def _apply_options(entity, options):
 def applied_view(window, camera, isolate=None, options=None):
     """Apply view options to window."""
     area = window.screen.areas[0]
-    space = area.spaces[0]
-
     area.ui_type = "VIEW_3D"
+    space = area.spaces[0]
 
     types = {"MESH", "GPENCIL"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
