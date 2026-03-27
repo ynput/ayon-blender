@@ -1,7 +1,6 @@
 from ayon_server.settings import (
     BaseSettingsModel,
     SettingsField,
-    TemplateWorkfileBaseOptions,
     task_types_enum,
 )
 from .creators import (
@@ -21,6 +20,7 @@ from .render_settings import (
     RenderSettingsModel,
     DEFAULT_RENDER_SETTINGS
 )
+from .templated_workfile_build import TemplatedWorkfileBuildModel
 
 
 class UnitScaleSettingsModel(BaseSettingsModel):
@@ -60,6 +60,18 @@ class IncludeHandlesModel(BaseSettingsModel):
     )
 
 
+class HooksModel(BaseSettingsModel):
+    install_pyside: bool = SettingsField(
+        default_factory=bool,
+        title="Execute PySide hook",
+        description=(
+            "When no available Qt bindings are found this hook will "
+            "install PySide into Blender.\n"
+            "**This may require admin privileges**"
+        )
+    )
+
+
 class BlenderSettings(BaseSettingsModel):
     unit_scale_settings: UnitScaleSettingsModel = SettingsField(
         default_factory=UnitScaleSettingsModel,
@@ -81,19 +93,19 @@ class BlenderSettings(BaseSettingsModel):
         title="Include/Exclude Handles in default playback & render range",
         description="You can disable using handles while still have them configured in AYON project.",
     )
+    hooks: HooksModel = SettingsField(
+        default_factory=HooksModel,
+        title="Hooks",
+        description="Enable / disable hooks.",
+    )
     imageio: BlenderImageIOModel = SettingsField(
         default_factory=BlenderImageIOModel,
         title="Color Management (ImageIO)",
         description="Enable / disable global color management system using OCIO files.",
     )
     RenderSettings: RenderSettingsModel = SettingsField(
-        default_factory=RenderSettingsModel, title="Render Settings")
-    workfile_builder: TemplateWorkfileBaseOptions = SettingsField(
-        default_factory=TemplateWorkfileBaseOptions,
-        title="Workfile Builder",
-        description="Configures startup workfile blend scene.",
+        default_factory=RenderSettingsModel, title="Render Settings"
     )
-
     create: CreatorsModel = SettingsField(
         default_factory=CreatorsModel,
         title="Creator Plugins",
@@ -109,6 +121,11 @@ class BlenderSettings(BaseSettingsModel):
         title="Publish Plugins",
         description="Configure various validator and extractor types for publishing.",
     )
+    templated_workfile_build: TemplatedWorkfileBuildModel = SettingsField(
+        default_factory=TemplatedWorkfileBuildModel,
+        title="Templated Workfile Build",
+        description="Build/Update workfile blend scene.",
+    )
 
 
 DEFAULT_VALUES = {
@@ -123,12 +140,14 @@ DEFAULT_VALUES = {
         "include_handles_default": False,
         "profiles": []
     },
+    "hooks": {
+        "install_pyside": True,
+    },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "create": DEFAULT_CREATORS_SETTINGS,
     "load": DEFAULT_LOADERS_SETTINGS,
     "publish": DEFAULT_BLENDER_PUBLISH_SETTINGS,
-    "workfile_builder": {
-        "create_first_version": False,
-        "custom_templates": []
-    }
+    "templated_workfile_build": {
+        "profiles": []
+    },
 }

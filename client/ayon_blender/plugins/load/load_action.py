@@ -27,8 +27,10 @@ class BlendActionLoader(plugin.BlenderLoader):
         moment.
     """
 
-    product_types = {"action"}
-    representations = {"blend"}
+    product_base_types = {"action"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Link Action"
     icon = "code-fork"

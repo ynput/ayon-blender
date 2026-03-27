@@ -1,84 +1,59 @@
 """Load a model asset in Blender."""
-
-from pathlib import Path
-from pprint import pformat
-from typing import Dict, List, Optional
-
 import os
-import json
-import bpy
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+from ayon_core.lib import BoolDef
+from ayon_core.pipeline.load import LoadError
 from ayon_blender.api import plugin
-from ayon_blender.api.pipeline import containerise_existing
-from ayon_blender.api.constants import (
-    AYON_PROPERTY,
-    VALID_EXTENSIONS,
+from ayon_blender.api.pipeline import (
+    containerise_existing,
+    metadata_update,
+    ls,
 )
+from ayon_blender.api.constants import AYON_PROPERTY
+
+import bpy
 
 
 class BlendLookLoader(plugin.BlenderLoader):
-    """Load models from a .blend file.
+    """Load material datablock from a .blend file."""
 
-    Because they come from a .blend file we can simply link the collection that
-    contains the model. There is no further need to 'containerise' it.
-    """
-
-    product_types = {"look"}
-    representations = {"json"}
+    product_base_types = {"look"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Load Look"
     icon = "code-fork"
     color = "orange"
 
-    def get_all_children(self, obj):
-        children = list(obj.children)
+    options = [
+        BoolDef(
+            "use_fake_user",
+            label="Use Fake User",
+            default=True,
+            tooltip="Set the fake user for the loaded asset.",
+        )
+    ]
 
-        for child in children:
-            children.extend(child.children)
+    def get_existing_library(self, libpath: str) -> Optional[bpy.types.Library]:
+        """Get the existing library if it's already loaded."""
+        for library in bpy.data.libraries:
+            if library and Path(library.filepath) == Path(libpath):
+                return library
+        return None
 
-        return children
-
-    def _process(self, libpath, container_name, objects):
-        with open(libpath, "r") as fp:
-            data = json.load(fp)
-
-        path = os.path.dirname(libpath)
-        materials_path = f"{path}/resources"
-
-        materials = []
-
-        for entry in data:
-            file = entry.get('fbx_filename')
-            if file is None:
+    def _is_containerized(self, library: str) -> bool:
+        """Check if there is an existing container for the given library path."""
+        for container in ls():
+            if container.get("loader") != self.__class__.__name__:
+                # Only consider containers of this particular loader
                 continue
-
-            bpy.ops.import_scene.fbx(filepath=f"{materials_path}/{file}")
-
-            mesh = [o for o in bpy.context.scene.objects if o.select_get()][0]
-            material = mesh.data.materials[0]
-            material.name = f"{material.name}:{container_name}"
-
-            texture_file = entry.get('tga_filename')
-            if texture_file:
-                node_tree = material.node_tree
-                pbsdf = node_tree.nodes['Principled BSDF']
-                base_color = pbsdf.inputs[0]
-                tex_node = base_color.links[0].from_node
-                tex_node.image.filepath = f"{materials_path}/{texture_file}"
-
-            materials.append(material)
-
-            for obj in objects:
-                for child in self.get_all_children(obj):
-                    mesh_name = child.name.split(':')[0]
-                    if mesh_name == material.name.split(':')[0]:
-                        child.data.materials.clear()
-                        child.data.materials.append(material)
-                        break
-
-            bpy.data.objects.remove(mesh)
-
-        return materials, objects
+            if container.get("library") != library:
+                continue
+            return True
+        return False
 
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
@@ -91,24 +66,12 @@ class BlendLookLoader(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
-
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
-
-        lib_container = plugin.prepare_scene_name(
-            folder_name, product_name
-        )
-        unique_number = plugin.get_unique_number(
-            folder_name, product_name
-        )
-        namespace = namespace or f"{folder_name}_{unique_number}"
-        container_name = plugin.prepare_scene_name(
-            folder_name, product_name, unique_number
-        )
+        lib_container = plugin.prepare_scene_name(folder_name, product_name)
 
         container = bpy.data.collections.new(lib_container)
-        container.name = container_name
         containerise_existing(
             container,
             name,
@@ -117,108 +80,107 @@ class BlendLookLoader(plugin.BlenderLoader):
             self.__class__.__name__,
         )
 
-        metadata = container.get(AYON_PROPERTY)
+        container_metadata = container.get(AYON_PROPERTY)
 
-        metadata["libpath"] = libpath
-        metadata["lib_container"] = lib_container
+        relative = bpy.context.preferences.filepaths.use_relative_paths
+        with bpy.data.libraries.load(
+            libpath, link=True, relative=relative
+        ) as (data_from, data_to):
+            data_to.materials = data_from.materials
+            data_to.images = data_from.images
 
-        selected = [o for o in bpy.context.scene.objects if o.select_get()]
+        if not data_to.materials:
+            raise LoadError(
+                "No material found in the file, please check if "
+                "there is any material datablock in the blend file."
+            )
+        materials = data_to.materials
+        for material in materials:
+            material.use_fake_user = options.get("use_fake_user", True)
+        container_metadata["library"] = next(
+            material.library for material
+            in materials if material.library
+        )
+        metadata_update(container, container_metadata)
+        bpy.ops.object.select_all(action='DESELECT')
+        self[:] = [materials]
 
-        materials, objects = self._process(libpath, container_name, selected)
-
-        # Save the list of imported materials in the metadata container
-        metadata["objects"] = objects
-        metadata["materials"] = materials
-
-        metadata["parent"] = context["representation"]["versionId"]
-        metadata["product_type"] = context["product"]["productType"]
-        metadata["project_name"] = context["project"]["name"]
-
-        nodes = list(container.objects)
-        nodes.append(container)
-        self[:] = nodes
-        return nodes
+        return container
 
     def update(self, container: Dict, context: Dict):
-        collection = bpy.data.collections.get(container["objectName"])
+        """Update the loaded material datalock.
+
+        Args:
+            container (Dict): The container to update.
+            context (Dict): The context of the update.
+        """
         repre_entity = context["representation"]
-        libpath = Path(self.filepath_from_context(context))
-        extension = libpath.suffix.lower()
+        collection = container["node"]
+        library = container["library"]
+        libpath = self.filepath_from_context(context)
+        existing_library = self.get_existing_library(libpath)
 
-        self.log.info(
-            "Container: %s\nRepresentation: %s",
-            pformat(container, indent=2),
-            pformat(repre_entity, indent=2),
-        )
+        # The new path may be the same path the library is already set to when
+        # updating to same version (which would merely force a reload) but
+        # we'll need to account for that case.
+        is_same_library = existing_library == library
 
-        assert collection, (
-            f"The asset is not loaded: {container['objectName']}"
-        )
-        assert not (collection.children), (
-            "Nested collections are not supported."
-        )
-        assert libpath, (
-            "No existing library file found for {container['objectName']}"
-        )
-        assert libpath.is_file(), (
-            f"The file doesn't exist: {libpath}"
-        )
-        assert extension in VALID_EXTENSIONS, (
-            f"Unsupported file: {libpath}"
-        )
+        # Even if there is an existing library with the same path we want to
+        # set the path on this library to match the existing one. Then Blender
+        # will end up 'merging' the libraries together, remapping all usage.
+        library.name = os.path.basename(libpath)
+        library.filepath = libpath
+        library.reload()
 
-        collection_metadata = collection.get(AYON_PROPERTY)
-        collection_libpath = collection_metadata["libpath"]
+        new_metadata: dict[str, Any] = {}
+        if existing_library and not is_same_library:
+            if self._is_containerized(existing_library):
+                # This library has now merged into the existing library
+                # and with that all its users have been remapped.
+                # Essentially containers would have merged.
+                self.log.info(
+                    "Library already exists."
+                    " Merging container with existing containerized library."
+                )
+                self.remove(container)
+                return
+            else:
+                # Update current container to point to the
+                # existing library
+                self.log.info(
+                    "Library already exists."
+                    " Updating container library to use existing library."
+                )
+                new_metadata["library"] = existing_library
 
-        normalized_collection_libpath = (
-            str(Path(bpy.path.abspath(collection_libpath)).resolve())
-        )
-        normalized_libpath = (
-            str(Path(bpy.path.abspath(str(libpath))).resolve())
-        )
-        self.log.debug(
-            "normalized_collection_libpath:\n  %s\nnormalized_libpath:\n  %s",
-            normalized_collection_libpath,
-            normalized_libpath,
-        )
-        if normalized_collection_libpath == normalized_libpath:
-            self.log.info("Library already loaded, not updating...")
-            return
-
-        for obj in collection_metadata['objects']:
-            for child in self.get_all_children(obj):
-                child.data.materials.clear()
-
-        for material in collection_metadata['materials']:
-            bpy.data.materials.remove(material)
-
-        namespace = collection_metadata['namespace']
-        name = collection_metadata['name']
-
-        container_name = f"{namespace}_{name}"
-
-        materials, objects = self._process(
-            libpath, container_name, collection_metadata['objects'])
-
-        collection_metadata["objects"] = objects
-        collection_metadata["materials"] = materials
-        collection_metadata["libpath"] = str(libpath)
-        collection_metadata["representation"] = repre_entity["id"]
-        collection_metadata["project_name"] = context["project"]["name"]
+        new_metadata["representation"] = repre_entity["id"]
+        metadata_update(collection, new_metadata)
 
     def remove(self, container: Dict) -> bool:
-        collection = bpy.data.collections.get(container["objectName"])
+        """Remove an existing container from a Blender scene.
+
+        Arguments:
+            container (ayon:container-1.0): Container to remove,
+                from `host.ls()`.
+
+        Returns:
+            bool: Whether the container was deleted.
+
+        Warning:
+            No nested collections are supported at the moment!
+        """
+
+        collection = bpy.data.collections.get(
+            container["objectName"]
+        )
         if not collection:
             return False
 
-        collection_metadata = collection.get(AYON_PROPERTY)
-
-        for obj in collection_metadata['objects']:
-            for child in self.get_all_children(obj):
-                child.data.materials.clear()
-
-        for material in collection_metadata['materials']:
-            bpy.data.materials.remove(material)
+        library = container["library"]
+        # if library users is more than 1, it means
+        # that there are other materials or images
+        if library and library.users <= 1:
+            bpy.data.libraries.remove(library)
 
         bpy.data.collections.remove(collection)
 

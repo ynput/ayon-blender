@@ -22,11 +22,13 @@ from ayon_blender.api.pipeline import (
 class BlendLinkLoader(plugin.BlenderLoader):
     """Link assets from a .blend file."""
 
-    product_types = {
+    product_base_types = {
         "model", "camera", "rig",
         "layout", "animation", "workfile"
     }
-    representations = {"blend"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Link Blend Hierarchy"
     icon = "code-fork"
@@ -184,7 +186,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
 class BlendLinkLoaderFlat(BlendLinkLoader):
     """Link assets from a .blend file as flat Object."""
 
-    product_types = {"blendScene"}
+    product_base_types = {"blendScene"}
+    product_types = product_base_types
     label = "Link Blend (Flat)"
 
     instance_collections = False

@@ -350,6 +350,108 @@ def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
     return selection
 
 
+def get_upstream_viewlayers(node: bpy.types.CompositorNodeOutputFile)-> set[str]:
+    """Get view layer nodes connected to a CompositorNodeOutputFile node.
+
+    Args:
+        node (bpy.types.CompositorNodeOutputFile): The output file node to check.
+
+    Returns:
+        set[str]: A set of view layer names connected to the output file node.
+    """
+    if not hasattr(node, "inputs"):
+        return set()
+    return {
+        node.layer for node in iter_viewlayer_nodes(node)
+    }
+
+
+def iter_viewlayer_nodes(node: bpy.types.CompositorNodeOutputFile):
+    """
+    Iterate through all Render Layers nodes connected to a File Output node.
+
+    Traverses through all input connections, following through intermediate
+    nodes (like Mix, Composite, etc.) to find all connected Render Layers nodes.
+    Uses an iterative stack-based approach with a set to track processed nodes.
+
+    Args:
+        node: A CompositorNodeOutputFile node to find connected Render Layers
+              nodes from
+
+    Yields:
+        bpy.types.CompositorNodeRLayers: Each connected Render Layers node
+    """
+
+    processed = set()
+    # Stack contains a queue of nodes to process
+    stack: list["bpy.types.CompositorNode"] = [node]
+
+    while stack:
+        current_node = stack.pop()
+
+        # Skip if already processed
+        if current_node in processed:
+            continue
+
+        processed.add(current_node)
+
+        if current_node.type == "R_LAYERS":
+            yield current_node
+        else:
+            # Add all input nodes to the stack for further traversal
+            for input_socket in current_node.inputs:
+                if input_socket.is_linked:
+                    for link in input_socket.links:
+                        stack.append(link.from_node)
+
+
+def iter_images_in_node_tree(tree: bpy.types.NodeTree):
+    """Iterate over all images in a node tree, including nested node groups.
+
+    Args:
+        tree (bpy.types.NodeTree): The node tree to iterate over.
+
+    Yields:
+        bpy.types.Image: Images found in the node tree.
+
+    """
+    nodes = list(tree.nodes)
+    processed = set(nodes)
+    for node in nodes:
+        if hasattr(node, "image"):
+            yield node.image
+        # Traverse down into node groups
+        if hasattr(node, "node_tree"):
+            children = node.node_tree.nodes
+            nodes.extend(
+                node for node in children
+                if node not in processed
+            )
+            processed.update(children)
+
+
+@contextlib.contextmanager
+def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Material]):
+    """Make image paths in materials absolute during context.
+
+    Args:
+        material_datablocks (set[bpy.types.Material]): material datablocks to make
+            image paths absolute for during context
+    """
+    original_image_paths = {}
+    for material in material_datablocks:
+        if not material.use_nodes:
+            continue
+        for image in iter_images_in_node_tree(material.node_tree):
+            filepath = image.filepath
+            original_image_paths[image] = filepath
+            image.filepath = bpy.path.abspath(filepath)
+    try:
+        yield
+    finally:
+        for image, path in original_image_paths.items():
+            image.filepath = path
+
 @contextlib.contextmanager
 def maintained_selection():
     r"""Maintain selection during context
@@ -587,19 +689,19 @@ def collect_animation_defs(create_context, step=True, fps=False):
     return defs
 
 
-def get_cache_modifiers(obj, modifier_type="MESH_SEQUENCE_CACHE"):
-    modifiers_dict = {}
-    modifiers = [modifier for modifier in obj.modifiers
-                 if modifier.type == modifier_type]
-    if modifiers:
-        modifiers_dict[obj.name] = modifiers
-    else:
-        for sub_obj in obj.children:
-            for ob in sub_obj.children:
-                cache_modifiers = [modifier for modifier in ob.modifiers
-                                   if modifier.type == modifier_type]
-                modifiers_dict[ob.name] = cache_modifiers
-    return modifiers_dict
+def add_cache_file(path: str) -> bpy.types.CacheFile:
+    """Add new CacheFile datablock.
+
+    bpy.ops.cachefile.open does not return the new cache file.
+    As such, we need to query what was there before and using
+    that find out what's new
+    """
+    before = set(bpy.data.cache_files)
+    bpy.ops.cachefile.open(filepath=path)
+    after = set(bpy.data.cache_files) - before
+    new = list(after - before)
+    assert len(new) == 1, f"A single CacheFile must be loaded, got: {new}"
+    return new[-1]
 
 
 def get_blender_version():
@@ -805,6 +907,29 @@ def get_scene_node_tree(ensure_exists=False):
         return bpy.context.scene.node_tree
 
 
+def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
+    """Check if a cache file has users.
+
+    Args:
+        cache (bpy.types.CacheFile): Cache File from datablock
+
+    Returns:
+        bool: True if the cache has users, False otherwise.
+    """
+    if cache.users == 0:
+        return False
+    # But there's an edge cases where
+    # Blender still reports users but they
+    # aren't actually there
+    def get_users(datablock):
+        return bpy.data.user_map(subset={datablock})[datablock]
+
+    if not cache.use_fake_user:
+        if not get_users(cache):
+            return False
+        return True
+
+
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
     """Create animation instances for the given rigs.
 
@@ -824,3 +949,51 @@ def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]
             "asset_group": rig
         }
     )
+
+
+def update_content_on_context_change():
+    """
+    This will update scene content to match new folder on context change
+    """
+
+    host = registered_host()
+    create_context = CreateContext(host, discover_publish_plugins=False)
+    task_entity = create_context.get_current_task_entity()
+
+    instance_values = {
+        "folderPath": create_context.get_current_folder_path(),
+        "task": task_entity["name"],
+    }
+    creator_attribute_values = {
+        "frameStart": float(task_entity["attrib"]["frameStart"]),
+        "frameEnd": float(task_entity["attrib"]["frameEnd"]),
+        "handleStart": float(task_entity["attrib"]["handleStart"]),
+        "handleEnd": float(task_entity["attrib"]["handleEnd"]),
+    }
+
+    has_changes = False
+    for instance in create_context.instances:
+        for key, value in instance_values.items():
+            if key not in instance or instance[key] == value:
+                continue
+
+            # Update instance value
+            print(f"Updating {instance.product_name} {key} to: {value}")
+            instance[key] = value
+            has_changes = True
+
+        creator_attributes = instance.creator_attributes
+        for key, value in creator_attribute_values.items():
+            if (
+                    key not in creator_attributes
+                    or creator_attributes[key] == value
+            ):
+                continue
+
+            # Update instance creator attribute value
+            print(f"Updating {instance.product_name} {key} to: {value}")
+            creator_attributes[key] = value
+            has_changes = True
+
+    if has_changes:
+        create_context.save_changes()

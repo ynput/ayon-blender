@@ -79,6 +79,17 @@ class ExtractBlendModel(BaseSettingsModel):
         title="Families"
     )
     compress: bool = SettingsField(True, title="Compress")
+    pack_textures: bool = SettingsField(
+        True,
+        title="Pack Textures",
+        description=(
+            "When enabled publishing the .blend file will also pack the "
+            "textures into the file, which can increase the file size "
+            "significantly but ensures all textures are included with "
+            "the publish. This may however impact performance through "
+            "some renderers."
+        )
+    )
 
 
 class ExtractBlendAnimationModel(BaseSettingsModel):
@@ -305,7 +316,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             "layout",
             "blendScene"
         ],
-        "compress": False
+        "compress": False,
+        "pack_textures": True,
     },
     "ExtractFBX": {
         "enabled": False,
