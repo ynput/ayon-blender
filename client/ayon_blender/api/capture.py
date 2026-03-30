@@ -5,7 +5,7 @@ Playblasting with independent viewport, camera and display options
 import contextlib
 import bpy
 
-from .lib import maintained_time
+from .lib import maintained_time, get_blender_version
 from .plugin import deselect_all, create_blender_context
 
 
@@ -92,6 +92,10 @@ def capture(
             stack.enter_context(applied_render_options(window, render_options))
             stack.enter_context(applied_image_settings(window, image_settings))
             stack.enter_context(maintained_time())
+            if get_blender_version() >= (5, 0, 0):
+                # set media type to IMAGE due to the
+                # multilayer-exr enumration issue in Blender 5.0
+                stack.enter_context(applied_media_type())
 
             bpy.ops.render.opengl(
                 animation=True,
@@ -163,9 +167,8 @@ def _apply_options(entity, options):
 def applied_view(window, camera, isolate=None, options=None):
     """Apply view options to window."""
     area = window.screen.areas[0]
-    space = area.spaces[0]
-
     area.ui_type = "VIEW_3D"
+    space = area.spaces[0]
 
     types = {"MESH", "GPENCIL"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
@@ -185,6 +188,17 @@ def applied_view(window, camera, isolate=None, options=None):
         space.shading.color_type = "MATERIAL"
         space.show_gizmo = False
         space.overlay.show_overlays = False
+
+
+@contextlib.contextmanager
+def applied_media_type():
+    """Context manager for setting media type to IMAGE."""
+    previous_media_type = bpy.context.scene.render.image_settings.media_type
+    bpy.context.scene.render.image_settings.media_type = "IMAGE"
+    try:
+        yield
+    finally:
+        bpy.context.scene.render.image_settings.media_type = previous_media_type
 
 
 @contextlib.contextmanager
@@ -299,4 +313,3 @@ def _independent_window():
         finally:
             restore_global_view(window) 
             bpy.ops.wm.window_close()
-
