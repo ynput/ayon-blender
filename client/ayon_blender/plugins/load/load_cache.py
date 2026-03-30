@@ -64,7 +64,7 @@ class CacheModelLoader(plugin.BlenderLoader):
     product_base_types = {"*"}
     product_types = product_base_types
     representations = {"*"}
-    extensions = {"abc", "usd", "usda", "usdc", "obj"}
+    extensions = {"abc", "usd", "usda", "usdc", "usdz", "obj"}
 
     label = "Load Cache"
     icon = "code-fork"
@@ -225,7 +225,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         relative = bpy.context.preferences.filepaths.use_relative_paths
 
         if any(libpath.lower().endswith(ext)
-               for ext in [".usd", ".usda", ".usdc"]):
+               for ext in [".usd", ".usda", ".usdc", ".usdz"]):
             # USD
             bpy.ops.wm.usd_import(
                 filepath=libpath,
