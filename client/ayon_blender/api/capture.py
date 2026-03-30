@@ -90,11 +90,13 @@ def capture(
             stack.enter_context(maintain_camera(window, camera))
             stack.enter_context(applied_frame_range(window, *frame_range))
             stack.enter_context(applied_render_options(window, render_options))
-            stack.enter_context(applied_image_settings(window, image_settings))
             stack.enter_context(maintained_time())
             if get_blender_version() >= (5, 0, 0):
-                # set media type to IMAGE due to the
-                # multilayer-exr enumration issue in Blender 5.0
+                # Ensure `media_type` is set and make sure it's
+                # in the dict before the `file_format` attribute
+                image_settings["media_type"] = "IMAGE"
+                image_settings["file_format"] = image_settings.pop("file_format")
+                stack.enter_context(applied_image_settings(window, image_settings))
                 stack.enter_context(applied_media_type())
 
             bpy.ops.render.opengl(
