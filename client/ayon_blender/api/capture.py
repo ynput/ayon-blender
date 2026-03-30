@@ -82,6 +82,10 @@ def capture(
         "use_overwrite": overwrite,
     }
 
+    if get_blender_version() >= (5, 0, 0):
+        # Enforce `media_type` is set to IMAGE
+        image_settings["media_type"] = "IMAGE"
+
     with _independent_window() as window:
 
         applied_view(window, camera, isolate, options=display_options)
@@ -90,13 +94,8 @@ def capture(
             stack.enter_context(maintain_camera(window, camera))
             stack.enter_context(applied_frame_range(window, *frame_range))
             stack.enter_context(applied_render_options(window, render_options))
-            stack.enter_context(maintained_time())
-            if get_blender_version() >= (5, 0, 0):
-                # Ensure `media_type` is set and make sure it's
-                # in the dict before the `file_format` attribute
-                image_settings["media_type"] = "IMAGE"
-                image_settings["file_format"] = image_settings.pop("file_format")
             stack.enter_context(applied_image_settings(window, image_settings))
+            stack.enter_context(maintained_time())
 
             bpy.ops.render.opengl(
                 animation=True,
@@ -238,9 +237,17 @@ def applied_render_options(window, options):
 def applied_image_settings(window, options):
     """Context manager to override image settings."""
 
-    options = options or ImageSettings.copy()
+    options = (options or ImageSettings).copy()
     ffmpeg = options.pop("ffmpeg", {})
     render = window.scene.render
+
+    # Enforce order to certain attributes, because the first value may
+    # influence what can be set as the second value
+    order = ["media_type", "file_format", "color_mode", "color_depth"]
+    for key in order:
+        if key in options:
+            # Pop them and re-add them at the end
+            options[key] = options.pop(key)
 
     # Store current image settings
     original = {}
