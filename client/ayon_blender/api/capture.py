@@ -96,8 +96,7 @@ def capture(
                 # in the dict before the `file_format` attribute
                 image_settings["media_type"] = "IMAGE"
                 image_settings["file_format"] = image_settings.pop("file_format")
-                stack.enter_context(applied_image_settings(window, image_settings))
-                stack.enter_context(applied_media_type())
+            stack.enter_context(applied_image_settings(window, image_settings))
 
             bpy.ops.render.opengl(
                 animation=True,
@@ -190,17 +189,6 @@ def applied_view(window, camera, isolate=None, options=None):
         space.shading.color_type = "MATERIAL"
         space.show_gizmo = False
         space.overlay.show_overlays = False
-
-
-@contextlib.contextmanager
-def applied_media_type():
-    """Context manager for setting media type to IMAGE."""
-    previous_media_type = bpy.context.scene.render.image_settings.media_type
-    bpy.context.scene.render.image_settings.media_type = "IMAGE"
-    try:
-        yield
-    finally:
-        bpy.context.scene.render.image_settings.media_type = previous_media_type
 
 
 @contextlib.contextmanager
