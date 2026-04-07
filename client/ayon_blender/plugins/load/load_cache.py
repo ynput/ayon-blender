@@ -207,6 +207,10 @@ class CacheModelLoader(plugin.BlenderLoader):
                     material = material_slot.material
                     if not material:
                         continue
+
+                    if material.users > 1:
+                        continue
+
                     bpy.data.materials.remove(material)
                 bpy.data.meshes.remove(obj.data)
             elif obj.type == 'EMPTY':
