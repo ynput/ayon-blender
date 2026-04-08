@@ -123,9 +123,9 @@ def set_render_passes(settings, renderer, view_layers):
         view_layers (list[bpy.types.ViewLayer]): The list of view layers to
         set the passes for.
     """
-    aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
-    existing_aov_list = set(existing_aov_options(renderer, view_layers))
-    aov_list = aov_list.union(existing_aov_list)
+    aov_list = set(existing_aov_options(renderer, view_layers))
+    if not aov_list:
+        aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
     # Common passes for both renderers
     for vl in view_layers:
