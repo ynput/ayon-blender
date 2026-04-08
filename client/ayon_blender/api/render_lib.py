@@ -123,12 +123,18 @@ def set_render_passes(settings, renderer, view_layers):
         view_layers (list[bpy.types.ViewLayer]): The list of view layers to
         set the passes for.
     """
-    aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
-    existing_aov_list = set(existing_aov_options(renderer, view_layers))
-    aov_list = aov_list.union(existing_aov_list)
+    base_aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
+    aov_list_combined: set[str] = set()
     # Common passes for both renderers
     for vl in view_layers:
+        # Compute per-layer AOV list: project settings AOVs unioned with only
+        # this view layer's currently enabled AOVs. This preserves per-layer
+        # AOV differences instead of propagating all layers' AOVs everywhere.
+        existing_aov_list = set(existing_aov_options(renderer, vl))
+        aov_list = base_aov_list.union(existing_aov_list)
+        aov_list_combined.update(aov_list)
+
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
@@ -166,7 +172,7 @@ def set_render_passes(settings, renderer, view_layers):
                 aov = vl.aovs[custom_pass_name]
             aov.type = custom_pass["value"]
 
-    return list(aov_list), custom_passes
+    return list(aov_list_combined), custom_passes
 
 
 def get_aov_options(renderer: str) -> dict[str, str]:
@@ -220,28 +226,27 @@ def get_aov_options(renderer: str) -> dict[str, str]:
 
 
 def existing_aov_options(
-    renderer: str, view_layers: list["bpy.types.ViewLayer"]
+    renderer: str, view_layer:"bpy.types.ViewLayer"
 ) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
-    for vl in view_layers:
-        if renderer == "BLENDER_EEVEE":
-            eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
-            for pass_name, attr in aov_options.items():
-                target = vl if attr in eevee_attrs else vl.eevee
-                if getattr(target, attr, False):
-                    aov_list.append(pass_name)
+    if renderer == "BLENDER_EEVEE":
+        eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
+        for pass_name, attr in aov_options.items():
+            target = view_layer.eevee if attr in eevee_attrs else view_layer
+            if getattr(target, attr, False):
+                aov_list.append(pass_name)
 
-        elif renderer == "CYCLES":
-            cycle_attrs = [
-                "denoising_store_passes", "pass_debug_sample_count",
-                "use_pass_volume_direct", "use_pass_volume_indirect",
-                "use_pass_shadow_catcher"
-            ]
-            for pass_name, attr in aov_options.items():
-                target = vl.cycles if attr in cycle_attrs else vl
-                if getattr(target, attr, False):
-                    aov_list.append(pass_name)
+    elif renderer == "CYCLES":
+        cycle_attrs = [
+            "denoising_store_passes", "pass_debug_sample_count",
+            "use_pass_volume_direct", "use_pass_volume_indirect",
+            "use_pass_shadow_catcher"
+        ]
+        for pass_name, attr in aov_options.items():
+            target = view_layer.cycles if attr in cycle_attrs else view_layer
+            if getattr(target, attr, False):
+                aov_list.append(pass_name)
 
     return aov_list
 
