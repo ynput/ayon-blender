@@ -233,9 +233,9 @@ def existing_aov_options(
     if renderer == "BLENDER_EEVEE":
         eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
         for pass_name, attr in aov_options.items():
-            target = view_layer if attr in eevee_attrs else view_layer.eevee
+            target = view_layer.eevee if attr in eevee_attrs else view_layer
             if getattr(target, attr, False):
-                    aov_list.append(pass_name)
+                aov_list.append(pass_name)
 
     elif renderer == "CYCLES":
         cycle_attrs = [
