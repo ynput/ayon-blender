@@ -58,8 +58,11 @@ def set_render_format(ext: str, multilayer: bool):
     bpy.context.scene.render.use_file_extension = True
     image_settings = bpy.context.scene.render.image_settings
 
-    if multilayer and lib.get_blender_version() >= (5, 0, 0):
-        image_settings.media_type = "MULTI_LAYER_IMAGE"
+    if lib.get_blender_version() >= (5, 0, 0):
+        if multilayer:
+            image_settings.media_type = "MULTI_LAYER_IMAGE"
+        else:
+            image_settings.media_type = "IMAGE"
 
     if ext == "exr":
         file_format = "OPEN_EXR_MULTILAYER" if multilayer else "OPEN_EXR"
