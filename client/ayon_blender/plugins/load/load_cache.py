@@ -200,14 +200,6 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         for obj in objects:
             if obj.type == 'MESH':
-                # QUESTION: Are we sure we want to remove the materials when
-                #  removing the mesh? What if the material is shared with
-                #  other objects?
-                for material_slot in list(obj.material_slots):
-                    material = material_slot.material
-                    if not material:
-                        continue
-                    bpy.data.materials.remove(material)
                 bpy.data.meshes.remove(obj.data)
             elif obj.type == 'EMPTY':
                 objects.extend(obj.children)
