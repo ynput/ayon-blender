@@ -50,18 +50,22 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
 
         placeholder_collection = bpy.data.collections.new(PLACEHOLDER_SET)
         bpy.context.scene.collection.children.link(placeholder_collection)
-        filepath = Path(path)
+        filepath = Path(path).resolve()
         if not filepath.exists():
             return False
 
-        with bpy.data.libraries.load(filepath.as_posix()) as (data_src, data_dst):
+        with bpy.data.libraries.load(str(filepath)) as (data_src, data_dst):
             data_dst.collections = data_src.collections
             data_dst.objects = data_src.objects
+
+        # Make all paths absolute to resolve relative path warnings
+        bpy.ops.file.make_paths_absolute()
 
         for target_object in data_dst.objects:
             bpy.context.scene.collection.objects.link(target_object)
         for target_collection in data_dst.collections:
             bpy.context.scene.collection.children.link(target_collection)
+
 
         # update imported sets information
         update_content_on_context_change()

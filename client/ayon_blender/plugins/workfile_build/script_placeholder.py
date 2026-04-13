@@ -8,7 +8,7 @@ from ayon_core.lib.events import weakref_partial
 
 EXAMPLE_SCRIPT = """
 # Access blender commands
-from pymxs import runtime as rt
+import bpy
 
 # Access the placeholder node
 placeholder_node = placeholder.scene_identifier
