@@ -61,9 +61,10 @@ class CacheModelLoader(plugin.BlenderLoader):
     Note:
         At least for now it only supports Alembic files.
     """
-    product_types = {"*"}
+    product_base_types = {"*"}
+    product_types = product_base_types
     representations = {"*"}
-    extensions = {"abc", "usd", "usda", "usdc", "obj"}
+    extensions = {"abc", "usd", "usda", "usdc", "usdz", "obj"}
 
     label = "Load Cache"
     icon = "code-fork"
@@ -199,8 +200,6 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         for obj in objects:
             if obj.type == 'MESH':
-                for material_slot in list(obj.material_slots):
-                    bpy.data.materials.remove(material_slot.material)
                 bpy.data.meshes.remove(obj.data)
             elif obj.type == 'EMPTY':
                 objects.extend(obj.children)
@@ -218,7 +217,7 @@ class CacheModelLoader(plugin.BlenderLoader):
         relative = bpy.context.preferences.filepaths.use_relative_paths
 
         if any(libpath.lower().endswith(ext)
-               for ext in [".usd", ".usda", ".usdc"]):
+               for ext in [".usd", ".usda", ".usdc", ".usdz"]):
             # USD
             bpy.ops.wm.usd_import(
                 filepath=libpath,
@@ -320,7 +319,6 @@ class CacheModelLoader(plugin.BlenderLoader):
         container = get_ayon_container()
         self._link_objects(objects, asset_group, container)
 
-        product_type = context["product"]["productType"]
         asset_group[AYON_PROPERTY] = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
@@ -332,8 +330,6 @@ class CacheModelLoader(plugin.BlenderLoader):
             # Blender-specific metadata
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": product_type,
             "objectName": group_name,
             "options": options or {}
         }

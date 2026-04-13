@@ -11,7 +11,8 @@ from ayon_core.pipeline import AYON_CONTAINER_ID
 class LoadImageCompositor(plugin.BlenderLoader):
     """Load media to the compositor."""
 
-    product_types = {"render", "image", "plate"}
+    product_base_types = {"render", "image", "plate"}
+    product_types = product_base_types
     representations = {"*"}
 
     label = "Load in Compositor"

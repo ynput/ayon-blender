@@ -19,8 +19,10 @@ import bpy
 class BlendLookLoader(plugin.BlenderLoader):
     """Load material datablock from a .blend file."""
 
-    product_types = {"look"}
-    representations = {"blend"}
+    product_base_types = {"look"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Load Look"
     icon = "code-fork"

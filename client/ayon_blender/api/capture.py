@@ -5,7 +5,7 @@ Playblasting with independent viewport, camera and display options
 import contextlib
 import bpy
 
-from .lib import maintained_time
+from .lib import maintained_time, get_blender_version
 from .plugin import deselect_all, create_blender_context
 
 
@@ -81,6 +81,10 @@ def capture(
         "resolution_y": height,
         "use_overwrite": overwrite,
     }
+
+    if get_blender_version() >= (5, 0, 0):
+        # Enforce `media_type` is set to IMAGE
+        image_settings["media_type"] = "IMAGE"
 
     with _independent_window() as window:
 
@@ -163,9 +167,8 @@ def _apply_options(entity, options):
 def applied_view(window, camera, isolate=None, options=None):
     """Apply view options to window."""
     area = window.screen.areas[0]
-    space = area.spaces[0]
-
     area.ui_type = "VIEW_3D"
+    space = area.spaces[0]
 
     types = {"MESH", "GPENCIL"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
@@ -234,9 +237,17 @@ def applied_render_options(window, options):
 def applied_image_settings(window, options):
     """Context manager to override image settings."""
 
-    options = options or ImageSettings.copy()
+    options = (options or ImageSettings).copy()
     ffmpeg = options.pop("ffmpeg", {})
     render = window.scene.render
+
+    # Enforce order to certain attributes, because the first value may
+    # influence what can be set as the second value
+    order = ["media_type", "file_format", "color_mode", "color_depth"]
+    for key in order:
+        if key in options:
+            # Pop them and re-add them at the end
+            options[key] = options.pop(key)
 
     # Store current image settings
     original = {}
@@ -299,4 +310,3 @@ def _independent_window():
         finally:
             restore_global_view(window) 
             bpy.ops.wm.window_close()
-

@@ -58,8 +58,11 @@ def set_render_format(ext: str, multilayer: bool):
     bpy.context.scene.render.use_file_extension = True
     image_settings = bpy.context.scene.render.image_settings
 
-    if multilayer and lib.get_blender_version() >= (5, 0, 0):
-        image_settings.media_type = "MULTI_LAYER_IMAGE"
+    if lib.get_blender_version() >= (5, 0, 0):
+        if multilayer:
+            image_settings.media_type = "MULTI_LAYER_IMAGE"
+        else:
+            image_settings.media_type = "IMAGE"
 
     if ext == "exr":
         file_format = "OPEN_EXR_MULTILAYER" if multilayer else "OPEN_EXR"
@@ -123,12 +126,18 @@ def set_render_passes(settings, renderer, view_layers):
         view_layers (list[bpy.types.ViewLayer]): The list of view layers to
         set the passes for.
     """
-    aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
-    existing_aov_list = set(existing_aov_options(renderer, view_layers))
-    aov_list = aov_list.union(existing_aov_list)
+    base_aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
+    aov_list_combined: set[str] = set()
     # Common passes for both renderers
     for vl in view_layers:
+        # Compute per-layer AOV list: project settings AOVs unioned with only
+        # this view layer's currently enabled AOVs. This preserves per-layer
+        # AOV differences instead of propagating all layers' AOVs everywhere.
+        existing_aov_list = set(existing_aov_options(renderer, vl))
+        aov_list = base_aov_list.union(existing_aov_list)
+        aov_list_combined.update(aov_list)
+
         if renderer == "BLENDER_EEVEE":
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
@@ -166,7 +175,7 @@ def set_render_passes(settings, renderer, view_layers):
                 aov = vl.aovs[custom_pass_name]
             aov.type = custom_pass["value"]
 
-    return list(aov_list), custom_passes
+    return list(aov_list_combined), custom_passes
 
 
 def get_aov_options(renderer: str) -> dict[str, str]:
@@ -220,31 +229,56 @@ def get_aov_options(renderer: str) -> dict[str, str]:
 
 
 def existing_aov_options(
-    renderer: str, view_layers: list["bpy.types.ViewLayer"]
+    renderer: str, view_layer:"bpy.types.ViewLayer"
 ) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
-    for vl in view_layers:
-        if renderer == "BLENDER_EEVEE":
-            eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
-            for pass_name, attr in aov_options.items():
-                target = vl if attr in eevee_attrs else vl.eevee
-                if getattr(target, attr, False):
-                    aov_list.append(pass_name)
+    if renderer == "BLENDER_EEVEE":
+        eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
+        for pass_name, attr in aov_options.items():
+            target = view_layer.eevee if attr in eevee_attrs else view_layer
+            if getattr(target, attr, False):
+                aov_list.append(pass_name)
 
-        elif renderer == "CYCLES":
-            cycle_attrs = [
-                "denoising_store_passes", "pass_debug_sample_count",
-                "use_pass_volume_direct", "use_pass_volume_indirect",
-                "use_pass_shadow_catcher"
-            ]
-            for pass_name, attr in aov_options.items():
-                target = vl.cycles if attr in cycle_attrs else vl
-                if getattr(target, attr, False):
-                    aov_list.append(pass_name)
+    elif renderer == "CYCLES":
+        cycle_attrs = [
+            "denoising_store_passes", "pass_debug_sample_count",
+            "use_pass_volume_direct", "use_pass_volume_indirect",
+            "use_pass_shadow_catcher"
+        ]
+        for pass_name, attr in aov_options.items():
+            target = view_layer.cycles if attr in cycle_attrs else view_layer
+            if getattr(target, attr, False):
+                aov_list.append(pass_name)
 
     return aov_list
 
+def ensure_unique_output_node_name(
+    tree: "bpy.types.NodeTree",
+    output_node: "bpy.types.CompositorNodeOutputFile",
+    name: str,
+) -> str:
+    """Ensure the given CompositorNodeOutputFile node has a unique name.
+
+    Args:
+        tree (bpy.types.NodeTree): The node tree to process.
+        output_node (bpy.types.CompositorNodeOutputFile): The output node to
+            rename if needed.
+        name (str): The variant name to use in the output node name.
+
+    Returns:
+        str: The unique name assigned to the given output node.
+
+    """
+    base_name = name
+    counter = 1
+    while tree.nodes.get(base_name):
+        base_name = f"{name}_{counter}"
+        counter += 1
+
+    output_node.name = base_name
+    output_node.label = base_name
+    return base_name
 
 def get_base_render_output_path(
     variant_name: str,
@@ -313,8 +347,9 @@ def create_render_node_tree(
     output: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
         "CompositorNodeOutputFile"
     )
-    output.name = variant_name
-    output.label = variant_name
+
+    # Ensure the output node has a unique name
+    unique_name = ensure_unique_output_node_name(tree, output, variant_name)
 
     # Multi-exr
     multi_exr: bool = ext == "exr" and multilayer
@@ -329,7 +364,7 @@ def create_render_node_tree(
 
     # Define the base path for the File Output node.
     base_path = get_base_render_output_path(
-        variant_name, project_settings=project_settings
+        unique_name, project_settings=project_settings
     )
     if blender_version >= (5, 0, 0):
         base_path_dir, base_path_filename = os.path.split(base_path)
