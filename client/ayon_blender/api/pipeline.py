@@ -519,7 +519,7 @@ def _discover_gui() -> Optional[Callable]:
     return None
 
 
-def get_ayon_property(node):
+def get_ayon_property(node) -> Dict:
     property = node.get(AYON_PROPERTY)
     if not property:
         # Backwards compatibility: Update legacy
@@ -532,7 +532,7 @@ def get_ayon_property(node):
             )
             node[AYON_PROPERTY] = property
             del node[AVALON_PROPERTY]
-    return property
+    return property.to_dict() if property else {}
 
 
 def convert_avalon_instances():
