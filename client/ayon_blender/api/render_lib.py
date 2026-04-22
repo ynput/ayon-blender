@@ -462,7 +462,9 @@ def create_render_node_tree(
 
 
 def prepare_rendering(
-    variant_name: str, project_settings: Optional[dict] = None
+    variant_name: str,
+    selected_view_layers: Optional[list[str]] = None,
+    project_settings: Optional[dict] = None
 ) -> "bpy.types.CompositorNodeOutputFile":
     """Initialize render setup using render settings from project settings."""
     assert bpy.data.filepath, "Workfile not saved. Please save the file first."
@@ -495,12 +497,17 @@ def prepare_rendering(
     if node_tree is not None:
         for node in node_tree.nodes:
             if node.bl_idname == "CompositorNodeRLayers" and node.select:
+                if has_selected_view_layers(selected_view_layers, node):
+                        continue
                 selected_renderlayer_nodes.append(node)
 
     if selected_renderlayer_nodes:
         render_layer_nodes = selected_renderlayer_nodes
     else:
-        render_layer_nodes = get_or_create_render_layer_nodes(view_layers)
+        render_layer_nodes = get_or_create_render_layer_nodes(
+            view_layers,
+            selected_view_layers=selected_view_layers
+        )
 
     # Generate Compositing nodes
     output_node = create_render_node_tree(
@@ -558,6 +565,7 @@ def set_tmp_scene_render_output_path(project_settings: dict):
 
 def get_or_create_render_layer_nodes(
     view_layers: list["bpy.types.ViewLayer"],
+    selected_view_layers: Optional[list[str]] = None
 ) -> set[bpy.types.CompositorNodeRLayers]:
     """Get existing render layer nodes or create new ones."""
     tree = lib.get_scene_node_tree(ensure_exists=True)
@@ -571,6 +579,9 @@ def get_or_create_render_layer_nodes(
     found_view_layer_names: set[str] = set()
     for node in tree.nodes:
         if node.bl_idname != "CompositorNodeRLayers":
+            continue
+
+        if has_selected_view_layers(selected_view_layers, node):
             continue
 
         # Skip if already found a render layer node for this view layer.
@@ -588,9 +599,38 @@ def get_or_create_render_layer_nodes(
     missing_view_layer_names: set[str] = (
         view_layer_names - found_view_layer_names
     )
+    if selected_view_layers:
+         missing_view_layer_names = missing_view_layer_names.intersection(
+            set(selected_view_layers)
+        )
+
     for view_layer_name in missing_view_layer_names:
         render_layer_node = tree.nodes.new("CompositorNodeRLayers")
         render_layer_node.layer = view_layer_name
         render_layer_nodes.add(render_layer_node)
 
     return render_layer_nodes
+
+
+def has_selected_view_layers(
+        selected_view_layers: Optional[list[str]],
+        node: bpy.types.CompositorNodeRLayers
+) -> bool:
+    """Check if the given compositor view layer node has a view
+    layer that is in the selected view layers.
+
+    Args:
+        selected_view_layers (Optional[list[str]]): selected view layers to consider 
+            for inclusion. If None, all view layers are included.
+        node (bpy.types.CompositorNodeRLayers): the compositor node to check against 
+            the selected view layers.
+
+    Returns:
+        bool: True if the node's layer is in the selected view layers, False otherwise.
+    """
+    if not selected_view_layers:
+        return False
+    for view_layer_name in selected_view_layers:
+        if view_layer_name == node.layer:
+            return True
+    return False

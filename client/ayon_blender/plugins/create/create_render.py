@@ -67,7 +67,12 @@ class CreateRender(plugin.BlenderCreator):
             # TODO: Prepare rendering setup should always generate a new
             #  setup, and return the relevant compositor node instead of
             #  guessing afterwards
-            node = render_lib.prepare_rendering(variant_name=variant)
+            # add options to select renderlayers
+            view_layers: Optional[list[str]] = pre_create_data.get("view_layers")
+            node = render_lib.prepare_rendering(
+                variant_name=variant,
+                selected_view_layers=view_layers
+            )
         else:
             # Create a Compositor node
             node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
@@ -233,6 +238,9 @@ class CreateRender(plugin.BlenderCreator):
         return defs
 
     def get_pre_create_attr_defs(self):
+        view_layer_items: list[str] = [
+            layer.name for layer in bpy.context.scene.view_layers
+        ]
         return [
             BoolDef(
                 "create_render_setup",
@@ -240,7 +248,12 @@ class CreateRender(plugin.BlenderCreator):
                 default=False,
                 tooltip="Create Render Setup",
             ),
-
+            EnumDef("view_layers",
+                    items=view_layer_items,
+                    label="View Layers",
+                    multiselection=True,
+                    tooltip="Select view layers to include in the render setup"
+            ),
         ]
 
     def imprint(self, node: bpy.types.CompositorNodeOutputFile, data: dict):
