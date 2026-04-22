@@ -73,6 +73,22 @@ class CreateRender(plugin.BlenderCreator):
                 variant_name=variant,
                 selected_view_layers=view_layers
             )
+
+            project_name = self.create_context.get_current_project_name()
+            project_entity = self.create_context.get_current_project_entity()
+            folder_entity = self.create_context.get_current_folder_entity()
+            task_entity = self.create_context.get_current_task_entity()
+
+            variant = clean_name(node.name)
+            product_name = self.get_product_name(
+                project_name=project_name,
+                project_entity=project_entity,
+                folder_entity=folder_entity,
+                task_entity=task_entity,
+                variant=variant,
+                host_name=self.create_context.host_name,
+                product_type=self.product_base_type,
+            )
         else:
             # Create a Compositor node
             node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
@@ -96,29 +112,14 @@ class CreateRender(plugin.BlenderCreator):
             else:
                 node.base_path = base_path
 
-            node.name = variant
-            node.label = variant
-
-        project_name = self.create_context.get_current_project_name()
-        project_entity = self.create_context.get_current_project_entity()
-        folder_entity = self.create_context.get_current_folder_entity()
-        task_entity = self.create_context.get_current_task_entity()
+        node.name = variant
+        node.label = variant
 
         self.set_instance_data(product_name, instance_data)
         product_type = instance_data.get("productType")
         if not product_type:
             product_type = self.product_base_type
 
-        variant = clean_name(node.name)
-        product_name = self.get_product_name(
-            project_name=project_name,
-            project_entity=project_entity,
-            folder_entity=folder_entity,
-            task_entity=task_entity,
-            variant=variant,
-            host_name=self.create_context.host_name,
-            product_type=product_type,
-        )
         instance = CreatedInstance(
             product_base_type=self.product_base_type,
             product_type=product_type,
