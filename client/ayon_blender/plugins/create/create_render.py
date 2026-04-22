@@ -90,30 +90,39 @@ class CreateRender(plugin.BlenderCreator):
                 product_type=self.product_base_type,
             )
         else:
-            # Create a Compositor node
-            node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
-                "CompositorNodeOutputFile"
-            )
             project_settings = (
                 self.create_context.get_current_project_settings()
             )
-            base_path = render_lib.get_base_render_output_path(
-                variant_name=variant,
-                # For now enforce multi-exr here since we are not connecting
-                # any inputs and it at least ensures a full path is set.
-                multi_exr=True,
-                project_settings=project_settings,
-            )
-            node.format.file_format = "OPEN_EXR_MULTILAYER"
-            if BLENDER_VERSION >= (5, 0, 0):
-                directory, filename = os.path.split(base_path)
-                node.directory = directory
-                node.file_name = filename
+            selected_renderlayer_nodes = render_lib.get_selected_render_layer_nodes(tree)
+            if selected_renderlayer_nodes:
+                node = render_lib.create_render_node_tree(
+                    variant,
+                    selected_renderlayer_nodes,
+                    project_settings
+                )
             else:
-                node.base_path = base_path
+                # Create a Compositor node
+                node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
+                    "CompositorNodeOutputFile"
+                )
+                base_path = render_lib.get_base_render_output_path(
+                    variant_name=variant,
+                    # For now enforce multi-exr here since we are not connecting
+                    # any inputs and it at least ensures a full path is set.
+                    multi_exr=True,
+                    project_settings=project_settings,
+                )
+                node.format.file_format = "OPEN_EXR_MULTILAYER"
+                if BLENDER_VERSION >= (5, 0, 0):
+                    directory, filename = os.path.split(base_path)
+                    node.directory = directory
+                    node.file_name = filename
+                else:
+                    node.base_path = base_path
 
-        node.name = variant
-        node.label = variant
+                node.name = variant
+                node.label = variant
+
 
         self.set_instance_data(product_name, instance_data)
         product_type = instance_data.get("productType")
