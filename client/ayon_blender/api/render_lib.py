@@ -497,8 +497,11 @@ def prepare_rendering(
     if node_tree is not None:
         for node in node_tree.nodes:
             if node.bl_idname == "CompositorNodeRLayers" and node.select:
-                if has_selected_view_layers(selected_view_layers, node):
-                        continue
+                if (
+                    selected_view_layers
+                    and not has_selected_view_layers(selected_view_layers, node)
+                ):
+                    continue
                 selected_renderlayer_nodes.append(node)
 
     if selected_renderlayer_nodes:
