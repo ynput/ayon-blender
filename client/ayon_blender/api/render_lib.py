@@ -608,7 +608,7 @@ def get_or_create_render_layer_nodes(
         view_layer_names - found_view_layer_names
     )
     if selected_view_layers:
-         missing_view_layer_names = missing_view_layer_names.intersection(
+        missing_view_layer_names = missing_view_layer_names.intersection(
             set(selected_view_layers)
         )
 
