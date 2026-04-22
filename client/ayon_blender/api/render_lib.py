@@ -636,8 +636,6 @@ def has_selected_view_layers(
     Returns:
         bool: True if the node's layer is in the selected view layers, False otherwise.
     """
-    if not selected_view_layers:
-        return False
     for view_layer_name in selected_view_layers:
         if view_layer_name == node.layer:
             return True
