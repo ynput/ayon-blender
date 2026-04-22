@@ -463,8 +463,9 @@ def create_render_node_tree(
 
 def prepare_rendering(
     variant_name: str,
-    selected_view_layers: Optional[list[str]] = None,
-    project_settings: Optional[dict] = None
+    project_settings: Optional[dict] = None,
+    *,
+    selected_view_layers: Optional[list[str]] = None
 ) -> "bpy.types.CompositorNodeOutputFile":
     """Initialize render setup using render settings from project settings."""
     assert bpy.data.filepath, "Workfile not saved. Please save the file first."
