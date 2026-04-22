@@ -15,10 +15,10 @@ BLENDER_VERSION = lib.get_blender_version()
 def clean_name(name: str) -> str:
     """Ensure variant name is valid, e.g. strip spaces from name"""
     # Entity name regex taken from server code which also applies to
-    # product names (which usually
+    # product names (which also follows the same rules).
     name_regex = r"^[a-zA-Z0-9_]([a-zA-Z0-9_\.\-]*[a-zA-Z0-9_])?$"
 
-    # Replace space with underscore
+    # Remove spaces
     clean = name.replace(" ", "")
     # Strip out any remaining invalid characters
     clean = re.sub(r"[^a-zA-Z0-9_.-]", "", clean)
@@ -74,21 +74,6 @@ class CreateRender(plugin.BlenderCreator):
                 selected_view_layers=view_layers
             )
 
-            project_name = self.create_context.get_current_project_name()
-            project_entity = self.create_context.get_current_project_entity()
-            folder_entity = self.create_context.get_current_folder_entity()
-            task_entity = self.create_context.get_current_task_entity()
-
-            variant = clean_name(node.name)
-            product_name = self.get_product_name(
-                project_name=project_name,
-                project_entity=project_entity,
-                folder_entity=folder_entity,
-                task_entity=task_entity,
-                variant=variant,
-                host_name=self.create_context.host_name,
-                product_type=self.product_base_type,
-            )
         else:
             project_settings = (
                 self.create_context.get_current_project_settings()
@@ -123,11 +108,27 @@ class CreateRender(plugin.BlenderCreator):
                 node.name = variant
                 node.label = variant
 
-
         self.set_instance_data(product_name, instance_data)
+
+        project_name = self.create_context.get_current_project_name()
+        project_entity = self.create_context.get_current_project_entity()
+        folder_entity = self.create_context.get_current_folder_entity()
+        task_entity = self.create_context.get_current_task_entity()
+
         product_type = instance_data.get("productType")
         if not product_type:
             product_type = self.product_base_type
+
+        variant = clean_name(node.name)
+        product_name = self.get_product_name(
+            project_name=project_name,
+            project_entity=project_entity,
+            folder_entity=folder_entity,
+            task_entity=task_entity,
+            variant=variant,
+            host_name=self.create_context.host_name,
+            product_type=self.product_base_type,
+        )
 
         instance = CreatedInstance(
             product_base_type=self.product_base_type,
@@ -162,8 +163,6 @@ class CreateRender(plugin.BlenderCreator):
         # Convert legacy instances that did not yet imprint on the
         # compositor node itself
         for instance in self.create_context.instances:
-            instance: CreatedInstance
-
             # Ignore instances from other creators
             if instance.creator_identifier != self.identifier:
                 continue
@@ -241,7 +240,6 @@ class CreateRender(plugin.BlenderCreator):
             self._add_instance_to_context(instance)
 
     def get_instance_attr_defs(self):
-
         render_target_items: dict[str, str] = {
             "local": "Local machine rendering",
             "local_no_render": "Use existing frames (local)",

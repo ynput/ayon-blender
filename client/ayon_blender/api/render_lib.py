@@ -460,6 +460,24 @@ def create_render_node_tree(
 
     return output
 
+def get_selected_render_layer_nodes(
+        node_tree: "bpy.types.NodeTree"
+) -> list["bpy.types.CompositorNodeRLayers"]:
+    """Get the selected render layer nodes from the given node tree.
+
+    Args:
+        node_tree (bpy.types.NodeTree): The node tree to search for selected render layer nodes.
+
+    Returns:
+        list[bpy.types.CompositorNodeRLayers]: A list of selected render layer nodes.
+
+    """
+    selected_nodes = []
+    for node in node_tree.nodes:
+        if node.bl_idname == "CompositorNodeRLayers" and node.select:
+            selected_nodes.append(node)
+    return selected_nodes
+
 
 def prepare_rendering(
     variant_name: str,
@@ -510,8 +528,8 @@ def prepare_rendering(
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
     node_tree = lib.get_scene_node_tree(ensure_exists=True)
-    selected_renderlayer_nodes = []
-    
+    selected_renderlayer_nodes = get_selected_render_layer_nodes(node_tree)
+
     # Check if node_tree is available before accessing nodes
     if node_tree is not None:
         for node in node_tree.nodes:
