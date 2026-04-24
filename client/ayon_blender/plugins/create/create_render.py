@@ -1,5 +1,4 @@
 """Create render."""
-import os
 import re
 
 import bpy

@@ -354,13 +354,23 @@ def create_render_node_tree(
     # Multi-exr
     multi_exr: bool = ext == "exr" and multilayer
     blender_version = lib.get_blender_version()
+    # By default, match output format from scene file format
+    image_settings = bpy.context.scene.render.image_settings
+    file_format = image_settings.file_format
     if blender_version >= (5, 0, 0):
         output.format.media_type = (
             "MULTI_LAYER_IMAGE" if multi_exr else "IMAGE"
         )
-    # By default, match output format from scene file format
-    image_settings = bpy.context.scene.render.image_settings
-    output.format.file_format = image_settings.file_format
+        # OPEN_EXR_MULTILAYER is not valid for the compositor output node;
+        # multilayer is handled via media_type instead.
+        if multi_exr:
+            file_format = "OPEN_EXR_MULTILAYER"
+        elif ext == "exr":
+            file_format = "OPEN_EXR"
+        else:
+            file_format = image_settings.file_format
+
+    output.format.file_format = file_format
 
     # Define the base path for the File Output node.
     base_path = get_base_render_output_path(
