@@ -461,12 +461,15 @@ def create_render_node_tree(
     return output
 
 def get_selected_render_layer_nodes(
-        node_tree: "bpy.types.NodeTree"
+        node_tree: "bpy.types.NodeTree",
+        selected_all: bool = False,
 ) -> list["bpy.types.CompositorNodeRLayers"]:
     """Get the selected render layer nodes from the given node tree.
 
     Args:
         node_tree (bpy.types.NodeTree): The node tree to search for selected render layer nodes.
+        selected_all (bool): If True, all render layer nodes are returned regardless of selection.
+            If False, only selected nodes are returned.
 
     Returns:
         list[bpy.types.CompositorNodeRLayers]: A list of selected render layer nodes.
@@ -474,7 +477,7 @@ def get_selected_render_layer_nodes(
     """
     selected_nodes = []
     for node in node_tree.nodes:
-        if node.bl_idname == "CompositorNodeRLayers" and node.select:
+        if node.bl_idname == "CompositorNodeRLayers" and (selected_all or node.select):
             selected_nodes.append(node)
     return selected_nodes
 
