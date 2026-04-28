@@ -354,13 +354,24 @@ def create_render_node_tree(
     # Multi-exr
     multi_exr: bool = ext == "exr" and multilayer
     blender_version = lib.get_blender_version()
+    # By default, match output format from scene file format
+    image_settings = bpy.context.scene.render.image_settings
+    file_format = image_settings.file_format
     if blender_version >= (5, 0, 0):
         output.format.media_type = (
             "MULTI_LAYER_IMAGE" if multi_exr else "IMAGE"
         )
-    # By default, match output format from scene file format
-    image_settings = bpy.context.scene.render.image_settings
-    output.format.file_format = image_settings.file_format
+        # OPEN_EXR_MULTILAYER only valid when multi_exr is True
+        # For non multilayer exr and exr format is used, file format
+        # should be OPEN_EXR, otherwise it should follow the scene file format
+        if multi_exr:
+            file_format = "OPEN_EXR_MULTILAYER"
+        elif ext == "exr":
+            file_format = "OPEN_EXR"
+        else:
+            file_format = image_settings.file_format
+
+    output.format.file_format = file_format
 
     # Define the base path for the File Output node.
     base_path = get_base_render_output_path(
@@ -460,11 +471,63 @@ def create_render_node_tree(
 
     return output
 
+def get_selected_render_layer_nodes(
+        node_tree: "bpy.types.NodeTree",
+        selected_all: bool = False,
+        selected_view_layers: Optional[list[str]] = None
+) -> set["bpy.types.CompositorNodeRLayers"]:
+    """Get the selected render layer nodes from the given node tree.
+
+    Args:
+        node_tree (bpy.types.NodeTree): The node tree to search for selected render layer nodes.
+        selected_all (bool): If True, all render layer nodes are returned regardless of selection.
+            If False, only selected nodes are returned.
+        selected_view_layers (Optional[list[str]]): Optional list of Blender view-layer names
+        to limit which render layer nodes are included. If provided,
+        only nodes whose view-layer names are included.
+
+    Returns:
+        set[bpy.types.CompositorNodeRLayers]: A set of selected render layer nodes.
+
+    """
+    selected_nodes = set()
+    for node in node_tree.nodes:
+        if node.bl_idname == "CompositorNodeRLayers" and (selected_all or node.select):
+            if (
+                selected_view_layers
+                and not has_selected_view_layers(selected_view_layers, node)
+            ):
+                continue
+            selected_nodes.add(node)
+
+    return selected_nodes
+
 
 def prepare_rendering(
-    variant_name: str, project_settings: Optional[dict] = None
+    variant_name: str,
+    project_settings: Optional[dict] = None,
+    *,
+    selected_view_layers: Optional[list[str]] = None
 ) -> "bpy.types.CompositorNodeOutputFile":
-    """Initialize render setup using render settings from project settings."""
+    """Initialize render setup using render settings from project settings.
+
+    Args:
+        variant_name (str): Render variant name used when generating the output
+            node tree and output paths.
+        project_settings (Optional[dict]): Project settings dictionary. If ``None``, the
+            settings are loaded for the current project.
+        selected_view_layers (Optional[list[str]]): Optional list of Blender view-layer
+            names to limit which render layer nodes are used or created. Use ``None``
+            to apply the setup to all available view layers. An empty list is
+            currently treated the same as ``None`` because it is falsy, so it
+            also results in all view layers being considered rather than no
+            layers.
+
+    Returns:
+        bpy.types.CompositorNodeOutputFile: The compositor file output node created
+            for the render setup.
+
+    """
     assert bpy.data.filepath, "Workfile not saved. Please save the file first."
 
     if project_settings is None:
@@ -489,18 +552,17 @@ def prepare_rendering(
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
     node_tree = lib.get_scene_node_tree(ensure_exists=True)
-    selected_renderlayer_nodes = []
-    
-    # Check if node_tree is available before accessing nodes
-    if node_tree is not None:
-        for node in node_tree.nodes:
-            if node.bl_idname == "CompositorNodeRLayers" and node.select:
-                selected_renderlayer_nodes.append(node)
+    selected_renderlayer_nodes = get_selected_render_layer_nodes(
+        node_tree, selected_view_layers=selected_view_layers
+    )
 
     if selected_renderlayer_nodes:
         render_layer_nodes = selected_renderlayer_nodes
     else:
-        render_layer_nodes = get_or_create_render_layer_nodes(view_layers)
+        render_layer_nodes = get_or_create_render_layer_nodes(
+            view_layers,
+            selected_view_layers=selected_view_layers
+        )
 
     # Generate Compositing nodes
     output_node = create_render_node_tree(
@@ -558,8 +620,24 @@ def set_tmp_scene_render_output_path(project_settings: dict):
 
 def get_or_create_render_layer_nodes(
     view_layers: list["bpy.types.ViewLayer"],
+    selected_view_layers: Optional[list[str]] = None
 ) -> set[bpy.types.CompositorNodeRLayers]:
-    """Get existing render layer nodes or create new ones."""
+    """Get existing render layer nodes or create new ones.
+    By default, this reuses or creates compositor render layer nodes for all
+    provided ``view_layers``. When ``selected_view_layers`` is provided, only
+    nodes whose view-layer names are in that selection are reused or created.
+
+    Args:
+        view_layers (list[bpy.types.ViewLayer]): Available view layers to
+            consider.
+        selected_view_layers (Optional[list[str]]): Specific view-layer names
+            to include. If None, all provided view layers are included.
+
+    Returns:
+        set[bpy.types.CompositorNodeRLayers]: Existing or newly created render
+            layer nodes matching the requested view layers.
+
+    """
     tree = lib.get_scene_node_tree(ensure_exists=True)
 
     view_layer_names: set[str] = {
@@ -571,6 +649,13 @@ def get_or_create_render_layer_nodes(
     found_view_layer_names: set[str] = set()
     for node in tree.nodes:
         if node.bl_idname != "CompositorNodeRLayers":
+            continue
+
+        # When a selection is provided, include only nodes whose layer is
+        # selected so existing selected nodes are reused instead of duplicated.
+        if selected_view_layers and not has_selected_view_layers(
+            selected_view_layers, node
+        ):
             continue
 
         # Skip if already found a render layer node for this view layer.
@@ -588,9 +673,40 @@ def get_or_create_render_layer_nodes(
     missing_view_layer_names: set[str] = (
         view_layer_names - found_view_layer_names
     )
+    if selected_view_layers:
+        missing_view_layer_names = missing_view_layer_names.intersection(
+            set(selected_view_layers)
+        )
+
     for view_layer_name in missing_view_layer_names:
         render_layer_node = tree.nodes.new("CompositorNodeRLayers")
         render_layer_node.layer = view_layer_name
         render_layer_nodes.add(render_layer_node)
 
     return render_layer_nodes
+
+
+def has_selected_view_layers(
+        selected_view_layers: Optional[list[str]],
+        node: bpy.types.CompositorNodeRLayers
+) -> bool:
+    """Check if the given compositor view layer node has a view
+    layer that is in the selected view layers.
+
+    Args:
+        selected_view_layers (Optional[list[str]]): selected view layers to consider 
+            for inclusion. If None or empty, the function returns False; use this 
+            function only when you know selected_view_layers is non-empty.
+        node (bpy.types.CompositorNodeRLayers): the compositor node to check against 
+            the selected view layers.
+
+    Returns:
+        bool: True if selected_view_layers is non-empty and the node's layer is in it,
+            False otherwise (including when selected_view_layers is None or empty).
+    """
+    if not selected_view_layers:
+        return False
+    for view_layer_name in selected_view_layers:
+        if view_layer_name == node.layer:
+            return True
+    return False

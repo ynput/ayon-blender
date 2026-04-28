@@ -1,5 +1,4 @@
 """Create render."""
-import os
 import re
 
 import bpy
@@ -15,10 +14,10 @@ BLENDER_VERSION = lib.get_blender_version()
 def clean_name(name: str) -> str:
     """Ensure variant name is valid, e.g. strip spaces from name"""
     # Entity name regex taken from server code which also applies to
-    # product names (which usually
+    # product names (which also follows the same rules).
     name_regex = r"^[a-zA-Z0-9_]([a-zA-Z0-9_\.\-]*[a-zA-Z0-9_])?$"
 
-    # Replace space with underscore
+    # Remove spaces
     clean = name.replace(" ", "")
     # Strip out any remaining invalid characters
     clean = re.sub(r"[^a-zA-Z0-9_.-]", "", clean)
@@ -62,42 +61,55 @@ class CreateRender(plugin.BlenderCreator):
         tree = lib.get_scene_node_tree(ensure_exists=True)
 
         variant: str = instance_data.get("variant", self.default_variant)
+        view_layers: Optional[list[str]] = pre_create_data.get("view_layers")
 
         if pre_create_data.get("create_render_setup", False):
             # TODO: Prepare rendering setup should always generate a new
             #  setup, and return the relevant compositor node instead of
             #  guessing afterwards
-            node = render_lib.prepare_rendering(variant_name=variant)
-        else:
-            # Create a Compositor node
-            node: bpy.types.CompositorNodeOutputFile = tree.nodes.new(
-                "CompositorNodeOutputFile"
+            # add options to select renderlayers
+            node = render_lib.prepare_rendering(
+                variant_name=variant,
+                selected_view_layers=view_layers
             )
+
+        else:
             project_settings = (
                 self.create_context.get_current_project_settings()
             )
-            base_path = render_lib.get_base_render_output_path(
-                variant_name=variant,
-                # For now enforce multi-exr here since we are not connecting
-                # any inputs and it at least ensures a full path is set.
-                multi_exr=True,
-                project_settings=project_settings,
+            view_layer_nodes = render_lib.get_selected_render_layer_nodes(
+                tree,
+                selected_all=True,
+                selected_view_layers=view_layers
             )
-            node.format.file_format = "OPEN_EXR_MULTILAYER"
-            if BLENDER_VERSION >= (5, 0, 0):
-                directory, filename = os.path.split(base_path)
-                node.directory = directory
-                node.file_name = filename
-            else:
-                node.base_path = base_path
+            node = render_lib.create_render_node_tree(
+                variant,
+                view_layer_nodes,
+                project_settings
+            )
 
-        node.name = variant
-        node.label = variant
+        project_name = self.create_context.get_current_project_name()
+        project_entity = self.create_context.get_current_project_entity()
+        folder_entity = self.create_context.get_current_folder_entity()
+        task_entity = self.create_context.get_current_task_entity()
 
-        self.set_instance_data(product_name, instance_data)
         product_type = instance_data.get("productType")
         if not product_type:
             product_type = self.product_base_type
+
+        variant = clean_name(node.name)
+        product_name = self.get_product_name(
+            project_name=project_name,
+            project_entity=project_entity,
+            folder_entity=folder_entity,
+            task_entity=task_entity,
+            variant=variant,
+            host_name=self.create_context.host_name,
+            product_type=product_type,
+        )
+
+        instance_data["productName"] = product_name
+        self.set_instance_data(product_name, instance_data)
         instance = CreatedInstance(
             product_base_type=self.product_base_type,
             product_type=product_type,
@@ -131,8 +143,6 @@ class CreateRender(plugin.BlenderCreator):
         # Convert legacy instances that did not yet imprint on the
         # compositor node itself
         for instance in self.create_context.instances:
-            instance: CreatedInstance
-
             # Ignore instances from other creators
             if instance.creator_identifier != self.identifier:
                 continue
@@ -210,7 +220,6 @@ class CreateRender(plugin.BlenderCreator):
             self._add_instance_to_context(instance)
 
     def get_instance_attr_defs(self):
-
         render_target_items: dict[str, str] = {
             "local": "Local machine rendering",
             "local_no_render": "Use existing frames (local)",
@@ -233,6 +242,9 @@ class CreateRender(plugin.BlenderCreator):
         return defs
 
     def get_pre_create_attr_defs(self):
+        view_layer_items: list[str] = [
+            layer.name for layer in bpy.context.scene.view_layers
+        ]
         return [
             BoolDef(
                 "create_render_setup",
@@ -240,7 +252,13 @@ class CreateRender(plugin.BlenderCreator):
                 default=False,
                 tooltip="Create Render Setup",
             ),
-
+            EnumDef("view_layers",
+                    items=view_layer_items,
+                    label="View Layers",
+                    multiselection=True,
+                    default=[],
+                    tooltip="Select view layers to include in the render setup"
+            ),
         ]
 
     def imprint(self, node: bpy.types.CompositorNodeOutputFile, data: dict):
