@@ -361,8 +361,9 @@ def create_render_node_tree(
         output.format.media_type = (
             "MULTI_LAYER_IMAGE" if multi_exr else "IMAGE"
         )
-        # OPEN_EXR_MULTILAYER is not valid for the compositor output node;
-        # multilayer is handled via media_type instead.
+        # OPEN_EXR_MULTILAYER only valid when multi_exr is True
+        # For non multilayer exr and exr format is used, file format
+        # should be OPEN_EXR, otherwise it should follow the scene file format
         if multi_exr:
             file_format = "OPEN_EXR_MULTILAYER"
         elif ext == "exr":
@@ -474,7 +475,7 @@ def get_selected_render_layer_nodes(
         node_tree: "bpy.types.NodeTree",
         selected_all: bool = False,
         selected_view_layers: Optional[list[str]] = None
-) -> list["bpy.types.CompositorNodeRLayers"]:
+) -> set["bpy.types.CompositorNodeRLayers"]:
     """Get the selected render layer nodes from the given node tree.
 
     Args:
@@ -486,10 +487,10 @@ def get_selected_render_layer_nodes(
         only nodes whose view-layer names are included.
 
     Returns:
-        list[bpy.types.CompositorNodeRLayers]: A list of selected render layer nodes.
+        set[bpy.types.CompositorNodeRLayers]: A set of selected render layer nodes.
 
     """
-    selected_nodes = []
+    selected_nodes = set()
     for node in node_tree.nodes:
         if node.bl_idname == "CompositorNodeRLayers" and (selected_all or node.select):
             if (
@@ -497,7 +498,7 @@ def get_selected_render_layer_nodes(
                 and not has_selected_view_layers(selected_view_layers, node)
             ):
                 continue
-            selected_nodes.append(node)
+            selected_nodes.add(node)
 
     return selected_nodes
 
@@ -694,12 +695,14 @@ def has_selected_view_layers(
 
     Args:
         selected_view_layers (Optional[list[str]]): selected view layers to consider 
-            for inclusion. If None, all view layers are included.
+            for inclusion. If None or empty, the function returns False; use this 
+            function only when you know selected_view_layers is non-empty.
         node (bpy.types.CompositorNodeRLayers): the compositor node to check against 
             the selected view layers.
 
     Returns:
-        bool: True if the node's layer is in the selected view layers, False otherwise.
+        bool: True if selected_view_layers is non-empty and the node's layer is in it,
+            False otherwise (including when selected_view_layers is None or empty).
     """
     if not selected_view_layers:
         return False

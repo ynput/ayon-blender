@@ -88,8 +88,6 @@ class CreateRender(plugin.BlenderCreator):
                 project_settings
             )
 
-        self.set_instance_data(product_name, instance_data)
-
         project_name = self.create_context.get_current_project_name()
         project_entity = self.create_context.get_current_project_entity()
         folder_entity = self.create_context.get_current_folder_entity()
@@ -107,9 +105,11 @@ class CreateRender(plugin.BlenderCreator):
             task_entity=task_entity,
             variant=variant,
             host_name=self.create_context.host_name,
-            product_type=self.product_base_type,
+            product_type=product_type,
         )
 
+        instance_data["productName"] = product_name
+        self.set_instance_data(product_name, instance_data)
         instance = CreatedInstance(
             product_base_type=self.product_base_type,
             product_type=product_type,
@@ -256,6 +256,7 @@ class CreateRender(plugin.BlenderCreator):
                     items=view_layer_items,
                     label="View Layers",
                     multiselection=True,
+                    default=[],
                     tooltip="Select view layers to include in the render setup"
             ),
         ]
