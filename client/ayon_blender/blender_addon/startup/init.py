@@ -1,4 +1,5 @@
 try:
+    from ayon_blender.qt_binding import ensure_qt_binding  # noqa: F401
     from ayon_core.pipeline import install_host
     from ayon_blender.api import BlenderHost
 except ModuleNotFoundError as exc:
@@ -8,6 +9,7 @@ except ModuleNotFoundError as exc:
         "application 'Arguments' configured correctly so that Blender has "
         "access to the launched context's PYTHONPATH."
     ) from exc
+
 
 def register():
     install_host(BlenderHost())
