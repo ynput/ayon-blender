@@ -61,13 +61,13 @@ class CreateRender(plugin.BlenderCreator):
         tree = lib.get_scene_node_tree(ensure_exists=True)
 
         variant: str = instance_data.get("variant", self.default_variant)
+        view_layers: Optional[list[str]] = pre_create_data.get("view_layers")
 
         if pre_create_data.get("create_render_setup", False):
             # TODO: Prepare rendering setup should always generate a new
             #  setup, and return the relevant compositor node instead of
             #  guessing afterwards
             # add options to select renderlayers
-            view_layers: Optional[list[str]] = pre_create_data.get("view_layers")
             node = render_lib.prepare_rendering(
                 variant_name=variant,
                 selected_view_layers=view_layers
@@ -79,7 +79,8 @@ class CreateRender(plugin.BlenderCreator):
             )
             view_layer_nodes = render_lib.get_selected_render_layer_nodes(
                 tree,
-                selected_all=True
+                selected_all=True,
+                selected_view_layers=view_layers
             )
             node = render_lib.create_render_node_tree(
                 variant,

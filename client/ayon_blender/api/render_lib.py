@@ -473,6 +473,7 @@ def create_render_node_tree(
 def get_selected_render_layer_nodes(
         node_tree: "bpy.types.NodeTree",
         selected_all: bool = False,
+        selected_view_layers: Optional[list[str]] = None
 ) -> list["bpy.types.CompositorNodeRLayers"]:
     """Get the selected render layer nodes from the given node tree.
 
@@ -480,6 +481,9 @@ def get_selected_render_layer_nodes(
         node_tree (bpy.types.NodeTree): The node tree to search for selected render layer nodes.
         selected_all (bool): If True, all render layer nodes are returned regardless of selection.
             If False, only selected nodes are returned.
+        selected_view_layers (Optional[list[str]]): Optional list of Blender view-layer names
+        to limit which render layer nodes are included. If provided,
+        only nodes whose view-layer names are included.
 
     Returns:
         list[bpy.types.CompositorNodeRLayers]: A list of selected render layer nodes.
@@ -488,7 +492,13 @@ def get_selected_render_layer_nodes(
     selected_nodes = []
     for node in node_tree.nodes:
         if node.bl_idname == "CompositorNodeRLayers" and (selected_all or node.select):
+            if (
+                selected_view_layers
+                and not has_selected_view_layers(selected_view_layers, node)
+            ):
+                continue
             selected_nodes.append(node)
+
     return selected_nodes
 
 
@@ -541,18 +551,9 @@ def prepare_rendering(
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
     # each view layer so we retrieve all of them.
     node_tree = lib.get_scene_node_tree(ensure_exists=True)
-    selected_renderlayer_nodes = get_selected_render_layer_nodes(node_tree)
-
-    # Check if node_tree is available before accessing nodes
-    if node_tree is not None:
-        for node in node_tree.nodes:
-            if node.bl_idname == "CompositorNodeRLayers" and node.select:
-                if (
-                    selected_view_layers
-                    and not has_selected_view_layers(selected_view_layers, node)
-                ):
-                    continue
-                selected_renderlayer_nodes.append(node)
+    selected_renderlayer_nodes = get_selected_render_layer_nodes(
+        node_tree, selected_view_layers=selected_view_layers
+    )
 
     if selected_renderlayer_nodes:
         render_layer_nodes = selected_renderlayer_nodes
