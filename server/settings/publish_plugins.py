@@ -35,6 +35,7 @@ def evaluation_mode_enum():
 
 def extract_model_usd_overrides_enum():
     return [
+        {"label": "Convert Orientation", "value": "convert_orientation"},
         {"label": "Export Animation", "value": "export_animation"},
         {"label": "Export Hair", "value": "export_hair"},
         {"label": "Export UV Maps", "value": "export_uvmaps"},
@@ -44,7 +45,7 @@ def extract_model_usd_overrides_enum():
     ]
 
 
-class ExtractModelUSDModel(BaseSettingsModel):
+class ExtractUSDModel(BaseSettingsModel):
     convert_orientation: bool = SettingsField(
         False,
         title="Convert Orientation",
@@ -289,8 +290,8 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ExtractPlayblastModel,
         title="Extract Playblast"
     )
-    ExtractUSD: ExtractModelUSDModel = SettingsField(
-        default_factory=ExtractModelUSDModel,
+    ExtractUSD: ExtractUSDModel = SettingsField(
+        default_factory=ExtractUSDModel,
         title="Extract USD"
     )
     ExtractModelUSD: ValidatePluginModel = SettingsField(

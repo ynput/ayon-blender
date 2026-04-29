@@ -144,11 +144,6 @@ class ExtractUSD(plugin.BlenderExtractor,
         }
 
         defs = [
-            BoolDef("convert_orientation",
-                    label="Convert Orientation",
-                    tooltip="Convert orientation axis to a different"
-                    " convention to match other applications.",
-                    default=cls.convert_orientation),
             EnumDef("forward_axis",
                     label="Forward Axis",
                     items=orientation_axes,
@@ -165,6 +160,11 @@ class ExtractUSD(plugin.BlenderExtractor,
             return defs
 
         override_defs = OrderedDict({
+            "convert_orientation": BoolDef("convert_orientation",
+                    label="Convert Orientation",
+                    tooltip="Convert orientation axis to a different"
+                    " convention to match other applications.",
+                    default=cls.convert_orientation),
             "export_animation": BoolDef(
                 "export_animation",
                 label="Export Animation",
