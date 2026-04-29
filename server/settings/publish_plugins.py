@@ -32,6 +32,46 @@ def evaluation_mode_enum():
         {"label": "Viewport", "value": "VIEWPORT"},
     ]
 
+class ExtractModelUSDModel(BaseSettingsModel):
+    enabled: bool = SettingsField(True)
+    optional: bool = SettingsField(title="Optional")
+    active: bool = SettingsField(title="Active")
+    convert_orientation: bool = SettingsField(
+        False,
+        title="Convert Orientation",
+        description="Convert Orientation settings for USD export"
+    )
+    export_animation: bool = SettingsField(
+        False,
+        title="Animation",
+        description="Whether to export animation data or not."
+    )
+    export_hair: bool = SettingsField(
+        False,
+        title="Hair",
+        description="Whether to export hair/fur systems or not."
+    )
+    export_uvmaps: bool = SettingsField(
+        False,
+        title="UV Maps",
+        description="Whether to export UV map data or not."
+    )
+    export_normals: bool = SettingsField(
+        False,
+        title="Normals",
+        description="Whether to export normal data or not."
+    )
+    export_materials: bool = SettingsField(
+        False,
+        title="Materials",
+        description="Whether to export material assignments and data or not."
+    )
+    use_instancing: bool = SettingsField(
+        False,
+        title="Instancing",
+        description="Whether to use USD instancing for duplicated objects or not."
+    )
+
 
 class AlembicEvaluationModeModel(BaseSettingsModel):
     subdiv_schema: bool = SettingsField(
@@ -233,8 +273,8 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ExtractPlayblastModel,
         title="Extract Playblast"
     )
-    ExtractModelUSD: ValidatePluginModel = SettingsField(
-        default_factory=ValidatePluginModel,
+    ExtractModelUSD: ExtractModelUSDModel = SettingsField(
+        default_factory=ExtractModelUSDModel,
         title="Extract Model USD"
     )
 

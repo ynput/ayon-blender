@@ -15,7 +15,14 @@ class ExtractUSD(plugin.BlenderExtractor,
     hosts = ["blender"]
     families = ["usd"]
 
+    # Settings
     convert_orientation = False
+    export_animation=False
+    export_hair=False
+    export_uvmaps=True
+    export_normals=True
+    export_materials=True
+    use_instancing=True
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -63,6 +70,12 @@ class ExtractUSD(plugin.BlenderExtractor,
             "convert_orientation": convert_orientation,
             "export_global_forward_selection": attribute_values.get("forward_axis", "Z"),
             "export_global_up_selection": attribute_values.get("up_axis", "Y"),
+            "export_animation": attribute_values.get("export_animation", self.export_animation),
+            "export_hair": attribute_values.get("export_hair", self.export_hair),
+            "export_uvmaps": attribute_values.get("export_uvmaps", self.export_uvmaps),
+            "export_normals": attribute_values.get("export_normals", self.export_normals),
+            "export_materials": attribute_values.get("export_materials", self.export_materials),
+            "use_instancing": attribute_values.get("use_instancing", self.use_instancing),
         }
 
         blender_version = lib.get_blender_version()
@@ -90,15 +103,6 @@ class ExtractUSD(plugin.BlenderExtractor,
                 root_prim_path="",  
                 selected_objects_only=True,
                 relative_paths=False,
-                export_animation=False,
-                export_hair=False,
-                export_uvmaps=True,
-                # TODO: add for new version of Blender (4+?)
-                # export_mesh_colors=True,
-                export_normals=True,
-                export_materials=True,
-                use_instancing=True,
-                # Convert Orientation
                 **kwargs
             )
 
@@ -136,7 +140,7 @@ class ExtractUSD(plugin.BlenderExtractor,
             "NEGATIVE_Y": "-Y",
             "NEGATIVE_Z": "-Z",
         }
-                
+
         return [
             BoolDef("convert_orientation",
                     label="Convert Orientation",
@@ -152,9 +156,33 @@ class ExtractUSD(plugin.BlenderExtractor,
                     label="Up Axis",
                     items=orientation_axes,
                     default="Y",
-                    visible=visible)
+                    visible=visible),
+            BoolDef("export_animation",
+                    label="Animation",
+                    tooltip="Export animation data",
+                    default=cls.export_animation),
+            BoolDef("export_hair",
+                    label="Hair",
+                    tooltip="Export hair/fur systems",
+                    default=cls.export_hair),
+            BoolDef("export_uvmaps",
+                    label="UV Maps",
+                    tooltip="Export UV map data",
+                    default=cls.export_uvmaps),
+            BoolDef("export_normals",
+                    label="Normals",
+                    tooltip="Export normal data",
+                    default=cls.export_normals),
+            BoolDef("export_materials",
+                    label="Materials",
+                    tooltip="Export material assignments and data",
+                    default=cls.export_materials),
+            BoolDef("use_instancing",
+                    label="Instancing",
+                    tooltip="Use USD instancing for duplicated objects",
+                    default=cls.use_instancing),
         ]
-    
+
     @classmethod
     def register_create_context_callbacks(cls, create_context):
         create_context.add_value_changed_callback(cls.on_values_changed)
