@@ -132,7 +132,12 @@ class ExtractUSD(plugin.BlenderExtractor,
             cls, instance
         )
 
-        visible = publish_attributes.get("convert_orientation", cls.convert_orientation)
+        defs = []
+
+        visible = (
+            publish_attributes.get("convert_orientation", cls.convert_orientation)
+            | cls.convert_orientation
+        )
 
         orientation_axes = {
             "X": "X",
@@ -143,18 +148,6 @@ class ExtractUSD(plugin.BlenderExtractor,
             "NEGATIVE_Z": "-Z",
         }
 
-        defs = [
-            EnumDef("forward_axis",
-                    label="Forward Axis",
-                    items=orientation_axes,
-                    default="Z",
-                    visible=visible),
-            EnumDef("up_axis",
-                    label="Up Axis",
-                    items=orientation_axes,
-                    default="Y",
-                    visible=visible),
-        ]
         overrides = publish_attributes.get("overrides", cls.overrides)
         if not overrides:
             return defs
@@ -165,6 +158,16 @@ class ExtractUSD(plugin.BlenderExtractor,
                     tooltip="Convert orientation axis to a different"
                     " convention to match other applications.",
                     default=cls.convert_orientation),
+            "forward_axis": EnumDef("forward_axis",
+                    label="Forward Axis",
+                    items=orientation_axes,
+                    default="Z",
+                    visible=visible),
+            "up_axis": EnumDef("up_axis",
+                    label="Up Axis",
+                    items=orientation_axes,
+                    default="Y",
+                    visible=visible),
             "export_animation": BoolDef(
                 "export_animation",
                 label="Export Animation",
@@ -197,10 +200,11 @@ class ExtractUSD(plugin.BlenderExtractor,
                 default=cls.use_instancing),
 
         })
-        overrides = set(overrides)
+
         for key, value in override_defs.items():
-            if key not in overrides:
+            if key not in overrides and key not in {"forward_axis", "up_axis"}:
                 continue
+
 
             defs.append(value)
 
