@@ -1,4 +1,5 @@
 import os
+from collections import OrderedDict
 
 import bpy
 
@@ -17,17 +18,18 @@ class ExtractUSD(plugin.BlenderExtractor,
 
     # Settings
     convert_orientation = False
-    export_animation=False
-    export_hair=False
-    export_uvmaps=True
-    export_normals=True
-    export_materials=True
-    use_instancing=True
+    export_animation = False
+    export_hair = False
+    export_uvmaps = True
+    export_normals = True
+    export_materials = True
+    use_instancing = True
+
+    overrides = []
 
     def process(self, instance):
         if not self.is_active(instance.data):
             return
-
         # Ignore runtime instances (e.g. USD layers)
         # TODO: This is better done via more specific `families`
         if not instance.data.get("transientData", {}).get("instance_node"):
@@ -60,7 +62,7 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         context = plugin.create_blender_context(
             active=root, selected=selected)
-        
+
         attribute_values = self.get_attr_values_from_data(instance.data)
         convert_orientation = attribute_values.get(
             "convert_orientation",
@@ -97,10 +99,10 @@ class ExtractUSD(plugin.BlenderExtractor,
         # Export USD
         with bpy.context.temp_override(**context):
             bpy.ops.wm.usd_export(
-                # Override the `/root` default value. If left as an empty 
+                # Override the `/root` default value. If left as an empty
                 # string, Blender will use the top-level object as the root prim.
                 filepath=filepath,
-                root_prim_path="",  
+                root_prim_path="",
                 selected_objects_only=True,
                 relative_paths=False,
                 **kwargs
@@ -118,13 +120,13 @@ class ExtractUSD(plugin.BlenderExtractor,
         instance.data.setdefault("representations", []).append(representation)
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
-    
+
     @classmethod
     def get_attr_defs_for_instance(cls, create_context, instance):
         # Filtering of instance, if needed, can be customized
         if not cls.instance_matches_plugin_families(instance):
             return []
-        
+
         # Attributes logic
         publish_attributes = cls.get_attr_values_from_data_for_plugin(
             cls, instance
@@ -134,14 +136,14 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         orientation_axes = {
             "X": "X",
-            "Y": "Y",  
+            "Y": "Y",
             "Z": "Z",
             "NEGATIVE_X": "-X",
             "NEGATIVE_Y": "-Y",
             "NEGATIVE_Z": "-Z",
         }
 
-        return [
+        defs = [
             BoolDef("convert_orientation",
                     label="Convert Orientation",
                     tooltip="Convert orientation axis to a different"
@@ -157,31 +159,52 @@ class ExtractUSD(plugin.BlenderExtractor,
                     items=orientation_axes,
                     default="Y",
                     visible=visible),
-            BoolDef("export_animation",
-                    label="Animation",
-                    tooltip="Export animation data",
-                    default=cls.export_animation),
-            BoolDef("export_hair",
-                    label="Hair",
-                    tooltip="Export hair/fur systems",
-                    default=cls.export_hair),
-            BoolDef("export_uvmaps",
-                    label="UV Maps",
-                    tooltip="Export UV map data",
-                    default=cls.export_uvmaps),
-            BoolDef("export_normals",
-                    label="Normals",
-                    tooltip="Export normal data",
-                    default=cls.export_normals),
-            BoolDef("export_materials",
-                    label="Materials",
-                    tooltip="Export material assignments and data",
-                    default=cls.export_materials),
-            BoolDef("use_instancing",
-                    label="Instancing",
-                    tooltip="Use USD instancing for duplicated objects",
-                    default=cls.use_instancing),
         ]
+        overrides = publish_attributes.get("overrides", cls.overrides)
+        if not overrides:
+            return defs
+
+        override_defs = OrderedDict({
+            "export_animation": BoolDef(
+                "export_animation",
+                label="Export Animation",
+                tooltip="Whether to export animation data or not.",
+                default=cls.export_animation),
+            "export_hair": BoolDef(
+                "export_hair",
+                label="Export Hair",
+                tooltip="Whether to export hair/fur systems or not.",
+                default=cls.export_hair),
+            "export_uvmaps": BoolDef(
+                "export_uvmaps",
+                label="Export UV Maps",
+                tooltip="Whether to export UV map data or not.",
+                default=cls.export_uvmaps),
+            "export_normals": BoolDef(
+                "export_normals",
+                label="Export Normals",
+                tooltip="Whether to export normal data or not.",
+                default=cls.export_normals),
+            "export_materials": BoolDef(
+                "export_materials",
+                label="Export Materials",
+                tooltip="Whether to export material assignments and data or not.",
+                default=cls.export_materials),
+            "use_instancing": BoolDef(
+                "use_instancing",
+                label="Instancing",
+                tooltip="Whether to use USD instancing for duplicated objects or not.",
+                default=cls.use_instancing),
+
+        })
+        overrides = set(overrides)
+        for key, value in override_defs.items():
+            if key not in overrides:
+                continue
+
+            defs.append(value)
+
+        return defs
 
     @classmethod
     def register_create_context_callbacks(cls, create_context):

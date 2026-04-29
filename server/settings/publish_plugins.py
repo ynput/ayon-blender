@@ -32,10 +32,19 @@ def evaluation_mode_enum():
         {"label": "Viewport", "value": "VIEWPORT"},
     ]
 
+
+def extract_model_usd_overrides_enum():
+    return [
+        {"label": "Export Animation", "value": "export_animation"},
+        {"label": "Export Hair", "value": "export_hair"},
+        {"label": "Export UV Maps", "value": "export_uvmaps"},
+        {"label": "Export Normals", "value": "export_normals"},
+        {"label": "Export Materials", "value": "export_materials"},
+        {"label": "Use Instancing", "value": "use_instancing"},
+    ]
+
+
 class ExtractModelUSDModel(BaseSettingsModel):
-    enabled: bool = SettingsField(True)
-    optional: bool = SettingsField(title="Optional")
-    active: bool = SettingsField(title="Active")
     convert_orientation: bool = SettingsField(
         False,
         title="Convert Orientation",
@@ -52,24 +61,31 @@ class ExtractModelUSDModel(BaseSettingsModel):
         description="Whether to export hair/fur systems or not."
     )
     export_uvmaps: bool = SettingsField(
-        False,
+        True,
         title="UV Maps",
         description="Whether to export UV map data or not."
     )
     export_normals: bool = SettingsField(
-        False,
+        True,
         title="Normals",
         description="Whether to export normal data or not."
     )
     export_materials: bool = SettingsField(
-        False,
+        True,
         title="Materials",
         description="Whether to export material assignments and data or not."
     )
     use_instancing: bool = SettingsField(
-        False,
+        True,
         title="Instancing",
         description="Whether to use USD instancing for duplicated objects or not."
+    )
+    overrides: list[str] = SettingsField(
+        enum_resolver=extract_model_usd_overrides_enum,
+        title="Exposed Overrides",
+        description=(
+            "Expose the attribute in this list to the user when publishing."
+        )
     )
 
 
@@ -273,8 +289,12 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ExtractPlayblastModel,
         title="Extract Playblast"
     )
-    ExtractModelUSD: ExtractModelUSDModel = SettingsField(
+    ExtractUSD: ExtractModelUSDModel = SettingsField(
         default_factory=ExtractModelUSDModel,
+        title="Extract USD"
+    )
+    ExtractModelUSD: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
         title="Extract Model USD"
     )
 
@@ -502,6 +522,16 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             },
             indent=4
         )
+    },
+    "ExtractUSD": {
+        "convert_orientation": False,
+        "export_animation": False,
+        "export_hair": False,
+        "export_uvmaps": True,
+        "export_normals": True,
+        "export_materials": True,
+        "use_instancing": True,
+        "overrides": []
     },
     "ExtractModelUSD": {
         "enabled": True,
