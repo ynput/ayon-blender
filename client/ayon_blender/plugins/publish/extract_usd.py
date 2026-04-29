@@ -205,7 +205,6 @@ class ExtractUSD(plugin.BlenderExtractor,
             if key not in overrides and key not in {"forward_axis", "up_axis"}:
                 continue
 
-
             defs.append(value)
 
         return defs
