@@ -150,56 +150,73 @@ class ExtractUSD(plugin.BlenderExtractor,
             return defs
 
         override_defs = {
-            "convert_orientation": BoolDef("convert_orientation",
-                    label="Convert Orientation",
-                    tooltip="Convert orientation axis to a different"
-                    " convention to match other applications.",
-                    default=cls.convert_orientation),
-            "forward_axis": EnumDef("forward_axis",
-                    label="Forward Axis",
-                    items=orientation_axes,
-                    default="Z",
-                    visible=visible),
-            "up_axis": EnumDef("up_axis",
-                    label="Up Axis",
-                    items=orientation_axes,
-                    default="Y",
-                    visible=visible),
+            "convert_orientation": BoolDef(
+                "convert_orientation",
+                label="Convert Orientation",
+                tooltip="Convert orientation axis to a different convention"
+                        " to match other applications.",
+                default=cls.convert_orientation,
+            ),
+            "forward_axis": EnumDef(
+                "forward_axis",
+                label="Forward Axis",
+                items=orientation_axes,
+                default="Z",
+                tooltip="Forward Axis for orientation conversion.",
+                visible=visible,
+            ),
+            "up_axis": EnumDef(
+                "up_axis",
+                label="Up Axis",
+                items=orientation_axes,
+                default="Y",
+                tooltip="Up Axis for orientation conversion.",
+                visible=visible,
+            ),
             "export_animation": BoolDef(
                 "export_animation",
                 label="Export Animation",
                 tooltip="Whether to export animation data or not.",
-                default=cls.export_animation),
+                default=cls.export_animation,
+            ),
             "export_hair": BoolDef(
                 "export_hair",
                 label="Export Hair",
                 tooltip="Whether to export hair/fur systems or not.",
-                default=cls.export_hair),
+                default=cls.export_hair,
+            ),
             "export_uvmaps": BoolDef(
                 "export_uvmaps",
                 label="Export UV Maps",
                 tooltip="Whether to export UV map data or not.",
-                default=cls.export_uvmaps),
+                default=cls.export_uvmaps,
+            ),
             "export_normals": BoolDef(
                 "export_normals",
                 label="Export Normals",
                 tooltip="Whether to export normal data or not.",
-                default=cls.export_normals),
+                default=cls.export_normals,
+            ),
             "export_materials": BoolDef(
                 "export_materials",
                 label="Export Materials",
-                tooltip="Whether to export material assignments and data or not.",
-                default=cls.export_materials),
+                tooltip="Whether to export material assignments and data or"
+                        " not.",
+                default=cls.export_materials,
+            ),
             "export_mesh_colors": BoolDef(
                 "export_mesh_colors",
                 label="Export Mesh Colors",
                 tooltip="Whether to export mesh color data or not.",
-                default=cls.export_mesh_colors),
+                default=cls.export_mesh_colors,
+            ),
             "use_instancing": BoolDef(
                 "use_instancing",
                 label="Instancing",
-                tooltip="Whether to use USD instancing for duplicated objects or not.",
-                default=cls.use_instancing),
+                tooltip="Whether to use USD instancing for duplicated objects"
+                        " or not.",
+                default=cls.use_instancing,
+            ),
         }
 
         for key, value in override_defs.items():
