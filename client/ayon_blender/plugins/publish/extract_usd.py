@@ -23,6 +23,7 @@ class ExtractUSD(plugin.BlenderExtractor,
     export_uvmaps = True
     export_normals = True
     export_materials = True
+    export_mesh_colors = True
     use_instancing = True
 
     overrides = []
@@ -77,6 +78,7 @@ class ExtractUSD(plugin.BlenderExtractor,
             "export_uvmaps": attribute_values.get("export_uvmaps", self.export_uvmaps),
             "export_normals": attribute_values.get("export_normals", self.export_normals),
             "export_materials": attribute_values.get("export_materials", self.export_materials),
+            "export_mesh_colors": attribute_values.get("export_mesh_colors", self.export_mesh_colors),
             "use_instancing": attribute_values.get("use_instancing", self.use_instancing),
         }
 
@@ -193,6 +195,11 @@ class ExtractUSD(plugin.BlenderExtractor,
                 label="Export Materials",
                 tooltip="Whether to export material assignments and data or not.",
                 default=cls.export_materials),
+            "export_mesh_colors": BoolDef(
+                "export_mesh_colors",
+                label="Export Mesh Colors",
+                tooltip="Whether to export mesh color data or not.",
+                default=cls.export_mesh_colors),
             "use_instancing": BoolDef(
                 "use_instancing",
                 label="Instancing",

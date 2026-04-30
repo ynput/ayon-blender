@@ -41,6 +41,7 @@ def extract_model_usd_overrides_enum():
         {"label": "Export UV Maps", "value": "export_uvmaps"},
         {"label": "Export Normals", "value": "export_normals"},
         {"label": "Export Materials", "value": "export_materials"},
+        {"label": "Export Mesh Colors", "value": "export_mesh_colors"},
         {"label": "Use Instancing", "value": "use_instancing"},
     ]
 
@@ -75,6 +76,11 @@ class ExtractUSDModel(BaseSettingsModel):
         True,
         title="Materials",
         description="Whether to export material assignments and data or not."
+    )
+    export_mesh_colors: bool = SettingsField(
+        True,
+        title="Mesh Colors",
+        description="Whether to export mesh color data or not."
     )
     use_instancing: bool = SettingsField(
         True,
@@ -531,6 +537,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "export_uvmaps": True,
         "export_normals": True,
         "export_materials": True,
+        "export_mesh_colors": True,
         "use_instancing": True,
         "overrides": []
     },
