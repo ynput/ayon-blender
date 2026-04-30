@@ -1,6 +1,4 @@
 import os
-from collections import OrderedDict
-
 import bpy
 
 from ayon_core.pipeline import KnownPublishError, OptionalPyblishPluginMixin
@@ -154,7 +152,7 @@ class ExtractUSD(plugin.BlenderExtractor,
         if not overrides:
             return defs
 
-        override_defs = OrderedDict({
+        override_defs = {
             "convert_orientation": BoolDef("convert_orientation",
                     label="Convert Orientation",
                     tooltip="Convert orientation axis to a different"
@@ -205,8 +203,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                 label="Instancing",
                 tooltip="Whether to use USD instancing for duplicated objects or not.",
                 default=cls.use_instancing),
-
-        })
+        }
 
         for key, value in override_defs.items():
             if key not in overrides and key not in {"forward_axis", "up_axis"}:
