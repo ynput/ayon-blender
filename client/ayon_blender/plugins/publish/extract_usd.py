@@ -150,7 +150,7 @@ class ExtractUSD(plugin.BlenderExtractor,
             "NEGATIVE_Z": "-Z",
         }
 
-        overrides = publish_attributes.get("overrides", cls.overrides)
+        overrides: set[str] = set(cls.overrides)
         if not overrides:
             return defs
 
