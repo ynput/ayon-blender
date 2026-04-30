@@ -134,10 +134,7 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         defs = []
 
-        visible = (
-            publish_attributes.get("convert_orientation", cls.convert_orientation)
-            | cls.convert_orientation
-        )
+        visible = publish_attributes.get("convert_orientation", cls.convert_orientation)
 
         orientation_axes = {
             "X": "X",
