@@ -546,7 +546,7 @@ def prepare_rendering(
     # Set scene render settings
     set_render_format(ext, multilayer)
     bpy.context.scene.render.engine = renderer
-    view_layers = bpy.context.scene.view_layers
+    view_layers = get_selected_view_layers(selected_view_layers=selected_view_layers)
     set_render_passes(project_settings, renderer, view_layers)
 
     # Use selected renderlayer nodes, or assume we want a renderlayer node for
@@ -710,3 +710,26 @@ def has_selected_view_layers(
         if view_layer_name == node.layer:
             return True
     return False
+
+
+def get_selected_view_layers(
+    selected_view_layers: Optional[list[str]] = None
+) -> list["bpy.types.ViewLayer"]:
+    """Get the selected view layers based on the provided names.
+
+    Args:
+        selected_view_layers (Optional[list[str]]): List of view layer names to select.
+            If None, all view layers are returned.
+
+    Returns:
+        list[bpy.types.ViewLayer]: List of selected view layers.
+    """
+    if selected_view_layers is None:
+        return bpy.context.scene.view_layers
+
+    selected_view_layers_list = []
+    for view_layer in bpy.context.scene.view_layers:
+        if view_layer.name in selected_view_layers:
+            selected_view_layers_list.append(view_layer)
+
+    return selected_view_layers_list
