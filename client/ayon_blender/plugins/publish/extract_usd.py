@@ -26,7 +26,7 @@ class ExtractUSD(plugin.BlenderExtractor,
     export_mesh_colors = True
     use_instancing = True
 
-    overrides = []
+    overrides: list[str] = []
 
     def process(self, instance):
         if not self.is_active(instance.data):
