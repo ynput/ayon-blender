@@ -651,13 +651,6 @@ def get_or_create_render_layer_nodes(
         if node.bl_idname != "CompositorNodeRLayers":
             continue
 
-        # When a selection is provided, include only nodes whose layer is
-        # selected so existing selected nodes are reused instead of duplicated.
-        if selected_view_layers and not has_selected_view_layers(
-            selected_view_layers, node
-        ):
-            continue
-
         # Skip if already found a render layer node for this view layer.
         if node.layer in found_view_layer_names:
             continue
