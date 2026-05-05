@@ -553,7 +553,11 @@ def prepare_rendering(
     # each view layer so we retrieve all of them.
     node_tree = lib.get_scene_node_tree(ensure_exists=True)
     selected_renderlayer_nodes = get_selected_render_layer_nodes(
-        node_tree, selected_view_layers=selected_view_layers
+        node_tree,
+        # If no specific view layers are selected,
+        # consider all nodes as selected
+        selected_all=not selected_view_layers,
+        selected_view_layers=selected_view_layers
     )
 
     if selected_renderlayer_nodes:
