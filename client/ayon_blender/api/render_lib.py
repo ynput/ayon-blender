@@ -721,9 +721,8 @@ def get_selected_view_layers(
     Returns:
         list[bpy.types.ViewLayer]: List of selected view layers.
     """
-    if selected_view_layers is None:
+    if not selected_view_layers:
         return bpy.context.scene.view_layers
-
     selected_view_layers_list = []
     for view_layer in bpy.context.scene.view_layers:
         if view_layer.name in selected_view_layers:
