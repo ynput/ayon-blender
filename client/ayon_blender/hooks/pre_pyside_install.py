@@ -106,13 +106,6 @@ class InstallPySideToBlender(PreLaunchHook):
                     python_version = dir_entry.name
                     break
 
-        # Change PYTHONPATH to contain blender's packages as first
-        python_paths = [
-            python_lib,
-            os.path.join(python_lib, "site-packages"),
-        ]
-        self.prepend_to_pythonpath(python_paths)
-
         # Get blender's python executable
         python_bin = os.path.join(python_dir, "bin")
         if platform == "windows":
@@ -131,11 +124,6 @@ class InstallPySideToBlender(PreLaunchHook):
             )
             return
 
-        # Check if PySide2 is installed and skip if yes
-        if self.is_pyside_installed(python_executable, qt_binding):
-            self.log.debug("Blender has already installed PySide2.")
-            return
-
         # Check if application packages dir exists for Blender's Python version
         python_minor = self.get_python_version(python_executable)
         local_dir = get_launcher_local_dir()
@@ -143,12 +131,21 @@ class InstallPySideToBlender(PreLaunchHook):
             local_dir, "application_packages", f"blender-py{python_minor}"
         )
 
-        # Prepend application packages dir to Python path and check availability again
+        # Change PYTHONPATH to contain blender's packages as first
+        python_paths = [
+            python_lib,
+            os.path.join(python_lib, "site-packages"),
+        ]
+
+        # Append application packages dir to Python path, if it exists
         if os.path.exists(app_packages):
-            self.prepend_to_pythonpath([app_packages])
-            if self.is_pyside_installed(python_executable, qt_binding):
-                self.log.debug("Qt bindings found in application packages.")
-                return
+            python_paths.append(app_packages)
+        self.prepend_to_pythonpath(python_paths)
+
+        # Check if Qt bindings are available
+        if self.is_pyside_installed(python_executable, qt_binding):
+            self.log.debug("Qt bindings are available.")
+            return
 
         # Install PySide2 into application packages
         result = self.install_pyside(
@@ -157,7 +154,8 @@ class InstallPySideToBlender(PreLaunchHook):
             qt_binding_version,
             app_packages,
         )
-        self.prepend_to_pythonpath([app_packages])
+        if app_packages not in python_paths:
+            self.prepend_to_pythonpath([app_packages])
 
         if result:
             self.log.info(
