@@ -1,3 +1,4 @@
+import hashlib
 import os
 import traceback
 import importlib
@@ -997,3 +998,17 @@ def update_content_on_context_change():
 
     if has_changes:
         create_context.save_changes()
+
+
+def clean_filename(filename: str) -> str:
+    """Clean filename from characters which has reached more than maximum 63 characters.
+    It would be removed after fully supporting blender 5.0, because blender 5.0 supports
+    up to 255 characters for the name.
+
+    Args:
+        filename (str): The filename to clean.
+    Returns:
+        str: The cleaned filename.
+    """
+    digest = hashlib.sha1(filename.encode("utf-8")).hexdigest()[:8]
+    return f"{filename[:54]}_{digest}"
