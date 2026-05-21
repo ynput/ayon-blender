@@ -50,7 +50,7 @@ def prepare_scene_name(
     # characters. If the name is longer, it will raise an error.
     # The truncation will only happen for blender version elder than 5.0
     if get_blender_version() < (5, 0, 0) and len(name) > 63:
-        raise ValueError(f"Scene name '{name}' would be too long.")
+        name = name[:63]
 
     return name
 
