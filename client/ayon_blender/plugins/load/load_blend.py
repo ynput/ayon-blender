@@ -278,7 +278,11 @@ class BlendLoader(plugin.BlenderLoader):
 
         for parent_container in parent_containers:
             parent_members = parent_container[AYON_PROPERTY].get("members", [])
-            parent_members = parent_members.tolist()
+            parent_members = (
+                parent_members.tolist() 
+                if not isinstance(parent_members, list) 
+                else parent_members
+            )
             parent_container[AYON_PROPERTY]["members"] = (
                 parent_members + members)
 
