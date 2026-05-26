@@ -277,7 +277,8 @@ class BlendLoader(plugin.BlenderLoader):
         parent_containers = self.get_all_container_parents(asset_group)
 
         for parent_container in parent_containers:
-            parent_members = parent_container[AYON_PROPERTY]["members"]
+            parent_members = parent_container[AYON_PROPERTY].get("members", [])
+            parent_members = parent_members.tolist()
             parent_container[AYON_PROPERTY]["members"] = (
                 parent_members + members)
 
