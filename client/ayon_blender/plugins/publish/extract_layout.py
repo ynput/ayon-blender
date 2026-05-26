@@ -5,7 +5,7 @@ import bpy
 import bpy_extras
 import bpy_extras.anim_utils
 
-from ayon_api import get_representations
+from ayon_api import get_representations, get_representations_hierarchy
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
@@ -138,8 +138,8 @@ class ExtractLayout(
         fbx_count = 0
 
         project_name = instance.context.data["projectName"]
-        version_ids = set()
         filtered_assets = []
+        repre_ids = set()
         for asset in asset_group.children:
             metadata = asset.get(AYON_PROPERTY)
             if not metadata:
@@ -153,8 +153,33 @@ class ExtractLayout(
                 continue
 
             filtered_assets.append((asset, metadata))
-            version_ids.add(metadata["parent"])
+            repre_ids.add(metadata["representation"])
 
+        hierarchy_by_repre_id = get_representations_hierarchy(
+            project_name,
+            repre_ids,
+            project_fields=[],
+            folder_fields=[],
+            task_fields=[],
+            product_fields={"id", "productBaseType"},
+            version_fields={"id"},
+            representation_fields={"id"},
+        )
+
+        version_id_by_repre_id = {}
+        product_id_by_version_id = {}
+        product_base_type_by_id = {}
+        for repre_id, hierarchy in hierarchy_by_repre_id.items():
+            repre_id = hierarchy.representation["id"]
+            version_id = hierarchy.version["id"]
+            product_id = hierarchy.product["id"]
+            version_id_by_repre_id[repre_id] = version_id
+            product_id_by_version_id[version_id] = product_id
+            product_base_type_by_id[product_id] = (
+                hierarchy.product["productBaseType"]
+            )
+
+        version_ids = set(product_id_by_version_id.keys())
         repre_entities = get_representations(
             project_name,
             representation_names={"blend", "fbx", "abc"},
@@ -172,10 +197,12 @@ class ExtractLayout(
             )
 
         for asset, metadata in filtered_assets:
-            version_id = metadata["parent"]
-            product_type = metadata.get("product_type")
-            if product_type is None:
-                product_type = metadata["family"]
+            repre_id = metadata["representation"]
+            version_id = version_id_by_repre_id.get(repre_id)
+            product_id = product_id_by_version_id.get(version_id)
+            product_base_type = product_base_type_by_id.get(product_id)
+            if not version_id or not product_id or not product_base_type:
+                continue
 
             repres_by_name = repre_mapping_by_version_id[version_id]
 
@@ -193,7 +220,10 @@ class ExtractLayout(
                 )
                 if value
             }
-            json_element["product_type"] = product_type
+            # TODO stop filling 'product_type'.
+            #   - was added for backwards compatibility
+            json_element["product_type"] = product_base_type
+            json_element["product_base_type"] = product_base_type
             json_element["instance_name"] = asset.name
             json_element["asset_name"] = metadata["asset_name"]
             json_element["file_path"] = metadata["libpath"]
@@ -229,7 +259,7 @@ class ExtractLayout(
             ]
 
             # Extract the animation as well
-            if product_type == "rig":
+            if product_base_type == "rig":
                 f, n = self._export_animation(
                     asset, instance, stagingdir, fbx_count)
                 if f:

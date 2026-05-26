@@ -33,7 +33,8 @@ from .ops import (
 from .lib import (
     imprint,
     get_blender_version,
-    get_scene_node_tree
+    get_scene_node_tree,
+    clean_filename
 )
 
 
@@ -50,7 +51,7 @@ def prepare_scene_name(
     # characters. If the name is longer, it will raise an error.
     # The truncation will only happen for blender version elder than 5.0
     if get_blender_version() < (5, 0, 0) and len(name) > 63:
-        raise ValueError(f"Scene name '{name}' would be too long.")
+        name = clean_filename(name)
 
     return name
 
@@ -181,8 +182,7 @@ class BlenderExtractor(Extractor):
 
 class BlenderCreator(Creator):
     """Base class for Blender Creator plug-ins."""
-    defaults = ['Main']
-
+    skip_instances = False
     settings_category = "blender"
     create_as_asset_group = False
 
@@ -281,9 +281,15 @@ class BlenderCreator(Creator):
 
         # Mimic families override like `self.read` does
         instance_data["families"] = self.get_publish_families()
-
+        product_type = instance_data.get("productType")
+        if not product_type:
+            product_type = self.product_base_type
         instance = CreatedInstance(
-            self.product_type, product_name, instance_data, self,
+            product_base_type=self.product_base_type,
+            product_type=product_type,
+            product_name=product_name,
+            data=instance_data,
+            creator=self,
             transient_data={"instance_node": instance_node}
         )
         self._add_instance_to_context(instance)
@@ -347,7 +353,7 @@ class BlenderCreator(Creator):
             if (
                 "productName" in changes.changed_keys
                 or "folderPath" in changes.changed_keys
-            ) and created_instance.product_type != "workfile":
+            ) and created_instance.product_base_type != "workfile":
                 folder_name = data["folderPath"].split("/")[-1]
                 name = prepare_scene_name(
                     folder_name, data["productName"]
@@ -458,7 +464,7 @@ class BlenderCreator(Creator):
         return data
 
     def get_publish_families(self) -> list[str]:
-        return [self.product_type]
+        return [self.product_base_type]
 
 
 class BlenderLoader(LoaderPlugin):
@@ -562,16 +568,12 @@ class BlenderLoader(LoaderPlugin):
             folder_name, product_name, unique_number
         )
 
-        nodes = self.process_asset(
+        return self.process_asset(
             context=context,
             name=name,
             namespace=namespace,
             options=options,
         )
-
-        # Only containerise if anything was loaded by the Loader.
-        if not nodes:
-            return None
 
     def exec_update(self, container: Dict, context: Dict):
         """Must be implemented by a subclass"""

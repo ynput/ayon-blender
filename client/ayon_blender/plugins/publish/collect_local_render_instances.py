@@ -1,3 +1,4 @@
+import ayon_api
 import pyblish.api
 
 from ayon_blender.api import plugin
@@ -28,6 +29,8 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
 
         self.log.debug("Expected files for local render: %s",
                        instance.data.get("expectedFiles"))
+
+        self._precollect_required_data(instance)
 
         # Use same logic as how instances get created for farm submissions
         skeleton = create_skeleton_instance(
@@ -85,3 +88,34 @@ class CollectLocalRenderInstances(plugin.BlenderInstancePlugin):
         # Skip integrating original render instance.
         # We are not removing it because it's used to trigger the render.
         instance.data["integrate"] = False
+
+    def _precollect_required_data(self, instance):
+        """Ensure required data is present.
+        
+        Some data may not exist yet in the instance at this point, so we need
+        to ensure it is there for certain function calls, like
+        `create_instances_for_aov` requiring `taskEntity` in instance data
+        if setting `use_legacy_product_names_for_renders` is disabled which is
+        usually collected at a later order by `CollectAnatomyInstanceData`.
+        """""
+
+        project_name: str = instance.context.data["projectName"]
+
+        # Add folderEntity
+        if "folderEntity" not in instance.data:
+            self.log.debug("Collecting folder entity for instance...")
+            instance.data["folderEntity"] = ayon_api.get_folder_by_path(
+                project_name=project_name,
+                folder_path=instance.data["folderPath"],
+            )
+        folder_entity = instance.data["folderEntity"]
+
+        # Add taskEntity
+        if "taskEntity" not in instance.data:
+            self.log.debug("Collecting task entity for instance...")
+            project_name: str = instance.context.data["projectName"]
+            instance.data["taskEntity"] = ayon_api.get_task_by_name(
+                project_name=project_name,
+                task_name=instance.data["task"],
+                folder_id=folder_entity["id"],
+            )

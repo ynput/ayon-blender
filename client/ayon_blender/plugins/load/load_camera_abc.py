@@ -1,12 +1,12 @@
 """Load an asset in Blender from an Alembic file."""
 
 from pathlib import Path
-from pprint import pformat
 from typing import Dict, List, Optional
 
-import os
+
 import bpy
 
+from ayon_core.lib import BoolDef
 from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin, lib
 from ayon_blender.api.constants import (
@@ -22,12 +22,28 @@ class AbcCameraLoader(plugin.BlenderLoader):
     Stores the imported asset in an empty named after the asset.
     """
 
-    product_types = {"camera"}
-    representations = {"abc"}
+    product_base_types = {"camera"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"abc"}
 
     label = "Load Camera (ABC)"
     icon = "code-fork"
     color = "orange"
+
+    always_add_cache_reader = True
+    add_namespace = True
+
+    @classmethod
+    def get_options(cls, contexts):
+        return [
+            BoolDef("always_add_cache_reader",
+                    default=cls.always_add_cache_reader,
+                    label="Always Add Cache Reader"),
+            BoolDef("add_namespace",
+                    default=cls.add_namespace,
+                    label="Add namespace to objects"),
+        ]
 
     def _remove(self, asset_group):
         objects = list(asset_group.children)
@@ -39,26 +55,38 @@ class AbcCameraLoader(plugin.BlenderLoader):
                 objects.extend(obj.children)
                 bpy.data.objects.remove(obj)
 
-    def _process(self, libpath, asset_group, group_name):
+    def _process(self, libpath, asset_group, group_name, options=None):
+        if options is None:
+            options = {}
+
         plugin.deselect_all()
 
         # Force the creation of the transform cache even if the camera
         # doesn't have an animation. We use the cache to update the camera.
+        always_add_cache_reader = options.get(
+            "always_add_cache_reader", self.always_add_cache_reader
+        )
         bpy.ops.wm.alembic_import(
-            filepath=libpath, always_add_cache_reader=True)
+            filepath=libpath,
+            always_add_cache_reader=always_add_cache_reader
+        )
 
         objects = lib.get_selection()
 
         for obj in objects:
             obj.parent = asset_group
 
-        for obj in objects:
-            name = obj.name
-            obj.name = f"{group_name}:{name}"
-            if obj.type != "EMPTY":
-                name_data = obj.data.name
-                obj.data.name = f"{group_name}:{name_data}"
+        # Add namespace
+        if options.get("add_namespace", self.add_namespace):
+            for obj in objects:
+                name = obj.name
+                obj.name = f"{group_name}:{name}"
+                if obj.type != "EMPTY":
+                    name_data = obj.data.name
+                    obj.data.name = f"{group_name}:{name_data}"
 
+        # Add AYON metadata
+        for obj in objects:
             if not obj.get(AYON_PROPERTY):
                 obj[AYON_PROPERTY] = dict()
 
@@ -98,7 +126,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
 
         asset_group = bpy.data.objects.new(group_name, object_data=None)
         add_to_ayon_container(asset_group)
-        self._process(libpath, asset_group, group_name)
+        self._process(libpath, asset_group, group_name, options)
 
         objects = []
         nodes = list(asset_group.children)
@@ -118,10 +146,9 @@ class AbcCameraLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "project_name": context["project"]["name"],
+            "options": options or {}
         }
 
         self[:] = objects
@@ -143,14 +170,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
         object_name = container["objectName"]
         asset_group = bpy.data.objects.get(object_name)
         libpath = Path(self.filepath_from_context(context))
-        prev_filename = os.path.basename(container["libpath"])
         extension = libpath.suffix.lower()
-
-        self.log.info(
-            "Container: %s\nRepresentation: %s",
-            pformat(container, indent=2),
-            pformat(repre_entity, indent=2),
-        )
 
         assert asset_group, (
             f"The asset is not loaded: {container['objectName']}")
@@ -176,36 +196,37 @@ class AbcCameraLoader(plugin.BlenderLoader):
             self.log.info("Library already loaded, not updating...")
             return
 
-        bpy.ops.cachefile.open(filepath=libpath.as_posix())
-        for obj in asset_group.children:
-            names = [constraint.name for constraint in obj.constraints
-                     if constraint.type == "TRANSFORM_CACHE"]
-            file_list = [file for file in bpy.data.cache_files
-                        if file.name.startswith(prev_filename)]
-            if names:
-                for name in names:
-                    obj.constraints.remove(obj.constraints.get(name))
-            if file_list:
-                bpy.data.batch_remove(file_list)
+        new_cachefile = lib.add_cache_file(libpath.as_posix())
+        new_cachefile.scale = 1.0
 
-            constraint = obj.constraints.new("TRANSFORM_CACHE")
-            constraint.cache_file = bpy.data.cache_files[-1]
-            constraint.cache_file.name = os.path.basename(libpath)
-            constraint.cache_file.filepath = libpath.as_posix()
-            constraint.cache_file.scale = 1.0
-            bpy.context.evaluated_depsgraph_get()
+        remove_unused_caches = set()
 
-            # Find the deepest hierarchy level in object paths
-            if constraint.cache_file.object_paths:
-                # Count slashes to determine hierarchy depth
-                object_paths_list = constraint.cache_file.object_paths
-                max_depth = max(
-                    path.path.count('/') for path in object_paths_list
-                )
-                # Assign only the deepest hierarchies
-                for object_path in object_paths_list:
-                    if object_path.path.count('/') == max_depth:
-                        constraint.object_path = object_path.path
+        # Update transform cache constraints
+        for obj in asset_group.children_recursive:
+            for constraint in obj.constraints:
+                if constraint.type != "TRANSFORM_CACHE":
+                    continue
+
+                if not constraint.cache_file:
+                    continue
+
+                remove_unused_caches.add(constraint.cache_file)
+                constraint.cache_file = new_cachefile
+
+                # Update the object path if object not found in cache file
+                if constraint.object_path not in new_cachefile.object_paths:
+                    self.log.warning(
+                        f"Object path '{constraint.object_path}' not found in new "
+                        "cache file, trying to update it."
+                    )
+                    self.log.info("new_cache object paths '%s'", new_cachefile.object_paths)
+
+        remove_unused_caches = {
+            cache for cache in remove_unused_caches if
+            not lib.has_users(cache)
+        }
+        if remove_unused_caches:
+            bpy.data.batch_remove(remove_unused_caches)
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]

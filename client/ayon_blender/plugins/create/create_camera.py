@@ -11,8 +11,8 @@ class CreateCamera(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.camera"
     label = "Camera"
     description = __doc__
-    product_type = "camera"
     product_base_type = "camera"
+    product_type = product_base_type
     icon = "video-camera"
 
     def create(

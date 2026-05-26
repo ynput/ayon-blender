@@ -10,15 +10,15 @@ class BlenderLegacyConvertor(ProductConvertorPlugin):
     This Converter will find all legacy products in the scene and will
     transform them to the current system. Since the old products doesn't
     retain any information about their original creators, the only mapping
-    we can do is based on their product types.
+    we can do is based on their product base types.
 
     Its limitation is that you can have multiple creators creating product
-    of the same product type and there is no way to handle it. This code
+    of the same product base type and there is no way to handle it. This code
     should nevertheless cover all creators that came with ayon.
 
     """
     identifier = "io.ayon.creators.blender.legacy"
-    product_type_to_id = {
+    product_base_type_to_id = {
         "action": "io.ayon.creators.blender.action",
         "camera": "io.ayon.creators.blender.camera",
         "animation": "io.ayon.creators.blender.animation",
@@ -66,14 +66,17 @@ class BlenderLegacyConvertor(ProductConvertorPlugin):
         if not self.legacy_instances:
             return
 
-        for product_type, instance_nodes in self.legacy_instances.items():
-            if product_type in self.product_type_to_id:
-                for instance_node in instance_nodes:
-                    creator_identifier = self.product_type_to_id[product_type]
-                    self.log.info(
-                        "Converting {} to {}".format(instance_node.name,
-                                                     creator_identifier)
-                    )
-                    imprint(instance_node, data={
-                        "creator_identifier": creator_identifier
-                    })
+        for product_base_type, instance_nodes in self.legacy_instances.items():
+            creator_identifier = self.product_base_type_to_id.get(
+                product_base_type
+            )
+            if not creator_identifier:
+                continue
+
+            for instance_node in instance_nodes:
+                self.log.info(
+                    f"Converting {instance_node.name} to {creator_identifier}"
+                )
+                imprint(instance_node, data={
+                    "creator_identifier": creator_identifier
+                })

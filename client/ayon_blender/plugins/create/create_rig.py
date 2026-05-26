@@ -11,8 +11,8 @@ class CreateRig(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.rig"
     label = "Rig"
     description = __doc__
-    product_type = "rig"
     product_base_type = "rig"
+    product_type = product_base_type
     icon = "wheelchair"
 
     create_as_asset_group = True

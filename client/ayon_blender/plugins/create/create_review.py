@@ -9,8 +9,8 @@ class CreateReview(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.review"
     label = "Review"
     description = __doc__
-    product_type = "review"
     product_base_type = "review"
+    product_type = product_base_type
     icon = "video-camera"
 
     def create(

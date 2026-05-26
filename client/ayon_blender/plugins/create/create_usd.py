@@ -12,8 +12,8 @@ class CreateUSD(plugin.BlenderCreator):
     name = "usdMain"
     label = "USD"
     description = __doc__
-    product_type = "usd"
     product_base_type = "usd"
+    product_type = product_base_type
     icon = "gears"
 
     def create(

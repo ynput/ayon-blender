@@ -11,8 +11,8 @@ class CreateLayout(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.layout"
     label = "Layout"
     description = __doc__
-    product_type = "layout"
     product_base_type = "layout"
+    product_type = product_base_type
     icon = "cubes"
 
     create_as_asset_group = True

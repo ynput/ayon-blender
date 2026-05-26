@@ -21,8 +21,10 @@ class FbxCameraLoader(plugin.BlenderLoader):
     Stores the imported asset in an empty named after the asset.
     """
 
-    product_types = {"camera"}
-    representations = {"fbx"}
+    product_base_types = {"camera"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"fbx"}
 
     label = "Load Camera (FBX)"
     icon = "code-fork"
@@ -118,8 +120,6 @@ class FbxCameraLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "project_name": context["project"]["name"],
         }

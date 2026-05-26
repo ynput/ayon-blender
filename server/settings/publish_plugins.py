@@ -33,6 +33,85 @@ def evaluation_mode_enum():
     ]
 
 
+def extract_model_usd_overrides_enum():
+    return [
+        {"label": "Convert Orientation", "value": "convert_orientation"},
+        {"label": "Export Animation", "value": "export_animation"},
+        {"label": "Export Hair", "value": "export_hair"},
+        {"label": "Export UV Maps", "value": "export_uvmaps"},
+        {"label": "Export Normals", "value": "export_normals"},
+        {"label": "Export Materials", "value": "export_materials"},
+        {"label": "Export Mesh Colors", "value": "export_mesh_colors"},
+        {"label": "Generate Preview Surface", "value": "generate_preview_surface"},
+        {"label": "Generate MaterialX Network", "value": "generate_materialx_network"},
+        {"label": "Use Instancing", "value": "use_instancing"},
+    ]
+
+
+class ExtractUSDModel(BaseSettingsModel):
+    convert_orientation: bool = SettingsField(
+        False,
+        title="Convert Orientation",
+        description="Convert Orientation settings for USD export"
+    )
+    export_animation: bool = SettingsField(
+        False,
+        title="Animation",
+        description="Whether to export animation data or not."
+    )
+    export_hair: bool = SettingsField(
+        False,
+        title="Hair",
+        description="Whether to export hair/fur systems or not."
+    )
+    export_uvmaps: bool = SettingsField(
+        True,
+        title="UV Maps",
+        description="Whether to export UV map data or not."
+    )
+    export_normals: bool = SettingsField(
+        True,
+        title="Normals",
+        description="Whether to export normal data or not."
+    )
+    export_materials: bool = SettingsField(
+        True,
+        title="Materials",
+        description="Whether to export material assignments and data or not."
+    )
+    export_mesh_colors: bool = SettingsField(
+        True,
+        title="Mesh Colors",
+        description="Whether to export mesh color data or not."
+    )
+    generate_preview_surface: bool = SettingsField(
+        True,
+        title="Generate Preview Surface",
+        description=(
+            "Whether to generate a preview surface for the exported geometry or not."
+        )
+    )
+    generate_materialx_network: bool = SettingsField(
+        False,
+        title="Generate MaterialX Network",
+        description=(
+            "Whether to generate a MaterialX network for the exported materials or not."
+        )
+    )
+    use_instancing: bool = SettingsField(
+        True,
+        title="Instancing",
+        description="Whether to use USD instancing for duplicated objects or not."
+    )
+    overrides: list[str] = SettingsField(
+        enum_resolver=extract_model_usd_overrides_enum,
+        title="Exposed Overrides",
+        description=(
+            "Expose the attribute in this list to the user when publishing."
+        )
+    )
+
+
 class AlembicEvaluationModeModel(BaseSettingsModel):
     subdiv_schema: bool = SettingsField(
         False,
@@ -79,6 +158,17 @@ class ExtractBlendModel(BaseSettingsModel):
         title="Families"
     )
     compress: bool = SettingsField(True, title="Compress")
+    pack_textures: bool = SettingsField(
+        True,
+        title="Pack Textures",
+        description=(
+            "When enabled publishing the .blend file will also pack the "
+            "textures into the file, which can increase the file size "
+            "significantly but ensures all textures are included with "
+            "the publish. This may however impact performance through "
+            "some renderers."
+        )
+    )
 
 
 class ExtractBlendAnimationModel(BaseSettingsModel):
@@ -222,6 +312,10 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ExtractPlayblastModel,
         title="Extract Playblast"
     )
+    ExtractUSD: ExtractUSDModel = SettingsField(
+        default_factory=ExtractUSDModel,
+        title="Extract USD"
+    )
     ExtractModelUSD: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Extract Model USD"
@@ -305,7 +399,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             "layout",
             "blendScene"
         ],
-        "compress": False
+        "compress": False,
+        "pack_textures": True,
     },
     "ExtractFBX": {
         "enabled": False,
@@ -450,6 +545,19 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             },
             indent=4
         )
+    },
+    "ExtractUSD": {
+        "convert_orientation": False,
+        "export_animation": False,
+        "export_hair": False,
+        "export_uvmaps": True,
+        "export_normals": True,
+        "export_materials": True,
+        "export_mesh_colors": True,
+        "generate_preview_surface": True,
+        "generate_materialx_network": False,
+        "use_instancing": True,
+        "overrides": []
     },
     "ExtractModelUSD": {
         "enabled": True,

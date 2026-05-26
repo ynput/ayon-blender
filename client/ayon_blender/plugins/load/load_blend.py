@@ -9,7 +9,8 @@ from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,
     get_blender_version,
-    create_animation_instance
+    create_animation_instance,
+    clean_filename,
 )
 from ayon_blender.api.pipeline import (
     add_to_ayon_container,
@@ -22,8 +23,10 @@ from ayon_blender.api.constants import AYON_PROPERTY
 class BlendLoader(plugin.BlenderLoader):
     """Load assets from a .blend file."""
 
-    product_types = {"model", "rig", "layout", "camera", "animation"}
-    representations = {"blend"}
+    product_base_types = {"model", "rig", "layout", "camera", "animation"}
+    product_types = product_base_types
+    representations = {"*"}
+    extensions = {"blend"}
 
     label = "Append Blend"
     icon = "code-fork"
@@ -104,7 +107,11 @@ class BlendLoader(plugin.BlenderLoader):
         members = []
         for attr in dir(data_to):
             from_names: list[str] = names_by_attr[attr]
-            for from_name, data in zip(from_names, getattr(data_to, attr)):
+            values = getattr(data_to, attr)
+            if not isinstance(values, list):
+                continue
+
+            for from_name, data in zip(from_names, values):
                 data.name = f"{group_name}:{from_name}"
                 members.append(data)
 
@@ -125,7 +132,7 @@ class BlendLoader(plugin.BlenderLoader):
         # If the filename is longer, it will be truncated for blender
         # version elder than 5.0
         if get_blender_version() < (5, 0, 0) and len(filepath) > 63:
-            filepath = filepath[:63]
+            filepath = clean_filename(filepath)
         library = bpy.data.libraries.get(filepath)
         bpy.data.libraries.remove(library)
 
@@ -144,12 +151,14 @@ class BlendLoader(plugin.BlenderLoader):
         """
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
-        product_name = context["product"]["name"]
+        product_entity = context["product"]
+        product_name = product_entity["name"]
 
-        try:
-            product_type = context["product"]["productType"]
-        except ValueError:
-            product_type = "model"
+        product_base_type = product_entity.get("productBaseType")
+        if not product_base_type:
+            product_base_type = product_entity.get("productType")
+            if not product_base_type:
+                product_base_type = "model"
 
         representation = context["representation"]["id"]
 
@@ -163,10 +172,10 @@ class BlendLoader(plugin.BlenderLoader):
         container, members = self._process_data(libpath, group_name)
 
         if self.create_animation_instance_on_load:
-            if product_type == "layout":
+            if product_base_type == "layout":
                 self._post_process_layout(container, folder_name, representation)
 
-            if product_type == "rig":
+            if product_base_type == "rig":
                 create_animation_instance(container)
 
         add_to_ayon_container(container)
@@ -180,8 +189,6 @@ class BlendLoader(plugin.BlenderLoader):
             "representation": context["representation"]["id"],
             "libpath": libpath,
             "asset_name": asset_name,
-            "parent": context["representation"]["versionId"],
-            "productType": context["product"]["productType"],
             "objectName": group_name,
             "members": members,
             "project_name": context["project"]["name"],
@@ -252,7 +259,6 @@ class BlendLoader(plugin.BlenderLoader):
         new_data = {
             "libpath": libpath,
             "representation": repre_entity["id"],
-            "parent": repre_entity["versionId"],
             "members": members,
             "project_name": context["project"]["name"],
         }
@@ -272,7 +278,12 @@ class BlendLoader(plugin.BlenderLoader):
         parent_containers = self.get_all_container_parents(asset_group)
 
         for parent_container in parent_containers:
-            parent_members = parent_container[AYON_PROPERTY]["members"]
+            parent_members = parent_container[AYON_PROPERTY].get("members", [])
+            parent_members = (
+                parent_members.tolist() 
+                if not isinstance(parent_members, list) 
+                else parent_members
+            )
             parent_container[AYON_PROPERTY]["members"] = (
                 parent_members + members)
 

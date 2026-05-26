@@ -9,8 +9,8 @@ class CreateAnimation(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.animation"
     label = "Animation"
     description = __doc__
-    product_type = "animation"
     product_base_type = "animation"
+    product_type = product_base_type
     icon = "male"
 
     def create(

@@ -41,11 +41,11 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
         camera = instance.data.get("review_camera", "AUTO")
         start = instance.data.get("frameStart", bpy.context.scene.frame_start)
-        product_type = instance.data["productType"]
+        product_base_type = instance.data["productBaseType"]
         isolate = instance.data("isolate", None)
 
         presets = json.loads(self.presets)
-        preset = presets.get(product_type, {})
+        preset = presets.get(product_base_type, {})
 
         preset.update({
             "camera": camera,

@@ -1,6 +1,7 @@
 import os
 import contextlib
 
+
 import bpy
 import pyblish.api
 
@@ -12,6 +13,7 @@ from ayon_blender.api.lib import (
     strip_instance_data,
     strip_namespace,
     packed_images,
+    make_material_image_paths_absolute,
 )
 
 
@@ -44,6 +46,7 @@ class ExtractBlend(
 
     # From settings
     compress = False
+    pack_textures = True
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -85,10 +88,18 @@ class ExtractBlend(
                         stack.enter_context(link_to_collection(
                             collection, list(missing_child_hierarchy)))
 
+
             stack.enter_context(strip_container_data(containers))
             stack.enter_context(strip_instance_data(asset_group))
             stack.enter_context(strip_namespace(containers))
-            stack.enter_context(packed_images(data_blocks, logger=self.log))
+            if self.pack_textures:
+                stack.enter_context(
+                    packed_images(data_blocks, logger=self.log)
+                )
+            # make sure all texture files are absolute paths
+            if instance.data["productBaseType"] == "look":
+                stack.enter_context(make_material_image_paths_absolute(data_blocks))
+
             self.log.debug("Datablocks: %s", data_blocks)
             bpy.data.libraries.write(
                 filepath, data_blocks, compress=self.compress
@@ -141,3 +152,32 @@ class ExtractBlendAction(ExtractBlend):
             action for action in bpy.data.actions
             if action.name == instance.data["productName"]
         }
+
+
+class ExtractBlendLook(ExtractBlend):
+    """Extract a blend file from the current scene."""
+    families = ["look"]
+    label = "Extract Blend (Look)"
+    optional = False
+    # From settings
+    compress = False
+
+    def add_datablock(self, instance: pyblish.api.Instance) -> set:
+        """Add the material data block to the blend file.
+        The datablock needs to be exported along with its linked objects
+        to preserve the material's node tree and texture links.
+
+        Args:
+            instance (pyblish.api.Instance): The instance to add.
+
+        Returns:
+            set: A set of data blocks added.
+        """
+        datablock_to_be_exported = set()
+        for obj in instance:
+            if not isinstance(obj, bpy.types.Object):
+                continue
+            if not hasattr(obj.data, "materials"):
+                continue
+            datablock_to_be_exported.update(obj.data.materials)
+        return datablock_to_be_exported

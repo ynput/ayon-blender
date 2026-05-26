@@ -11,8 +11,8 @@ class CreateModel(plugin.BlenderCreator):
     identifier = "io.ayon.creators.blender.model"
     label = "Model"
     description = __doc__
-    product_type = "model"
     product_base_type = "model"
+    product_type = product_base_type
     icon = "cube"
 
     create_as_asset_group = True
