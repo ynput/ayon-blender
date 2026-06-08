@@ -42,6 +42,8 @@ def extract_model_usd_overrides_enum():
         {"label": "Export Normals", "value": "export_normals"},
         {"label": "Export Materials", "value": "export_materials"},
         {"label": "Export Mesh Colors", "value": "export_mesh_colors"},
+        {"label": "Generate Preview Surface", "value": "generate_preview_surface"},
+        {"label": "Generate MaterialX Network", "value": "generate_materialx_network"},
         {"label": "Use Instancing", "value": "use_instancing"},
     ]
 
@@ -81,6 +83,20 @@ class ExtractUSDModel(BaseSettingsModel):
         True,
         title="Mesh Colors",
         description="Whether to export mesh color data or not."
+    )
+    generate_preview_surface: bool = SettingsField(
+        True,
+        title="Generate Preview Surface",
+        description=(
+            "Whether to generate a preview surface for the exported geometry or not."
+        )
+    )
+    generate_materialx_network: bool = SettingsField(
+        False,
+        title="Generate MaterialX Network",
+        description=(
+            "Whether to generate a MaterialX network for the exported materials or not."
+        )
     )
     use_instancing: bool = SettingsField(
         True,
@@ -538,6 +554,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "export_normals": True,
         "export_materials": True,
         "export_mesh_colors": True,
+        "generate_preview_surface": True,
+        "generate_materialx_network": False,
         "use_instancing": True,
         "overrides": []
     },

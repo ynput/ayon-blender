@@ -22,6 +22,8 @@ class ExtractUSD(plugin.BlenderExtractor,
     export_normals = True
     export_materials = True
     export_mesh_colors = True
+    generate_preview_surface = True
+    generate_materialx_network = False
     use_instancing = True
 
     overrides: list[str] = []
@@ -77,6 +79,12 @@ class ExtractUSD(plugin.BlenderExtractor,
             "export_normals": attribute_values.get("export_normals", self.export_normals),
             "export_materials": attribute_values.get("export_materials", self.export_materials),
             "export_mesh_colors": attribute_values.get("export_mesh_colors", self.export_mesh_colors),
+            "generate_preview_surface": attribute_values.get(
+                "generate_preview_surface", self.generate_preview_surface
+            ),
+            "generate_materialx_network": attribute_values.get(
+                "generate_materialx_network", self.generate_materialx_network
+            ),
             "use_instancing": attribute_values.get("use_instancing", self.use_instancing),
         }
 
@@ -209,6 +217,18 @@ class ExtractUSD(plugin.BlenderExtractor,
                 label="Export Mesh Colors",
                 tooltip="Whether to export mesh color data or not.",
                 default=cls.export_mesh_colors,
+            ),
+            "generate_preview_surface": BoolDef(
+                "generate_preview_surface",
+                label="Generate Preview Surface",
+                tooltip="Whether to generate a preview surface for exported meshes or not.",
+                default=cls.generate_preview_surface,
+            ),
+            "generate_materialx_network": BoolDef(
+                "generate_materialx_network",
+                label="Generate MaterialX Network",
+                tooltip="Whether to generate a MaterialX network for exported materials or not.",
+                default=cls.generate_materialx_network,
             ),
             "use_instancing": BoolDef(
                 "use_instancing",
