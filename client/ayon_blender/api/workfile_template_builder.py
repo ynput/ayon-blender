@@ -259,7 +259,6 @@ def open_template(*args, **kwargs):
     open_template_ui(builder, main_window=main_window)
 
 
-
 def create_placeholder(*args, **kwargs):
     """Create Workfile Placeholder for Blender."""
     host = registered_host()
