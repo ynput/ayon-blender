@@ -471,6 +471,8 @@ class OpenTemplate(LaunchQtApp):
     def execute(self, context):
         from .workfile_template_builder import open_template
         window = open_template()
+        if window is None:
+            return {"FINISHED"}
         BlenderApplication.store_window(self.bl_idname, window)
         self._window = window
         return super().execute(context)
