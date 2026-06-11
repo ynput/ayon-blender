@@ -217,7 +217,7 @@ def _process_app_events() -> Optional[float]:
 class LaunchQtApp(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
-    _window = Union[QtWidgets.QDialog, ModuleType]
+    _window: Optional[Union[QtWidgets.QDialog, ModuleType]] = None
     _tool_name: str = None
     _init_args: Optional[List] = list()
     _init_kwargs: Optional[Dict] = dict()
@@ -250,7 +250,9 @@ class LaunchQtApp(bpy.types.Operator):
 
         if self._tool_name is None:
             if self._window is None:
-                raise AttributeError("`self._window` is not set.")
+                self._window = BlenderApplication.get_window(self.bl_idname)
+                if self._window is None:
+                    raise AttributeError("`self._window` is not set.")
 
         else:
             window = BlenderApplication.get_window(self.bl_idname)
@@ -464,18 +466,14 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 
 
 class OpenTemplate(LaunchQtApp):
-    """Build Workfile from ayon template settings."""
+    """Open workfile template."""
 
     bl_idname = "wm.ayon_open_template"
     bl_label = "Open Template"
     def execute(self, context):
         from .workfile_template_builder import open_template
-        window = open_template()
-        if window is None:
-            return {"FINISHED"}
-        BlenderApplication.store_window(self.bl_idname, window)
-        self._window = window
-        return super().execute(context)
+        open_template()
+        return {"FINISHED"}
 
 
 
