@@ -250,9 +250,7 @@ class LaunchQtApp(bpy.types.Operator):
 
         if self._tool_name is None:
             if self._window is None:
-                self._window = BlenderApplication.get_window(self.bl_idname)
-                if self._window is None:
-                    raise AttributeError("`self._window` is not set.")
+                raise AttributeError("`self._window` is not set.")
 
         else:
             window = BlenderApplication.get_window(self.bl_idname)
