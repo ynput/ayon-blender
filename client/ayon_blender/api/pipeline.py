@@ -391,6 +391,11 @@ def on_new():
 
     set_unit_scale_from_settings(blender_settings=settings)
 
+    if not IS_HEADLESS:
+        from .workfile_template_builder import create_first_workfile_from_template
+        create_first_workfile_from_template()
+
+
 
 def on_open():
     project = os.environ.get("AYON_PROJECT_NAME")
