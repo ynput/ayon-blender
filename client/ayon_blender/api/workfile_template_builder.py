@@ -252,12 +252,11 @@ def build_workfile_template(*args) -> None:
 #     builder.rebuild_template()
 
 
-def open_template(*args, **kwargs) -> None:
+def open_template(*args, **kwargs):
     """Open workfile template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
     main_window = kwargs.get("main_window")
     open_template_ui(builder, main_window=main_window)
-    return main_window
 
 
 def create_placeholder(*args, **kwargs):
