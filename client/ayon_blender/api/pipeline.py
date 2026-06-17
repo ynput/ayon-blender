@@ -396,7 +396,6 @@ def on_new():
         create_first_workfile_from_template()
 
 
-
 def on_open():
     project = os.environ.get("AYON_PROJECT_NAME")
     settings = get_blender_settings(project)
