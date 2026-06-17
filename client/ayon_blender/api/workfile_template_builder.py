@@ -1,10 +1,10 @@
 """Blender workfile template builder implementation"""
 import bpy
+import os
 
 import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
-    TemplateAlreadyImported,
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -22,8 +22,7 @@ from .lib import (
     imprint,
     update_content_on_context_change
 )
-
-from pathlib import Path
+from .workio import open_file
 
 
 PLACEHOLDER_SET = "PLACEHOLDERS_SET"
@@ -42,32 +41,9 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         Returns:
             bool: Whether the template was successfully imported or not
         """
-        if bpy.data.collections.get(PLACEHOLDER_SET):
-            raise TemplateAlreadyImported((
-                "Build template already loaded\n"
-                "Clean scene if needed (File > New Scene)"
-            ))
-
-        placeholder_collection = bpy.data.collections.new(PLACEHOLDER_SET)
-        bpy.context.scene.collection.children.link(placeholder_collection)
-        filepath = Path(path).resolve()
-        if not filepath.exists():
-            return False
-
-        with bpy.data.libraries.load(str(filepath)) as (data_src, data_dst):
-            data_dst.collections = data_src.collections
-            data_dst.objects = data_src.objects
-
-        # Make all paths absolute to resolve relative path warnings
-        bpy.ops.file.make_paths_absolute()
-
-        for target_object in data_dst.objects:
-            bpy.context.scene.collection.objects.link(target_object)
-        for target_collection in data_dst.collections:
-            bpy.context.scene.collection.children.link(target_collection)
-
-
-        # update imported sets information
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Template file not found: {path}")
+        open_file(path)
         update_content_on_context_change()
         return True
 
