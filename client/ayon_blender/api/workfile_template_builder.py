@@ -25,9 +25,6 @@ from .lib import (
 from .workio import open_file
 
 
-PLACEHOLDER_SET = "PLACEHOLDERS_SET"
-
-
 class BlenderTemplateBuilder(AbstractTemplateBuilder):
     """Concrete implementation of AbstractTemplateBuilder for Blender"""
     def import_template(self, path):
@@ -147,27 +144,6 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
             )
 
         return placeholders
-
-    def post_placeholder_process(self, placeholder, failed):
-        """Cleanup placeholder after load of its corresponding representations.
-
-        Hide placeholder, add them to placeholder set.
-        Used only by PlaceholderCreateMixin and PlaceholderLoadMixin
-
-        Args:
-            placeholder (PlaceholderItem): Item which was just used to load
-                representation.
-            failed (bool): Loading of representation failed.
-        """
-        # Hide placeholder and add them to placeholder set
-        node = placeholder.scene_identifier
-
-        # If we just populate the placeholders from current scene, the
-        # placeholder set will not be created so account for that.
-        placeholder_set = bpy.data.collections.get(PLACEHOLDER_SET)
-        if placeholder_set:
-            placeholder_set = bpy.data.collections.new(name=PLACEHOLDER_SET)
-        placeholder_set.children = node
 
     def delete_placeholder(self, placeholder):
         """Remove placeholder if building was successful
