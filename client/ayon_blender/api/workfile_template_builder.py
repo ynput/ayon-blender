@@ -40,8 +40,7 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         if not os.path.exists(path):
             self.log.warning(f"Template file not found: {path}")
             return False
-        host = registered_host()
-        host.open_workfile(path)
+        bpy.ops.wm.read_homefile(filepath=path)
         update_content_on_context_change()
         return True
 
