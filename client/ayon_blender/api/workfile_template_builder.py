@@ -22,7 +22,6 @@ from .lib import (
     imprint,
     update_content_on_context_change
 )
-from .workio import open_file
 
 
 class BlenderTemplateBuilder(AbstractTemplateBuilder):
@@ -41,7 +40,8 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         if not os.path.exists(path):
             self.log.warning(f"Template file not found: {path}")
             return False
-        open_file(path)
+        host = registered_host()
+        host.open_workfile(path)
         update_content_on_context_change()
         return True
 

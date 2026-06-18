@@ -392,8 +392,44 @@ def on_new():
     set_unit_scale_from_settings(blender_settings=settings)
 
     if not IS_HEADLESS:
-        from .workfile_template_builder import create_first_workfile_from_template
+        _deferred_create_first_workfile_from_template()
+
+
+def _create_first_workfile_from_template_deferred() -> Optional[float]:
+    """Build first workfile from template after Blender startup settles.
+
+    Running this during load_post/homefile initialization can be unstable,
+    so defer execution and retry until context is ready.
+    """
+    window_manager = getattr(bpy.context, "window_manager", None)
+    scene = getattr(bpy.context, "scene", None)
+    if not window_manager or not scene:
+        return 0.1
+
+    try:
+        from .workfile_template_builder import (
+            create_first_workfile_from_template,
+        )
         create_first_workfile_from_template()
+    except Exception:
+        log.warning(
+            "Failed to create first workfile from template on new file.",
+            exc_info=True,
+        )
+    return None
+
+
+def _deferred_create_first_workfile_from_template() -> None:
+    """Schedule deferred first workfile template creation once."""
+    if bpy.app.timers.is_registered(
+        _create_first_workfile_from_template_deferred
+    ):
+        return
+
+    bpy.app.timers.register(
+        _create_first_workfile_from_template_deferred,
+        first_interval=0.1,
+    )
 
 
 def on_open():
