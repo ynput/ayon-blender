@@ -70,7 +70,7 @@ ORIGINAL_EXCEPTHOOK = sys.excepthook
 
 
 log = Logger.get_logger(__name__)
-_is_opening_template = False
+_is_opening_workfile_template = False
 
 
 class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
@@ -411,14 +411,17 @@ def _create_first_workfile_from_template_deferred() -> Optional[float]:
         from .workfile_template_builder import (
             create_first_workfile_from_template,
         )
-        global _is_opening_template
-        _is_opening_template = True
+        global _is_opening_workfile_template
+        _is_opening_workfile_template = True
         create_first_workfile_from_template()
     except Exception:
         log.warning(
             "Failed to create first workfile from template on new file.",
             exc_info=True,
         )
+    finally:
+        _is_opening_workfile_template = False
+
     return None
 
 
@@ -514,7 +517,7 @@ def _on_load_post(*args):
         # Likely this was an open operation since it has a filepath
         emit_event("open")
     else:
-        if not _is_opening_template:
+        if not _is_opening_workfile_template:
             emit_event("new")
 
     ops.OpenFileCacher.post_load()
