@@ -407,11 +407,11 @@ def _create_first_workfile_from_template_deferred() -> Optional[float]:
     if not window_manager or not scene:
         return 0.1
 
+    global _is_opening_workfile_template
     try:
         from .workfile_template_builder import (
             create_first_workfile_from_template,
         )
-        global _is_opening_workfile_template
         _is_opening_workfile_template = True
         create_first_workfile_from_template()
     except Exception:
