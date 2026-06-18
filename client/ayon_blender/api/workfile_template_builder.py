@@ -39,7 +39,8 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
             bool: Whether the template was successfully imported or not
         """
         if not os.path.exists(path):
-            raise FileNotFoundError(f"Template file not found: {path}")
+            self.log.warning(f"Template file not found: {path}")
+            return False
         open_file(path)
         update_content_on_context_change()
         return True
