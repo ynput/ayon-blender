@@ -5,7 +5,6 @@ import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
     TemplateProfileNotFound,
-    TemplateLoadFailed,
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -197,11 +196,6 @@ def create_first_workfile_from_template() -> None:
         log.warning(
             "Template profile not found. Skipping..."
         )
-
-    except TemplateLoadFailed:
-        log.warning(
-            "Template path not set. Skipping..."
-    )
 
 
 def build_workfile_template(*args) -> None:
