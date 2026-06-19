@@ -28,9 +28,6 @@ from ayon_core.pipeline import (
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity
 )
-from ayon_core.pipeline.workfile.workfile_template_builder import (
-    TemplateProfileNotFound
-)
 from ayon_core.lib import (
     Logger,
     register_event_callback,
@@ -417,11 +414,6 @@ def _create_first_workfile_from_template_timer() -> Optional[float]:
         )
         _is_opening_workfile_template = True
         create_first_workfile_from_template()
-
-    except TemplateProfileNotFound:
-        # to avoid looping of the callback, remove it!
-        log.warning("Template profile not found. Skipping...")
-        _is_opening_workfile_template = False
 
     except Exception:
         log.warning(

@@ -1,10 +1,10 @@
 """Blender workfile template builder implementation"""
 import bpy
-
+import logging
 import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
-
+    TemplateProfileNotFound,
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -22,6 +22,9 @@ from .lib import (
     imprint,
     update_content_on_context_change
 )
+
+
+log = logging.getLogger(__name__)
 
 
 class BlenderTemplateBuilder(AbstractTemplateBuilder):
@@ -186,7 +189,10 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
 def create_first_workfile_from_template(*args) -> None:
     """Create the first workfile from template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template(workfile_creation_enabled=True)
+    try:
+        builder.build_template(workfile_creation_enabled=True)
+    except TemplateProfileNotFound:
+        log.warning("Template profile not found. Skipping...")
 
 
 def build_workfile_template(*args) -> None:
