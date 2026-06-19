@@ -39,7 +39,7 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
             bool: Whether the template was successfully imported or not
         """
         if not path:
-            self.log.warning("No template path provided.")
+            self.log.debug("No workfile template path set.")
             return False
         if not os.path.exists(path):
             self.log.warning(f"Template file not found: {path}")
