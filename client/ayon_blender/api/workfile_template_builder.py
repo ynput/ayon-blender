@@ -5,6 +5,7 @@ import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
     TemplateProfileNotFound,
+    TemplateLoadFailed,
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -186,13 +187,21 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
         imprint(obj_or_col, {"folderPath": folder_path})
 
 
-def create_first_workfile_from_template(*args) -> None:
+def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
     try:
         builder.build_template(workfile_creation_enabled=True)
+
     except TemplateProfileNotFound:
-        log.warning("Template profile not found. Skipping...")
+        log.warning(
+            "Template profile not found. Skipping..."
+        )
+
+    except TemplateLoadFailed:
+        log.warning(
+            "Template path not set. Skipping..."
+    )
 
 
 def build_workfile_template(*args) -> None:
