@@ -420,7 +420,6 @@ def _create_first_workfile_from_template_timer() -> Optional[float]:
             "Failed to create first workfile from template on new file.",
             exc_info=True,
         )
-        _is_opening_workfile_template = False
 
     finally:
         _is_opening_workfile_template = False
