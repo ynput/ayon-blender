@@ -37,8 +37,6 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
             path (str): A path to current template (usually given by
             get_template_preset implementation)
 
-        Returns:
-            bool: Whether the template was successfully imported or not
         """
         bpy.ops.wm.read_homefile(filepath=path)
         update_content_on_context_change()
