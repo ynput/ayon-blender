@@ -38,15 +38,9 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         Returns:
             bool: Whether the template was successfully imported or not
         """
-        if not path:
-            self.log.debug("No workfile template path set.")
-            return False
-        if not os.path.exists(path):
-            self.log.warning(f"Workfile template file not found: {path}")
-            return False
         bpy.ops.wm.read_homefile(filepath=path)
         update_content_on_context_change()
-        return True
+
 
 class BlenderPlaceholderPlugin(PlaceholderPlugin):
     """Base Placeholder Plugin for Blender with one unified cache.
