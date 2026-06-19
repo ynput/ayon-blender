@@ -5,6 +5,7 @@ import os
 import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
+
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -37,6 +38,9 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         Returns:
             bool: Whether the template was successfully imported or not
         """
+        if not path:
+            self.log.warning("No template path provided.")
+            return False
         if not os.path.exists(path):
             self.log.warning(f"Template file not found: {path}")
             return False
