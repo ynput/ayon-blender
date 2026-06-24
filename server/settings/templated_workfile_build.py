@@ -7,6 +7,7 @@ from ayon_server.settings import (
 
 
 class TemplatedWorkfileProfileModel(BaseSettingsModel):
+    enabled: bool = SettingsField(title="Enabled")
     task_types: list[str] = SettingsField(
         default_factory=list,
         title="Task types",
@@ -35,6 +36,14 @@ class TemplatedWorkfileProfileModel(BaseSettingsModel):
     create_first_version: bool = SettingsField(
         True,
         title="Create first version"
+    )
+    apply_to_empty_scene: bool = SettingsField(
+        False,
+        title="Always apply to empty scene"
+    )
+    apply_on_app_launch: bool = SettingsField(
+        False,
+        title="Apply on application launch"
     )
 
 
