@@ -187,13 +187,7 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
 def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
-    try:
-        builder.build_template(workfile_creation_enabled=True)
-
-    except TemplateProfileNotFound:
-        log.warning(
-            "Template profile not found. Skipping..."
-        )
+    builder.build_template(workfile_creation_enabled=True)
 
 
 def build_workfile_template(*args) -> None:

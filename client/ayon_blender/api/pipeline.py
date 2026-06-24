@@ -393,10 +393,10 @@ def on_new():
     set_unit_scale_from_settings(blender_settings=settings)
 
     if not IS_HEADLESS:
-        _deferred_create_first_workfile_from_template()
+        _deferred_build_workfile_from_template()
 
 
-def _create_first_workfile_from_template_timer() -> Optional[float]:
+def _build_from_template_timer() -> Optional[float]:
     """Build first workfile from template after Blender startup settles.
 
     Running this during load_post/homefile initialization can be unstable,
@@ -409,11 +409,9 @@ def _create_first_workfile_from_template_timer() -> Optional[float]:
 
     global _is_opening_workfile_template
     try:
-        from .workfile_template_builder import (
-            create_first_workfile_from_template,
-        )
+        from .workfile_template_builder import build_workfile_template
         _is_opening_workfile_template = True
-        create_first_workfile_from_template()
+        build_workfile_template()
 
     except Exception:
         log.warning(
@@ -427,15 +425,15 @@ def _create_first_workfile_from_template_timer() -> Optional[float]:
     return None
 
 
-def _deferred_create_first_workfile_from_template() -> None:
-    """Schedule deferred first workfile template creation once."""
+def _deferred_build_workfile_from_template() -> None:
+    """Schedule deferred workfile template creation once."""
     if bpy.app.timers.is_registered(
-        _create_first_workfile_from_template_timer
+        _build_from_template_timer
     ):
         return
 
     bpy.app.timers.register(
-        _create_first_workfile_from_template_timer,
+        _build_from_template_timer,
         first_interval=0.1,
     )
 
