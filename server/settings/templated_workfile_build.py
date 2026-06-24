@@ -7,7 +7,6 @@ from ayon_server.settings import (
 
 
 class TemplatedWorkfileProfileModel(BaseSettingsModel):
-    enabled: bool = SettingsField(title="Enabled")
     task_types: list[str] = SettingsField(
         default_factory=list,
         title="Task types",
