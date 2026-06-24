@@ -185,16 +185,28 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
 
 def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
-    builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template(workfile_creation_enabled=True)
+    build_workfile_template(on_new_scene=True)
 
 
-def build_workfile_template(*args) -> None:
+def build_workfile_template(*args, **kwargs) -> None:
     """Build the workfile template."""
     builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template()
+    preset = builder.get_template_preset()
+    profile = preset["profile"]
+    is_new_workfile = False
+    host = registered_host()
+    is_new_file = not host.get_current_workfile()
+    if kwargs.get("on_new_scene"):
+        is_new_workfile = profile["apply_to_empty_scene"]
+    elif is_new_file:
+        is_new_workfile = profile["apply_on_app_launch"]
 
-
+    builder.build_template(
+        template_path=preset["path"],
+        keep_placeholder=preset["keep_placeholder"],
+        create_first_version=preset["create_first_version"],
+        workfile_creation_enabled=is_new_workfile,
+    )
 # def update_workfile_template(*args) -> None:
 #     """Update the workfile template."""
 #     builder = BlenderTemplateBuilder(registered_host())
