@@ -203,7 +203,7 @@ def build_workfile_template(*args, **kwargs) -> None:
 
     builder.build_template(
         template_path=preset["path"],
-        keep_placeholder=preset["keep_placeholder"],
+        keep_placeholders=preset["keep_placeholder"],
         create_first_version=preset["create_first_version"],
         workfile_creation_enabled=is_new_workfile,
     )
