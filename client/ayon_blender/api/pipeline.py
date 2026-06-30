@@ -411,7 +411,7 @@ def _build_from_template_timer() -> Optional[float]:
     try:
         from .workfile_template_builder import build_workfile_template
         _is_opening_workfile_template = True
-        build_workfile_template()
+        build_workfile_template(on_new_scene=_is_opening_workfile_template)
 
     except Exception:
         log.warning(
