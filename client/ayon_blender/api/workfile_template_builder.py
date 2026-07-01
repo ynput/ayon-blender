@@ -1,5 +1,4 @@
 """Blender workfile template builder implementation"""
-import os
 import bpy
 import logging
 import itertools
@@ -195,10 +194,11 @@ def build_workfile_template(*args, **kwargs) -> None:
     preset = builder.get_template_preset()
     profile = preset["profile"]
     is_new_workfile = False
-    has_existing_workfile = os.getenv("AYON_LAST_WORKFILE")
+    host = registered_host()
+    is_new_file = not host.get_current_workfile()
     if kwargs.get("on_new_scene"):
         is_new_workfile = profile["apply_to_empty_scene"]
-        if not is_new_workfile and not has_existing_workfile:
+        if not is_new_workfile and is_new_file:
             is_new_workfile = profile["apply_on_app_launch"]
     builder.build_template(
         template_path=preset["path"],
