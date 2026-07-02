@@ -1,10 +1,10 @@
 """Blender workfile template builder implementation"""
 import bpy
-
+import logging
 import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
-    TemplateAlreadyImported,
+    TemplateProfileNotFound,
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -23,10 +23,8 @@ from .lib import (
     update_content_on_context_change
 )
 
-from pathlib import Path
 
-
-PLACEHOLDER_SET = "PLACEHOLDERS_SET"
+log = logging.getLogger(__name__)
 
 
 class BlenderTemplateBuilder(AbstractTemplateBuilder):
@@ -39,37 +37,10 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
             path (str): A path to current template (usually given by
             get_template_preset implementation)
 
-        Returns:
-            bool: Whether the template was successfully imported or not
         """
-        if bpy.data.collections.get(PLACEHOLDER_SET):
-            raise TemplateAlreadyImported((
-                "Build template already loaded\n"
-                "Clean scene if needed (File > New Scene)"
-            ))
-
-        placeholder_collection = bpy.data.collections.new(PLACEHOLDER_SET)
-        bpy.context.scene.collection.children.link(placeholder_collection)
-        filepath = Path(path).resolve()
-        if not filepath.exists():
-            return False
-
-        with bpy.data.libraries.load(str(filepath)) as (data_src, data_dst):
-            data_dst.collections = data_src.collections
-            data_dst.objects = data_src.objects
-
-        # Make all paths absolute to resolve relative path warnings
-        bpy.ops.file.make_paths_absolute()
-
-        for target_object in data_dst.objects:
-            bpy.context.scene.collection.objects.link(target_object)
-        for target_collection in data_dst.collections:
-            bpy.context.scene.collection.children.link(target_collection)
-
-
-        # update imported sets information
+        bpy.ops.wm.read_homefile(filepath=path)
         update_content_on_context_change()
-        return True
+
 
 class BlenderPlaceholderPlugin(PlaceholderPlugin):
     """Base Placeholder Plugin for Blender with one unified cache.
@@ -172,27 +143,6 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
 
         return placeholders
 
-    def post_placeholder_process(self, placeholder, failed):
-        """Cleanup placeholder after load of its corresponding representations.
-
-        Hide placeholder, add them to placeholder set.
-        Used only by PlaceholderCreateMixin and PlaceholderLoadMixin
-
-        Args:
-            placeholder (PlaceholderItem): Item which was just used to load
-                representation.
-            failed (bool): Loading of representation failed.
-        """
-        # Hide placeholder and add them to placeholder set
-        node = placeholder.scene_identifier
-
-        # If we just populate the placeholders from current scene, the
-        # placeholder set will not be created so account for that.
-        placeholder_set = bpy.data.collections.get(PLACEHOLDER_SET)
-        if placeholder_set:
-            placeholder_set = bpy.data.collections.new(name=PLACEHOLDER_SET)
-        placeholder_set.children = node
-
     def delete_placeholder(self, placeholder):
         """Remove placeholder if building was successful
 
@@ -234,10 +184,16 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
         imprint(obj_or_col, {"folderPath": folder_path})
 
 
-def create_first_workfile_from_template(*args) -> None:
+def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template(workfile_creation_enabled=True)
+    try:
+        builder.build_template(workfile_creation_enabled=True)
+
+    except TemplateProfileNotFound:
+        log.warning(
+            "Template profile not found. Skipping..."
+        )
 
 
 def build_workfile_template(*args) -> None:

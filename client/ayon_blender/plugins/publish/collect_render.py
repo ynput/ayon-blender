@@ -176,8 +176,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
         return {
             "colorspaceConfig": ocio_path,
-            "colorspaceDisplay": display,
-            "colorspaceView": view,
+            "sceneDisplay": display,
+            "sceneView": view,
             "colorspace": colorspace
         }
 
