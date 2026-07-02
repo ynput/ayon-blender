@@ -207,6 +207,10 @@ def install():
     if not IS_HEADLESS:
         ops.register()
 
+        # should be performed after registering the plugin
+        from .workfile_template_builder import trigger_on_app_launch
+        trigger_on_app_launch()
+
 
 def uninstall():
     """Uninstall Blender configuration for AYON."""
@@ -409,9 +413,9 @@ def _build_from_template_timer() -> Optional[float]:
 
     global _is_opening_workfile_template
     try:
-        from .workfile_template_builder import build_workfile_template
+        from .workfile_template_builder import trigger_on_new_file
         _is_opening_workfile_template = True
-        build_workfile_template(on_new_scene=_is_opening_workfile_template)
+        trigger_on_new_file()
 
     except Exception:
         log.warning(

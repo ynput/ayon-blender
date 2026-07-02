@@ -183,29 +183,35 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
         imprint(obj_or_col, {"folderPath": folder_path})
 
 
+def trigger_on_app_launch() -> None:
+    """Build the workfile template during application
+    launch if the setting is enabled.
+    """
+    builder = BlenderTemplateBuilder(registered_host())
+    preset = builder.get_template_preset()
+    if preset.execute_on_new_file:
+        return
+
+    builder.trigger_on_app_launch(preset=preset)
+
+
+def trigger_on_new_file() -> None:
+    """Build the workfile template during new file creation
+    if the setting is enabled.
+    """
+    builder = BlenderTemplateBuilder(registered_host())
+    builder.trigger_on_new_file()
+
+
 def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
-    build_workfile_template(on_new_scene=True)
+    build_workfile_template(workfile_creation_enabled=True)
 
 
 def build_workfile_template(*args, **kwargs) -> None:
     """Build the workfile template."""
     builder = BlenderTemplateBuilder(registered_host())
-    preset = builder.get_template_preset()
-    profile = preset["profile"]
-    is_new_workfile = False
-    host = registered_host()
-    is_new_file = not host.get_current_workfile()
-    if kwargs.get("on_new_scene"):
-        is_new_workfile = profile["apply_to_empty_scene"]
-        if not is_new_workfile and is_new_file:
-            is_new_workfile = profile["apply_on_app_launch"]
-    builder.build_template(
-        template_path=preset["path"],
-        keep_placeholders=preset["keep_placeholder"],
-        create_first_version=preset["create_first_version"],
-        workfile_creation_enabled=is_new_workfile,
-    )
+    builder.build_template()
 # def update_workfile_template(*args) -> None:
 #     """Update the workfile template."""
 #     builder = BlenderTemplateBuilder(registered_host())
