@@ -205,7 +205,8 @@ def trigger_on_new_file() -> None:
 
 def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
-    build_workfile_template(workfile_creation_enabled=True)
+    builder = BlenderTemplateBuilder(registered_host())
+    builder.create_first_workfile_version()
 
 
 def build_workfile_template(*args, **kwargs) -> None:
