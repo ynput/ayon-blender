@@ -404,6 +404,13 @@ def _build_from_template_timer(on_app_launched: bool = False) -> Optional[float]
 
     Running this during load_post/homefile initialization can be unstable,
     so defer execution and retry until context is ready.
+
+    Args:
+        on_app_launched (bool): Whether this is being called on application
+            launch or on new file creation.
+    Returns:
+        Optional[float]: Return None to stop the timer, or a float to retry
+            after that many seconds.
     """
     # Import here to avoid circular imports at module level
     from .workfile_template_builder import (
@@ -436,7 +443,12 @@ def _build_from_template_timer(on_app_launched: bool = False) -> Optional[float]
 
 
 def _deferred_build_workfile_from_template(on_app_launched: bool = False) -> None:
-    """Schedule deferred workfile template creation once."""
+    """Schedule deferred workfile template creation once.
+
+    Args:
+        on_app_launched (bool): Whether this is being called on application
+            launch or on new file creation.
+    """
     if bpy.app.timers.is_registered(
         lambda: _build_from_template_timer(on_app_launched=on_app_launched)
     ):
