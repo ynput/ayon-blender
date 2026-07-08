@@ -208,8 +208,7 @@ def install():
         ops.register()
 
         # should be performed after registering the plugin
-        from .workfile_template_builder import trigger_on_app_launch
-        trigger_on_app_launch()
+        _deferred_build_workfile_from_template(on_app_launched=True)
 
 
 def uninstall():
@@ -400,12 +399,17 @@ def on_new():
         _deferred_build_workfile_from_template()
 
 
-def _build_from_template_timer() -> Optional[float]:
+def _build_from_template_timer(on_app_launched: bool = False) -> Optional[float]:
     """Build first workfile from template after Blender startup settles.
 
     Running this during load_post/homefile initialization can be unstable,
     so defer execution and retry until context is ready.
     """
+    # Import here to avoid circular imports at module level
+    from .workfile_template_builder import (
+        trigger_on_app_launch,
+        trigger_on_new_file,
+    )
     window_manager = getattr(bpy.context, "window_manager", None)
     scene = getattr(bpy.context, "scene", None)
     if not window_manager or not scene:
@@ -413,9 +417,11 @@ def _build_from_template_timer() -> Optional[float]:
 
     global _is_opening_workfile_template
     try:
-        from .workfile_template_builder import trigger_on_new_file
         _is_opening_workfile_template = True
-        trigger_on_new_file()
+        if on_app_launched:
+            trigger_on_app_launch()
+        else:
+            trigger_on_new_file()
 
     except Exception:
         log.warning(
@@ -429,15 +435,15 @@ def _build_from_template_timer() -> Optional[float]:
     return None
 
 
-def _deferred_build_workfile_from_template() -> None:
+def _deferred_build_workfile_from_template(on_app_launched: bool = False) -> None:
     """Schedule deferred workfile template creation once."""
     if bpy.app.timers.is_registered(
-        _build_from_template_timer
+        lambda: _build_from_template_timer(on_app_launched=on_app_launched)
     ):
         return
 
     bpy.app.timers.register(
-        _build_from_template_timer,
+        lambda: _build_from_template_timer(on_app_launched=on_app_launched),
         first_interval=0.1,
     )
 
