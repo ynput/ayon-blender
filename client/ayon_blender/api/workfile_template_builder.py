@@ -188,11 +188,7 @@ def trigger_on_app_launch() -> None:
     launch if the setting is enabled.
     """
     builder = BlenderTemplateBuilder(registered_host())
-    preset = builder.get_template_preset()
-    if preset.execute_on_new_file:
-        return
-
-    builder.trigger_on_app_launch(preset=preset)
+    builder.trigger_on_app_launch()
 
 
 def trigger_on_new_file() -> None:
