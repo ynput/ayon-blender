@@ -205,10 +205,12 @@ def create_first_workfile_from_template() -> None:
     builder.create_first_workfile_version()
 
 
-def build_workfile_template(*args, **kwargs) -> None:
+def build_workfile_template() -> None:
     """Build the workfile template."""
     builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template()
+    preset = builder.get_template_preset()
+    builder.build_template(preset=preset)
+
 # def update_workfile_template(*args) -> None:
 #     """Update the workfile template."""
 #     builder = BlenderTemplateBuilder(registered_host())
