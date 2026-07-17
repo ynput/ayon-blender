@@ -41,7 +41,7 @@ class TemplatedWorkfileProfileModel(BaseSettingsModel):
         title="Always apply to empty scene"
     )
     execute_on_app_launch: bool = SettingsField(
-        False,
+        True,
         title="Apply on application launch"
     )
 
