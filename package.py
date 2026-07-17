@@ -9,4 +9,6 @@ ayon_server_version = ">=1.1.2"
 ayon_required_addons = {
     "core": ">=1.8.0",
 }
-ayon_compatible_addons = {}
+ayon_compatible_addons = {
+    "core": ">=1.9.9",
+}
