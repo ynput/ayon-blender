@@ -209,6 +209,8 @@ def build_workfile_template() -> None:
     """Build the workfile template."""
     builder = BlenderTemplateBuilder(registered_host())
     preset = builder.get_template_preset()
+    if not preset.has_valid_path():
+        return
     builder.build_template(preset=preset)
 
 # def update_workfile_template(*args) -> None:
