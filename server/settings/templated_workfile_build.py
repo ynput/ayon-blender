@@ -36,6 +36,14 @@ class TemplatedWorkfileProfileModel(BaseSettingsModel):
         True,
         title="Create first version"
     )
+    execute_on_new_file: bool = SettingsField(
+        False,
+        title="Always apply to empty scene"
+    )
+    execute_on_app_launch: bool = SettingsField(
+        True,
+        title="Apply on application launch"
+    )
 
 
 class TemplatedWorkfileBuildModel(BaseSettingsModel):

@@ -207,6 +207,9 @@ def install():
     if not IS_HEADLESS:
         ops.register()
 
+        # should be performed after registering the plugin
+        _deferred_build_workfile_from_template(on_app_launched=True)
+
 
 def uninstall():
     """Uninstall Blender configuration for AYON."""
@@ -393,15 +396,27 @@ def on_new():
     set_unit_scale_from_settings(blender_settings=settings)
 
     if not IS_HEADLESS:
-        _deferred_create_first_workfile_from_template()
+        _deferred_build_workfile_from_template()
 
 
-def _create_first_workfile_from_template_timer() -> Optional[float]:
+def _build_from_template_timer(on_app_launched: bool = False) -> Optional[float]:
     """Build first workfile from template after Blender startup settles.
 
     Running this during load_post/homefile initialization can be unstable,
     so defer execution and retry until context is ready.
+
+    Args:
+        on_app_launched (bool): Whether this is being called on application
+            launch or on new file creation.
+    Returns:
+        Optional[float]: Return None to stop the timer, or a float to retry
+            after that many seconds.
     """
+    # Import here to avoid circular imports at module level
+    from .workfile_template_builder import (
+        trigger_on_app_launch,
+        trigger_on_new_file,
+    )
     window_manager = getattr(bpy.context, "window_manager", None)
     scene = getattr(bpy.context, "scene", None)
     if not window_manager or not scene:
@@ -409,11 +424,11 @@ def _create_first_workfile_from_template_timer() -> Optional[float]:
 
     global _is_opening_workfile_template
     try:
-        from .workfile_template_builder import (
-            create_first_workfile_from_template,
-        )
         _is_opening_workfile_template = True
-        create_first_workfile_from_template()
+        if on_app_launched:
+            trigger_on_app_launch()
+        else:
+            trigger_on_new_file()
 
     except Exception:
         log.warning(
@@ -427,15 +442,20 @@ def _create_first_workfile_from_template_timer() -> Optional[float]:
     return None
 
 
-def _deferred_create_first_workfile_from_template() -> None:
-    """Schedule deferred first workfile template creation once."""
+def _deferred_build_workfile_from_template(on_app_launched: bool = False) -> None:
+    """Schedule deferred workfile template creation once.
+
+    Args:
+        on_app_launched (bool): Whether this is being called on application
+            launch or on new file creation.
+    """
     if bpy.app.timers.is_registered(
-        _create_first_workfile_from_template_timer
+        lambda: _build_from_template_timer(on_app_launched=on_app_launched)
     ):
         return
 
     bpy.app.timers.register(
-        _create_first_workfile_from_template_timer,
+        lambda: _build_from_template_timer(on_app_launched=on_app_launched),
         first_interval=0.1,
     )
 
