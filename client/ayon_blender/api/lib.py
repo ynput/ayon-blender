@@ -1,22 +1,17 @@
+import contextlib
 import hashlib
+import importlib
 import os
 import traceback
-import importlib
-import contextlib
 from typing import Dict, List, Union
 
-import bpy
 import addon_utils
-from ayon_core.lib import (
-    Logger,
-    NumberDef
-)
+import bpy
+from ayon_core.lib import Logger, NumberDef
 from ayon_core.pipeline import registered_host
-
 from ayon_core.pipeline.create import CreateContext
 
 from . import pipeline
-
 from .constants import AYON_PROPERTY
 
 log = Logger.get_logger(__name__)
@@ -998,6 +993,29 @@ def update_content_on_context_change():
 
     if has_changes:
         create_context.save_changes()
+
+
+def iter_bpy_prop_collection_idprop():
+    """Iterate over all blender property collections.
+
+    See:
+        https://docs.blender.org/api/current/bpy.types.bpy_prop_collection_idprop.html
+    """ # noqa
+    data = bpy.data
+    for attr in dir(data):
+        prop = getattr(data, attr)
+        if not isinstance(prop, bpy.types.bpy_prop_collection):
+            continue
+
+        # Check if this is bpy_prop_collection_idprop by checking for all
+        # for an attributes this base class should expose that does not live
+        # on bpy_prop_collection. In Blender 5.2+ `bpy.data.all_ids` attribute
+        # was added which is a `bpy_prop_collection` but does not come with
+        # the `remove` method for example.
+        if not hasattr(prop, "remove"):
+            continue
+
+        yield attr, prop
 
 
 def clean_filename(filename: str) -> str:
