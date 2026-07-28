@@ -92,8 +92,10 @@ def prepare_data(data, container_name=None):
 def create_blender_context(active: Optional[bpy.types.Object] = None,
                            selected: Optional[bpy.types.Object] = None,
                            window: Optional[bpy.types.Window] = None):
-    """Create a new Blender context. If an object is passed as
-    parameter, it is set as selected and active.
+    """Create a new Blender context override.
+
+    If `active` is provided it is set as the active object in the override.
+    If `selected` is provided it is set as `selected_objects` in the override.
 
     This function first prefers a VIEW_3D area (best for most ops). If no
     VIEW_3D is available in the current layout, it falls back to the first
