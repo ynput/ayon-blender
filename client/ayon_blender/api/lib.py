@@ -1007,11 +1007,11 @@ def iter_bpy_prop_collection_idprop():
         if not isinstance(prop, bpy.types.bpy_prop_collection):
             continue
 
-        # Check if this is bpy_prop_collection_idprop by checking for all
-        # for an attributes this base class should expose that does not live
+        # Check if this is `bpy_prop_collection_idprop` by checking for an
+        # attribute this base class should expose that does not live
         # on bpy_prop_collection. In Blender 5.2+ `bpy.data.all_ids` attribute
         # was added which is a `bpy_prop_collection` but does not come with
-        # the `remove` method for example.
+        # the `remove` method for example which we want to skip here.
         if not hasattr(prop, "remove"):
             continue
 
