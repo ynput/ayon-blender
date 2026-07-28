@@ -996,7 +996,7 @@ def update_content_on_context_change():
 
 
 def iter_bpy_prop_collection_idprop():
-    """Iterate over all blender property collections.
+    """Iterate over all Blender property collections.
 
     See:
         https://docs.blender.org/api/current/bpy.types.bpy_prop_collection_idprop.html
