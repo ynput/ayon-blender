@@ -92,31 +92,58 @@ def prepare_data(data, container_name=None):
 def create_blender_context(active: Optional[bpy.types.Object] = None,
                            selected: Optional[bpy.types.Object] = None,
                            window: Optional[bpy.types.Window] = None):
-    """Create a new Blender context. If an object is passed as
-    parameter, it is set as selected and active.
+    """Create a new Blender context override.
+
+    If `active` is provided it is set as the active object in the override.
+    If `selected` is provided it is set as `selected_objects` in the override.
+
+    This function first prefers a VIEW_3D area (best for most ops). If no
+    VIEW_3D is available in the current layout, it falls back to the first
+    available area/region with a 'WINDOW' region. When Blender is running in
+    background/headless mode (no windows), return a minimal context containing
+    scene/view_layer/active/selected so non-UI-dependent ops still work.
     """
 
-    if not isinstance(selected, list):
+    # Normalize selected to a list/tuple
+    if not isinstance(selected, (list, tuple)):
         selected = [selected]
 
-    override_context = bpy.context.copy()
+    def _region_context(win_, area_, region_):
+        override_context = bpy.context.copy()
+        override_context['window'] = win_
+        override_context['screen'] = win_.screen
+        override_context['area'] = area_
+        override_context['region'] = region_
+        override_context['scene'] = bpy.context.scene
+        override_context['active_object'] = active
+        override_context['selected_objects'] = selected
+        override_context['view_layer'] = bpy.context.view_layer
+        return override_context
 
     windows = [window] if window else bpy.context.window_manager.windows
-
     for win in windows:
         for area in win.screen.areas:
             if area.type == 'VIEW_3D':
                 for region in area.regions:
                     if region.type == 'WINDOW':
-                        override_context['window'] = win
-                        override_context['screen'] = win.screen
-                        override_context['area'] = area
-                        override_context['region'] = region
-                        override_context['scene'] = bpy.context.scene
-                        override_context['active_object'] = active
-                        override_context['selected_objects'] = selected
-                        return override_context
-    raise Exception("Could not create a custom Blender context.")
+                        return _region_context(win, area, region)
+
+    # Second pass: use first area with a WINDOW region (any area type)
+    for win in windows:
+        for area in win.screen.areas:
+            for region in area.regions:
+                if region.type == 'WINDOW':
+                    return _region_context(win, area, region)
+
+    # Headless / background fallback: provide minimal context so non-UI ops
+    # work. Some operators may require a full UI context and will raise
+    # accordingly.
+    override_context = bpy.context.copy()
+    override_context['scene'] = bpy.context.scene
+    override_context['view_layer'] = bpy.context.view_layer
+    override_context['active_object'] = active
+    override_context['selected_objects'] = selected
+    return override_context
 
 
 def get_parent_collection(collection):
