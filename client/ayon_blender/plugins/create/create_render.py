@@ -87,7 +87,6 @@ class CreateRender(plugin.BlenderCreator):
                 view_layer_nodes,
                 project_settings
             )
-            return
 
         project_name = self.create_context.get_current_project_name()
         project_entity = self.create_context.get_current_project_entity()
