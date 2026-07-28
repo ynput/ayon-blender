@@ -138,7 +138,7 @@ def set_render_passes(settings, renderer, view_layers):
         aov_list = base_aov_list.union(existing_aov_list)
         aov_list_combined.update(aov_list)
 
-        if renderer == "BLENDER_EEVEE":
+        if _is_legacy_eevee_renderer(renderer):
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
             eevee_attrs: set[str] = {
@@ -178,6 +178,29 @@ def set_render_passes(settings, renderer, view_layers):
     return list(aov_list_combined), custom_passes
 
 
+def _is_legacy_eevee_renderer(renderer):
+    """Return whether renderer is Eevee in Blender lower than 4.2.
+
+    Note:
+      In Blender <4.2 'BLENDER_EEVEE' represents Eevee renderer.
+      In Blender 4.2-5.1 'BLENDER_EEVEE_NEXT' represents Eevee renderer.
+      In Blender >5.2 'BLENDER_EEVEE' represents Eevee renderer.
+
+    Args:
+        renderer (str): Renderer name.
+
+    Returns:
+        bool: Whether renderer is Eevee in Blender version lower than 4.2.
+    """
+    if renderer != "BLENDER_EEVEE":
+        return False
+
+    ver_major, ver_minor, _ = lib.get_blender_version()
+    if (ver_major, ver_minor) < (4, 2):
+        return True
+    return False
+
+
 def get_aov_options(renderer: str) -> dict[str, str]:
     """Return the available AOV options based on the renderer name."""
     aov_options = {
@@ -196,7 +219,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
         "cryptomatte_material": "use_pass_cryptomatte_material",
         "cryptomatte_asset": "use_pass_cryptomatte_asset",
     }
-    if renderer == "BLENDER_EEVEE":
+    if _is_legacy_eevee_renderer(renderer):
         eevee_options = {
             "shadow": "use_pass_shadow",
             "volume_light": "use_pass_volume_direct",
@@ -233,7 +256,7 @@ def existing_aov_options(
 ) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
-    if renderer == "BLENDER_EEVEE":
+    if _is_legacy_eevee_renderer(renderer):
         eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
         for pass_name, attr in aov_options.items():
             target = view_layer.eevee if attr in eevee_attrs else view_layer
@@ -538,8 +561,10 @@ def prepare_rendering(
     multilayer = get_multilayer(project_settings)
     renderer = get_renderer(project_settings)
     ver_major, ver_minor, _ = lib.get_blender_version()
+
+    # Between Blender 4.2 and 5.1, the Eevee renderer is BLENDER_EEVEE_NEXT
     if renderer == "BLENDER_EEVEE" and (
-        ver_major >= 4 and ver_minor >=2
+        (4, 2) <= (ver_major, ver_minor) <= (5, 1)
     ):
         renderer = "BLENDER_EEVEE_NEXT"
 

@@ -10,6 +10,7 @@ from ayon_blender.api.lib import (
     imprint,
     get_blender_version,
     clean_filename,
+    iter_bpy_prop_collection_idprop,
 )
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,
@@ -228,17 +229,11 @@ class BlendSceneLoader(plugin.BlenderLoader):
         members = set(asset_group.get(AYON_PROPERTY).get("members", []))
 
         if members:
-            for attr_name in dir(bpy.data):
-                attr = getattr(bpy.data, attr_name)
-                if not isinstance(attr, bpy.types.bpy_prop_collection):
-                    continue
-
-                # ensure to make a list copy because we
-                # we remove members as we iterate
+            for _, attr in iter_bpy_prop_collection_idprop():
+                # make a list copy because we remove members as we iterate
                 for data in list(attr):
                     if data not in members or data == asset_group:
                         continue
-
                     attr.remove(data)
 
         bpy.data.collections.remove(asset_group)
