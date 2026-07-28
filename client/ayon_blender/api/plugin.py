@@ -116,6 +116,7 @@ def create_blender_context(active: Optional[bpy.types.Object] = None,
         override_context['active_object'] = active
         override_context['selected_objects'] = selected
         override_context['view_layer'] = bpy.context.view_layer
+        return override_context
 
     windows = [window] if window else bpy.context.window_manager.windows
     for win in windows:
