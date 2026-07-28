@@ -10,20 +10,17 @@ from qtpy import QtCore, QtWidgets
 
 from ayon_core.lib import get_ayon_launcher_args
 
+from ayon_blender.ipc_communication import (
+    IPCClient,
+    RemoteLoaderFrontendController,
+)
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# Setup path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-try:
-    from .ipc_client import IPCClient
-except ImportError:
-    from ipc_client import IPCClient
 
 
 def create_external_ui_process_launcher():
@@ -36,7 +33,7 @@ def create_external_ui_process_launcher():
         env["AYON_IPC_PORT"] = str(ipc_port)
         env["AYON_IPC_TOKEN"] = session_token
         return subprocess.Popen(
-            get_ayon_launcher_args(["run", str(launcher_script)]),
+            get_ayon_launcher_args("run", str(launcher_script)),
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -63,6 +60,26 @@ def _show_tool(tool_name, tab=None):
         window.activateWindow()
 
 
+def _show_loader_window(loader_window_by_name, loader_controller_by_name, ipc_client, tool_name):
+    from ayon_core.tools.loader.ui import LoaderWindow
+
+    controller = loader_controller_by_name.get(tool_name)
+    window = loader_window_by_name.get(tool_name)
+    if controller is None:
+        controller = RemoteLoaderFrontendController(ipc_client)
+        loader_controller_by_name[tool_name] = controller
+
+    if window is None:
+        window = LoaderWindow(controller=controller)
+        loader_window_by_name[tool_name] = window
+
+    window.show()
+    window.raise_()
+    window.activateWindow()
+    window.showNormal()
+    window.refresh()
+
+
 def main():
     """Entry-point of the external UI process."""
     ipc_host = os.environ.get("AYON_IPC_HOST", "127.0.0.1")
@@ -75,6 +92,8 @@ def main():
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
     ipc = IPCClient(host=ipc_host, port=ipc_port, session_token=session_token)
+    loader_window_by_name = {}
+    loader_controller_by_name = {}
 
     if not ipc.connect():
         logger.error("Could not connect to Blender IPC server")
@@ -84,7 +103,15 @@ def main():
         tool_name = payload.get("tool")
         tab = payload.get("tab")
         try:
-            _show_tool(tool_name, tab)
+            if tool_name in {"loader", "libraryloader"}:
+                _show_loader_window(
+                    loader_window_by_name,
+                    loader_controller_by_name,
+                    ipc,
+                    tool_name,
+                )
+            else:
+                _show_tool(tool_name, tab)
         except Exception:
             logger.exception("Failed to open tool '%s'", tool_name)
 
@@ -92,6 +119,9 @@ def main():
 
     # Keep the process alive and attempt reconnection if Blender restarts.
     def _tick():
+        for controller in list(loader_controller_by_name.values()):
+            controller.process_events()
+
         if not ipc.is_connected():
             ipc.reconnect_with_backoff()
 

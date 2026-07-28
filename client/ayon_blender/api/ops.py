@@ -30,10 +30,15 @@ from ayon_core.pipeline.context_tools import (
 from ayon_core.tools.utils import host_tools
 from ayon_core.style import load_stylesheet
 
+from ayon_blender.ipc_communication import (
+    IPCServer,
+    deserialize_from_ipc,
+    serialize_for_ipc,
+    BlenderLoaderBackendBridge,
+)
 from .workio import OpenFileCacher
 from . import pipeline
 from . import render_lib
-from . import ipc_bridge
 from .external_ui_host import create_external_ui_process_launcher
 
 logger = logging.getLogger(__name__)
@@ -43,8 +48,9 @@ PREVIEW_COLLECTIONS: Dict = dict()
 TIMER_INTERVAL: float = 0.01
 
 # IPC and external UI process management
-_ipc_server_instance: Optional[ipc_bridge.IPCServer] = None
+_ipc_server_instance: Optional[IPCServer] = None
 _external_ui_process: Optional[subprocess.Popen] = None
+_loader_backend_bridge: Optional[BlenderLoaderBackendBridge] = None
 _external_ui_launcher = create_external_ui_process_launcher()
 USE_EXTERNAL_UI: bool = True  # Toggle to use in-process or external UI
 
@@ -185,7 +191,7 @@ def _init_ipc_server():
         return _ipc_server_instance
 
     try:
-        _ipc_server_instance = ipc_bridge.IPCServer()
+        _ipc_server_instance = IPCServer()
         port = _ipc_server_instance.start()
 
         # Register handlers for common operations
@@ -219,8 +225,12 @@ def _ensure_external_ui_process():
     logger.info("External UI process launched (PID: %s)", _external_ui_process.pid)
 
 
-def _register_ipc_handlers(server: ipc_bridge.IPCServer):
+def _register_ipc_handlers(server: IPCServer):
     """Register request handlers for IPC server."""
+    global _loader_backend_bridge
+
+    if _loader_backend_bridge is None:
+        _loader_backend_bridge = BlenderLoaderBackendBridge(server)
 
     def handle_show_tool(params: Dict) -> str:
         """Handle request to show a tool (execute in main thread)."""
@@ -281,14 +291,33 @@ def _register_ipc_handlers(server: ipc_bridge.IPCServer):
         execute_in_main_thread(mti)
         return mti.wait()
 
+    def handle_loader_call(params: Dict):
+        """Handle frontend->backend loader controller RPC call."""
+        method_name = params.get("method")
+        args = deserialize_from_ipc(params.get("args") or [])
+        kwargs = deserialize_from_ipc(params.get("kwargs") or {})
+
+        if _loader_backend_bridge is None:
+            raise RuntimeError("Loader backend bridge was not initialized")
+
+        def _do_call():
+            return _loader_backend_bridge.call_method(method_name, args, kwargs)
+
+        mti = MainThreadItem(_do_call)
+        execute_in_main_thread(mti)
+        result = mti.wait()
+        return serialize_for_ipc(result)
+
+
     server.register_handler("show_tool", handle_show_tool)
     server.register_handler("show_publisher", handle_show_publisher)
     server.register_handler("refresh_manager", handle_refresh_manager)
+    server.register_handler("loader_call", handle_loader_call)
 
 
 def _shutdown_ipc_server():
     """Shutdown the IPC server and external UI process."""
-    global _ipc_server_instance, _external_ui_process
+    global _ipc_server_instance, _external_ui_process, _loader_backend_bridge
 
     if _external_ui_process:
         try:
@@ -304,6 +333,8 @@ def _shutdown_ipc_server():
         except Exception as e:
             logger.error(f"Error stopping IPC server: {e}")
         _ipc_server_instance = None
+
+    _loader_backend_bridge = None
 
 
 def _process_app_events() -> Optional[float]:

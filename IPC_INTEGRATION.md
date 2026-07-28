@@ -43,6 +43,32 @@ The new IPC system:
 └─────────────────────────────────────┘
 ```
 
+## Loader split architecture
+
+The loader now uses a split controller setup:
+
+- Backend controller in Blender process:
+  - `ayon-blender/ipc_communication/loader_ipc.py`
+  - `BlenderLoaderBackendBridge` owns `ayon_core.tools.loader.LoaderController`
+  - Executes all loader methods inside Blender main thread via `MainThreadItem`
+  - Emits loader events as IPC event topic `loader_event`
+
+- Frontend controller in external UI process:
+  - `ayon-blender/ipc_communication/loader_ipc.py`
+  - `RemoteLoaderFrontendController` is passed to `LoaderWindow`
+  - Forwards method calls through IPC request `loader_call`
+  - Receives `loader_event` payloads and dispatches callbacks locally
+
+- External loader UI host glue:
+  - `ayon-blender/client/ayon_blender/api/external_ui_host.py`
+  - Intercepts `open_tool` for `loader` / `libraryloader`
+  - Creates `LoaderWindow(controller=RemoteLoaderFrontendController(...))`
+
+- Blender IPC handler registration:
+  - `ayon-blender/client/ayon_blender/api/ops.py`
+  - Registers request handler `loader_call`
+  - Initializes `BlenderLoaderBackendBridge` when IPC starts
+
 ## Protocol
 
 All communication uses JSON-based messages over TCP, one message per line (newline-delimited JSON).

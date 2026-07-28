@@ -14,7 +14,7 @@ Protocol is JSON-based with message types:
 
 import json
 import uuid
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 from enum import Enum
 
 

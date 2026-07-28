@@ -8,32 +8,25 @@ via the IPC bridge. Features:
 - Event subscription and callbacks
 - Graceful handling of Blender unresponsiveness
 """
+from __future__ import annotations
 
 import socket
 import time
 import logging
 import threading
 import uuid
-from typing import Optional, Dict, Any, Callable, List, Tuple
-from pathlib import Path
-import sys
+from typing import Any, Callable
 
-# Add current directory to path for imports
-_current_dir = Path(__file__).parent
-if str(_current_dir) not in sys.path:
-    sys.path.insert(0, str(_current_dir))
-
-try:
-    from .ipc_protocol import (
-        Message, MessageType, HelloMessage, RequestMessage, ResponseMessage,
-        EventMessage, PingMessage, PongMessage, parse_message
-    )
-except ImportError:
-    # Fallback for when module is run as script
-    from ipc_protocol import (
-        Message, MessageType, HelloMessage, RequestMessage, ResponseMessage,
-        EventMessage, PingMessage, PongMessage, parse_message
-    )
+from ayon_blender.ipc_communication.ipc_protocol import (
+    Message,
+    MessageType,
+    HelloMessage,
+    RequestMessage,
+    ResponseMessage,
+    EventMessage,
+    PongMessage,
+    parse_message
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +48,14 @@ class PendingRequest:
         request_id: str,
         method: str,
         timeout_sec: float = 30.0,
-        idempotency_key: Optional[str] = None,
+        idempotency_key: str | None = None,
     ):
         self.request_id = request_id
         self.method = method
         self.timeout_sec = timeout_sec
         self.idempotency_key = idempotency_key
         self.submitted_at = time.time()
-        self.callback: Optional[Callable[[bool, Any, Optional[str]], None]] = None
+        self.callback: Callable[[bool, Any, str | None], None] | None = None
         self.done = False
 
     def is_expired(self) -> bool:
@@ -94,7 +87,7 @@ class IPCClient:
         host: str = "127.0.0.1",
         port: int = 0,
         session_token: str = "",
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ):
         """Initialize IPC client.
 
@@ -109,20 +102,20 @@ class IPCClient:
         self.session_token = session_token
         self.session_id = session_id or str(uuid.uuid4())[:8]
 
-        self.socket: Optional[socket.socket] = None
+        self.socket: socket.socket | None = None
         self.state = ConnectionState.DISCONNECTED
         self.connected = False
 
-        self.pending_requests: Dict[str, PendingRequest] = {}
-        self.response_callbacks: Dict[str, Callable] = {}
-        self.event_subscribers: Dict[str, List[Callable]] = {}
+        self.pending_requests: dict[str, PendingRequest] = {}
+        self.response_callbacks: dict[str, Callable] = {}
+        self.event_subscribers: dict[str, list[Callable]] = {}
 
         self.reconnect_attempts = 0
         self.last_heartbeat = time.time()
-        self.blender_unresponsive_since: Optional[float] = None
+        self.blender_unresponsive_since: float | None = None
 
         self._lock = threading.RLock()
-        self._receiver_thread: Optional[threading.Thread] = None
+        self._receiver_thread: threading.Thread | None = None
         self._running = False
         self._recv_buffer = b""
 
@@ -233,10 +226,10 @@ class IPCClient:
     def send_request(
         self,
         method: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         timeout_sec: float = 30.0,
-        callback: Optional[Callable[[bool, Any, Optional[str]], None]] = None,
-        idempotency_key: Optional[str] = None,
+        callback: Callable[[bool, Any, str | None], None] | None = None,
+        idempotency_key: str | None = None,
     ) -> str:
         """Send an async request to Blender.
 
@@ -294,9 +287,9 @@ class IPCClient:
     def send_request_wait(
         self,
         method: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         timeout_sec: float = 30.0,
-    ) -> Tuple[bool, Any, Optional[str]]:
+    ) -> tuple[bool, Any, str | None]:
         """Send a request and wait for response (blocking).
 
         Args:
@@ -332,7 +325,7 @@ class IPCClient:
         else:
             return False, None, "Request timeout"
 
-    def subscribe(self, topic: str, callback: Callable[[Dict[str, Any]], None]):
+    def subscribe(self, topic: str, callback: Callable[[dict[str, Any]], None]):
         """Subscribe to an event topic.
 
         Args:
@@ -376,7 +369,7 @@ class IPCClient:
         self.socket.sendall((json_str + "\n").encode("utf-8"))
         self.last_heartbeat = time.time()
 
-    def _receive_line(self) -> Optional[str]:
+    def _receive_line(self) -> str | None:
         """Receive a single line of JSON."""
         if not self.socket:
             return None
