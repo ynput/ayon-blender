@@ -10,6 +10,7 @@ class BlenderWorkfilesController(BaseWorkfileController):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self._ipc_server: IPCServer | None = None
 
     def register_ipc_handler(self, ipc_server: IPCServer):
@@ -43,7 +44,7 @@ class BlenderWorkfilesController(BaseWorkfileController):
                 self.channel_name,
                 "show",
             )
-            return
+            return None
 
         func = getattr(self, method_name)
         return func(**message.params)

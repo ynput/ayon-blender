@@ -46,9 +46,13 @@ TIMER_INTERVAL: float = 0.01
 class _IPCConnection:
     server: IPCServer | None = None
     ui_process: subprocess.Popen | None = None
-    workfiles_controller: BlenderWorkfilesController = (
-        BlenderWorkfilesController()
-    )
+    workfiles_controller: BlenderWorkfilesController | None = None
+
+
+def _init_tool_controllers():
+    """Initialize tool controllers for IPC communication."""
+    if _IPCConnection.workfiles_controller is None:
+        _IPCConnection.workfiles_controller = BlenderWorkfilesController()
 
 
 def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> subprocess.Popen:
@@ -58,9 +62,7 @@ def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> s
     env["AYON_IPC_HOST"] = ipc_host
     env["AYON_IPC_PORT"] = str(ipc_port)
     env["AYON_IPC_TOKEN"] = session_token
-    # USED to debug the external UI host process.
     launch_args = get_ayon_launcher_args("run", str(launcher_script))
-    print("Launching external UI host with: %s", launch_args)
     logger.info("Launching external UI host with: %s", launch_args)
     return subprocess.Popen(
         launch_args,
@@ -250,7 +252,7 @@ def _ensure_external_ui_process():
 
 def _register_ipc_handlers(server: IPCServer):
     """Register request handlers for IPC server."""
-
+    _init_tool_controllers()
     _IPCConnection.workfiles_controller.register_ipc_handler(server)
 
 
