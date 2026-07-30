@@ -171,6 +171,12 @@ class RequestMessage(JsonMessage):
 
         super().__init__(MessageType.REQUEST)
 
+    def __str__(self) -> str:
+        return (
+            f"RequestMessage(id={self.id}, channel={self.channel},"
+            f" method={self.method}, params={self.params})"
+        )
+
     def to_data(self) -> dict[str, Any]:
         """Serialize the message to JSON bytes."""
         return {
@@ -197,6 +203,12 @@ class ResponseMessage(JsonMessage):
         self.error = error
 
         super().__init__(MessageType.RESPONSE)
+
+    def __str__(self) -> str:
+        return (
+            f"ResponseMessage(request_id={self.request_id}, ok={self.ok},"
+            f" result={self.result}, error={self.error})"
+        )
 
     def to_data(self) -> dict[str, Any]:
         """Serialize the message to JSON bytes."""

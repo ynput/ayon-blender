@@ -50,12 +50,13 @@ class PendingRequest:
         request_id: str,
         method: str,
         timeout_sec: float = 30.0,
+        callback: Callable[[ResponseMessage], Any] | None = None
     ):
         self.request_id = request_id
         self.method = method
         self.timeout_sec = timeout_sec
         self.submitted_at = time.time()
-        self.callback: Callable[[bool, Any, str | None], None] | None = None
+        self.callback: Callable[[ResponseMessage], Any] | None = callback
         self.done = False
 
     def is_expired(self) -> bool:
@@ -114,7 +115,6 @@ class IPCClient:
         self.connected = False
 
         self.pending_requests: dict[str, PendingRequest] = {}
-        self.response_callbacks: dict[str, Callable] = {}
         self.channel_handlers: dict[str, ClientChannelHandler] = {}
 
         self.reconnect_attempts = 0
@@ -257,7 +257,7 @@ class IPCClient:
         method: str,
         params: dict[str, Any] | None = None,
         timeout_sec: float = 30.0,
-        callback: Callable[[bool, Any, str | None], None] | None = None,
+        callback: Callable[[ResponseMessage], None] | None = None,
     ) -> str:
         """Send an async request to Blender.
 
@@ -274,28 +274,33 @@ class IPCClient:
         if not self.connected:
             error_msg = "Not connected to Blender"
             if callback:
-                callback(False, None, error_msg)
+                callback(
+                    ResponseMessage(
+                        ok=False,
+                        result=None,
+                        error=error_msg,
+                        request_id=uuid.uuid4().hex,
+                    )
+                )
             raise RuntimeError(error_msg)
 
         if params is None:
             params = {}
 
-        request_id = uuid.uuid4().hex
         req = RequestMessage(
             channel=channel,
             method=method,
             params=params,
-            request_id=request_id,
         )
+        request_id = req.id
 
         with self._lock:
             self.pending_requests[request_id] = PendingRequest(
                 request_id=request_id,
                 method=method,
                 timeout_sec=timeout_sec,
+                callback=callback,
             )
-            if callback is not None:
-                self.response_callbacks[request_id] = callback
 
         try:
             self._send_message(req)
@@ -305,9 +310,15 @@ class IPCClient:
             logger.error(f"Failed to send request: {e}")
             with self._lock:
                 self.pending_requests.pop(request_id, None)
-                self.response_callbacks.pop(request_id, None)
             if callback is not None:
-                callback(False, None, str(e))
+                callback(
+                    ResponseMessage(
+                        request_id=req.id,
+                        ok=False,
+                        result=None,
+                        error=str(e),
+                    )
+                )
             raise
 
     def send_request_wait(
@@ -316,7 +327,7 @@ class IPCClient:
         method: str,
         params: dict[str, Any] | None = None,
         timeout_sec: float = 30.0,
-    ) -> tuple[bool, Any, str | None]:
+    ) -> ResponseMessage:
         """Send a request and wait for response (blocking).
 
         Args:
@@ -326,18 +337,16 @@ class IPCClient:
             timeout_sec: Timeout in seconds
 
         Returns:
-            (success, result, error_msg)
+            ResponseMessage
         """
         done_event = threading.Event()
-        result_holder = RequestWaitData()
-
-        def callback(ok, result, error):
-            result_holder.ok = ok
-            result_holder.result = result
-            result_holder.error = error
+        output = {}
+        def callback(req):
+            output["_"] = req
+            print("Callback called with", req)
             done_event.set()
 
-        self.send_request(
+        request_id = self.send_request(
             channel=channel,
             method=method,
             params=params,
@@ -346,15 +355,14 @@ class IPCClient:
         )
 
         if not done_event.wait(timeout=timeout_sec + 5):
-            result_holder.ok = False
-            result_holder.result = None
-            result_holder.error = "Request timeout"
+            return ResponseMessage(
+                ok=False,
+                result=None,
+                error="Request timeout",
+                request_id=request_id,
+            )
 
-        return (
-            result_holder.ok,
-            result_holder.result,
-            result_holder.error,
-        )
+        return output["_"]
 
     def get_state(self) -> str:
         """Get current connection state."""
@@ -462,19 +470,18 @@ class IPCClient:
     def _handle_response(self, resp: ResponseMessage):
         """Handle response message."""
         request_id = resp.request_id
-        ok = resp.ok
-        result = resp.result
-        error = resp.error
 
-        logger.debug(f"Response for request {request_id}: ok={ok}")
+        logger.debug(f"Response for request {request_id}: ok={resp.ok}")
 
         with self._lock:
-            self.pending_requests.pop(request_id, None)
-            callback = self.response_callbacks.pop(request_id, None)
+            callback = None
+            pr = self.pending_requests.pop(request_id, None)
+            if pr is not None:
+                callback = pr.callback
 
         if callback is not None:
             try:
-                callback(ok, result, error)
+                callback(resp)
             except Exception as e:
                 logger.error(f"Error in response callback: {e}")
 

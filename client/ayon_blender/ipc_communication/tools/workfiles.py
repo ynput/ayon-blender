@@ -3,7 +3,6 @@ from __future__ import annotations
 import typing
 from typing import Any
 
-from qtpy import QtWidgets
 
 from ayon_core.host.interfaces import WorkfileInfo
 from ayon_core.host import PublishedWorkfileInfo
@@ -76,12 +75,13 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         if not wait:
             self._client.send_request(self.channel_name, method_name, params)
             return None
-        ok, result, error = self._client.send_request_wait(
+
+        response = self._client.send_request_wait(
             self.channel_name, method_name, params
         )
-        if not ok:
-            raise Exception(error)
-        return result
+        if not response.ok:
+            raise Exception(response.error)
+        return response.result
 
     def is_host_valid(self):
         """Host is valid for workfiles tool work.
