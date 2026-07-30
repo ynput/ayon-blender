@@ -240,6 +240,12 @@ def _ensure_external_ui_process():
         "External UI process launched (PID: %s)",
         _IPCConnection.ui_process.pid
     )
+    # TODO better way to wait for the external UI process
+    # - maybe store requests to send if client is not connected?
+    for _ in range(300):
+        if _IPCConnection.server.clients:
+            break
+        time.sleep(0.1)
 
 
 def _register_ipc_handlers(server: IPCServer):
