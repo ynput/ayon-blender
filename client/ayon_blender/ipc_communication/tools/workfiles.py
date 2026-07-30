@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import threading
+import time
 import typing
 from typing import Any
 
+from qtpy import QtCore
 
 from ayon_core.host.interfaces import WorkfileInfo
 from ayon_core.host import PublishedWorkfileInfo
@@ -29,9 +32,66 @@ if typing.TYPE_CHECKING:
     from ayon_blender.ipc_communication import IPCClient, RequestMessage
 
 
+class WaitCallback:
+    def __init__(self):
+        self._event = threading.Event()
+        self.response = None
+
+    def __call__(self, response):
+        self.response = response
+        self._event.set()
+
+    def is_done(self):
+        return self._event.is_set()
+
+    def wait(self, timeout: float | None = None) -> bool:
+        return self._event.wait(timeout)
+
+
+class WorkerTask(QtCore.QObject, QtCore.QRunnable):
+    def __init__(self, func, *args, **kwargs):
+        QtCore.QObject.__init__(self)
+        QtCore.QRunnable.__init__(self)
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        self.func(*self.args, **self.kwargs)
+
+
+class Worker(QtCore.QObject):
+    def __init__(self):
+        self._thread_pool = QtCore.QThreadPool()
+        self._thread_pool.setMaxThreadCount(1)
+
+    def do_task(self, task):
+        self._thread_pool.start(task)
+
+    def trigger_method(self, client, channel_name, method, params, callback):
+        """Trigger method on backend in a separate thread.
+
+        Args:
+            client (IPCClient): IPC client.
+            method (str): Method name.
+            params (dict): Parameters for the method.
+            callback (Callable): Callback to call with the response.
+
+        """
+        def run():
+            client.send_request(
+                channel_name, method, params, callback=callback
+            )
+
+        task = WorkerTask(client.send_request, channel_name, method, params, callback=callback)
+        self._thread_pool.start(task)
+        return task
+
+
 class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
     window = None
     channel_name = "workfiles"
+    _response_timeout_sec = 35.0
 
     def __init__(self, client: IPCClient):
         client.register_channel_handler(
@@ -40,15 +100,14 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
 
         self._event_system = QueuedEventSystem()
         self._client: IPCClient = client
+        self._worker = Worker()
 
     def _handle_request(self, client: IPCClient, req: RequestMessage):
         if req.method == "show":
             execute_in_main_thread(self._show_window)
-            return
 
-        if req.method == "emit_event":
+        elif req.method == "emit_event":
             execute_in_main_thread(self.emit_event, **req.params)
-            return
 
     def _show_window(self):
         if self.window is None:
@@ -73,15 +132,39 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             Any: Result of the triggered method.
 
         """
+        response_callback = WaitCallback()
+        task = WorkerTask(
+            self._client.send_request, self.channel_name,
+            method_name,
+            params,
+            callback=response_callback
+        )
+        self._worker.do_task(task)
         if not wait:
-            self._client.send_request(self.channel_name, method_name, params)
             return None
 
-        response = self._client.send_request_wait(
-            self.channel_name, method_name, params
-        )
+        # TODO simplify - do not timeout, instead regularly check for process
+        app = QtCore.QCoreApplication.instance()
+        timeout_at = time.monotonic() + self._response_timeout_sec
+        while not response_callback.is_done():
+            # Keep UI/queued callbacks responsive while waiting.
+            if app is not None:
+                app.processEvents(QtCore.QEventLoop.AllEvents, 5)
+
+            remaining = timeout_at - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"Timeout waiting for '{method_name}' response "
+                    f"after {self._response_timeout_sec:.1f}s"
+                )
+            response_callback.wait(min(0.01, remaining))
+
+        response = response_callback.response
+        if response is None:
+            raise RuntimeError(f"No response payload for '{method_name}'")
+
         if not response.ok:
-            raise Exception(response.error)
+            raise RuntimeError(response.error or f"Request '{method_name}' failed")
         return response.result
 
     def is_host_valid(self):
