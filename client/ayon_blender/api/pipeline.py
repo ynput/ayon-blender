@@ -37,6 +37,7 @@ from ayon_core.lib import (
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
 
+from .workio import OpenFileCacher
 from . import lib
 from . import ops
 
@@ -522,7 +523,7 @@ def _on_load_post(*args):
         if not _is_opening_workfile_template:
             emit_event("new")
 
-    ops.OpenFileCacher.post_load()
+    OpenFileCacher.post_load()
 
 
 def _register_callbacks():
