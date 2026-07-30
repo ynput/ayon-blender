@@ -5,13 +5,16 @@ import sys
 import logging
 import time
 
-from qtpy import QtCore
+import psutil
 
 from ayon_blender.ipc_communication import IPCClient
-from ayon_blender.ipc_communication.tools import BlenderWorkfilesFrontend
+from ayon_blender.ipc_communication.tools import (
+    BlenderWorkfilesFrontend,
+    start_main_thread_helper,
+    execute_in_main_thread,
+)
 
 from ayon_core.tools.utils import get_ayon_qt_app
-
 
 # Setup logging
 logging.basicConfig(
@@ -23,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Entry-point of the external UI process."""
+    pid = int(os.environ["AYON_IPC_PID"])
     ipc_host = os.environ["AYON_IPC_HOST"]
     ipc_port = int(os.environ["AYON_IPC_PORT"])
     session_token = os.environ["AYON_IPC_TOKEN"]
@@ -42,23 +46,31 @@ def main():
         logger.error("Could not connect to Blender IPC server")
         sys.exit(2)
 
-    workfiles = BlenderWorkfilesFrontend(ipc)
+    start_main_thread_helper()
+    _workfiles = BlenderWorkfilesFrontend(ipc)
 
     # Keep the process alive and attempt reconnection if Blender restarts.
     def _tick():
-        if not ipc.is_connected():
+        if ipc.is_connected():
+            execute_in_main_thread(_tick)
+            return
+
+        if psutil.pid_exists(pid):
+            execute_in_main_thread(_tick)
             ipc.reconnect_with_backoff()
+            return
 
-    timer = QtCore.QTimer()
-    timer.timeout.connect(_tick)
-    timer.start(1000)
+        logger.error("Blender process has exited")
+        if ipc.is_connected():
+            ipc.disconnect()
+        app.exit(0)
 
+    execute_in_main_thread(_tick)
+
+    app.setQuitOnLastWindowClosed(False)
     app.aboutToQuit.connect(ipc.disconnect)
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
     main()
-
-
-

@@ -247,7 +247,7 @@ class IPCClientConnection:
                 break
 
             # Main message loop
-            while self._connected:
+            while True:
                 try:
                     msg = self._receive_msg()
                     if msg is None:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import typing
 from typing import Any
 
+from qtpy import QtWidgets
+
 from ayon_core.host.interfaces import WorkfileInfo
 from ayon_core.host import PublishedWorkfileInfo
 
@@ -22,6 +24,8 @@ from ayon_core.tools.common_models.users import UserItem
 
 from ayon_core.lib.events import QueuedEventSystem
 
+from .utils import execute_in_main_thread
+
 if typing.TYPE_CHECKING:
     from ayon_blender.ipc_communication import IPCClient, RequestMessage
 
@@ -31,23 +35,26 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
     channel_name = "workfiles"
 
     def __init__(self, client: IPCClient):
-        self._responses = {}
-
-        self._event_system = QueuedEventSystem()
-        self._client: IPCClient = client
         client.register_channel_handler(
             self.channel_name, self._handle_request
         )
 
+        self._event_system = QueuedEventSystem()
+        self._client: IPCClient = client
+
     def _handle_request(self, client: IPCClient, req: RequestMessage):
         if req.method == "show":
-            print("Here")
-            if self.window is None:
-                self.window = WorkfilesToolWindow(controller=self)
-
-            self.window.show()
+            execute_in_main_thread(self._show_window)
             return
-        print("Unhandled request", req)
+
+        if req.method == "emit_event":
+            self.emit_event(**req.params)
+
+    def _show_window(self):
+        if self.window is None:
+            self.window = WorkfilesToolWindow(controller=self)
+
+        self.window.show()
 
     def _trigger_method(
         self,
@@ -87,6 +94,16 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             "is_host_valid", {}, True
         )
 
+    def get_current_project_name(self):
+        """Project name from current context of host.
+
+        Returns:
+            str: Name of project.
+
+        """
+        return self._trigger_method(
+            "get_current_project_name", {}, True
+        )
 
     def get_workfile_extensions(self):
         """Get possible workfile extensions.
@@ -136,6 +153,9 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             "get_window_subtitle", {}, True
         )
 
+    def emit_event(self, topic, data, source):
+        self._event_system.emit(topic, data, source)
+
     def register_event_callback(self, topic, callback):
         """Register event callback.
 
@@ -147,7 +167,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 is triggered.
 
         """
-        print("NOT IMPLEMENTED register_event_callback", topic, callback)
+        self._event_system.add_callback(topic, callback)
 
     def get_user_items_by_name(self):
         """Get user items available on AYON server.

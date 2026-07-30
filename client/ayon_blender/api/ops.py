@@ -32,7 +32,7 @@ from ayon_core.style import load_stylesheet
 
 from ayon_blender.ipc_communication import IPCServer
 
-from .tools import BlenderWorkfilesController
+from .tools import BlenderWorkfilesController, get_ui_process_script_path
 from . import pipeline
 from . import render_lib
 
@@ -52,8 +52,9 @@ class _IPCConnection:
 
 
 def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> subprocess.Popen:
-    launcher_script = Path(__file__).parent / "external_ui_host.py"
+    launcher_script = get_ui_process_script_path()
     env = os.environ.copy()
+    env["AYON_IPC_PID"] = str(os.getpid())
     env["AYON_IPC_HOST"] = ipc_host
     env["AYON_IPC_PORT"] = str(ipc_port)
     env["AYON_IPC_TOKEN"] = session_token
@@ -302,9 +303,9 @@ def _process_app_events() -> Optional[float]:
             dialog.activateWindow()
             dialog.open()
 
-    # Process IPC events (send pending events to clients)
-    # if _IPCConnection.server:
-    #     _IPCConnection.server.process_events()
+    # Process IPC requests (send pending events to clients)
+    if _IPCConnection.server:
+        _IPCConnection.server.process_requests()
 
     return TIMER_INTERVAL
 
@@ -313,6 +314,7 @@ class LaunchToolOperator(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
     _tool_name: str = None
+    _params: dict | None = None
     bl_idname: str = None
 
     def __init__(self, *args, **kwargs):
@@ -343,8 +345,8 @@ class LaunchToolOperator(bpy.types.Operator):
 
             server.trigger_method(
                 self._tool_name,
-                "open",
-                {"tab": getattr(self, "_tab", None),}
+                "show",
+                self._params,
             )
             return {"FINISHED"}
 
@@ -362,10 +364,9 @@ class LaunchCreator(LaunchToolOperator):
     bl_idname = "wm.ayon_creator"
     bl_label = "Create..."
     _tool_name = "publisher"
-    _tab = "publish"
+    _params = {"tab": "create"}
 
     def execute(self, context):
-        self._tab = "create"
         return super().execute(context)
 
 
@@ -383,9 +384,9 @@ class LaunchPublisher(LaunchToolOperator):
     bl_idname = "wm.ayon_publisher"
     bl_label = "Publish..."
     _tool_name = "publisher"
+    _params = {"tab": "publish"}
 
     def execute(self, context):
-        self._tab = "publish"
         return super().execute(context)
 
 

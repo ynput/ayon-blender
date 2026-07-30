@@ -124,7 +124,6 @@ class IPCClient:
         self._lock = threading.RLock()
         self._receiver_thread: threading.Thread | None = None
         self._running = False
-        self._recv_buffer = b""
 
     def connect(self) -> bool:
         """Establish connection to Blender IPC server.
@@ -295,7 +294,7 @@ class IPCClient:
                 method=method,
                 timeout_sec=timeout_sec,
             )
-            if callback:
+            if callback is not None:
                 self.response_callbacks[request_id] = callback
 
         try:
@@ -307,7 +306,7 @@ class IPCClient:
             with self._lock:
                 self.pending_requests.pop(request_id, None)
                 self.response_callbacks.pop(request_id, None)
-            if callback:
+            if callback is not None:
                 callback(False, None, str(e))
             raise
 
@@ -378,7 +377,7 @@ class IPCClient:
         self.last_heartbeat = time.time()
 
     def _receive_msg(self) -> Message | None:
-        if not self.socket:
+        if self.socket is None:
             return None
 
         return read_message_from_socket(self.socket)
@@ -388,7 +387,7 @@ class IPCClient:
         try:
             while self._running and self.connected:
                 try:
-                    if not self.socket:
+                    if self.socket is None:
                         break
 
                     self.socket.settimeout(5.0)
@@ -404,7 +403,6 @@ class IPCClient:
 
                 except socket.timeout:
                     # Check for pending request timeouts
-                    self._check_request_timeouts()
 
                     # Check heartbeat (detect Blender busy)
                     if time.time() - self.last_heartbeat > 60:
@@ -474,30 +472,12 @@ class IPCClient:
             self.pending_requests.pop(request_id, None)
             callback = self.response_callbacks.pop(request_id, None)
 
-        if callback:
+        if callback is not None:
             try:
                 callback(ok, result, error)
             except Exception as e:
                 logger.error(f"Error in response callback: {e}")
 
-    def _check_request_timeouts(self):
-        """Check for expired requests and invoke callbacks."""
-        expired = []
-        with self._lock:
-            for request_id, pending in list(self.pending_requests.items()):
-                if pending.is_expired() and not pending.done:
-                    expired.append(request_id)
-                    pending.mark_done()
-
-        for request_id in expired:
-            with self._lock:
-                callback = self.response_callbacks.pop(request_id, None)
-
-            if callback:
-                try:
-                    callback(False, None, "Request timeout")
-                except Exception as e:
-                    logger.error(f"Error in timeout callback: {e}")
 
 
 
