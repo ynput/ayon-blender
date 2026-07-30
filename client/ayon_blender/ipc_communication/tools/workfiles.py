@@ -181,7 +181,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             "get_user_items_by_name", {}, True
         )
         return {
-            key: UserItem.from_data(value)
+            key: UserItem(**value)
             for key, value in data.items()
         }
 
@@ -202,15 +202,15 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[FolderTypeItem]: Folder type information.
 
         """
-        data = self._trigger_method(
+        folder_type_items = self._trigger_method(
             "get_folder_type_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return {
-            key: FolderTypeItem.from_data(value)
-            for key, value in data.items()
-        }
+        return [
+            FolderTypeItem.from_data(item)
+            for item in folder_type_items
+        ]
 
     def get_task_type_items(self, project_name, sender=None):
         """Task type items for a project.
@@ -229,15 +229,15 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[TaskTypeItem]: Task type information.
 
         """
-        data = self._trigger_method(
+        items = self._trigger_method(
             "get_task_type_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return {
-            key: TaskTypeItem.from_data(value)
-            for key, value in data.items()
-        }
+        return [
+            TaskTypeItem.from_data(item)
+            for item in items
+        ]
 
     # Host information
     def get_workfile_extensions(self):
@@ -527,10 +527,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             {"project_name": project_name, "sender": sender},
             True
         )
-        return [
-            FolderItem.from_data(item)
-            for item in folder_items
-        ]
+        return {
+            entity_id: FolderItem.from_data(entity)
+            for entity_id, entity in folder_items.items()
+        }
 
     def get_task_items(self, project_name, folder_id, sender):
         """Task items.
@@ -603,7 +603,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[WorkfileInfo]: List of workarea file items.
 
         """
-        return self._trigger_method(
+        items = self._trigger_method(
             "get_workarea_file_items",
             {
                 "folder_id": folder_id,
@@ -612,6 +612,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             },
             True
         )
+        return [WorkfileInfo.from_data(item) for item in items]
 
     def get_workarea_save_as_data(self, folder_id, task_id):
         """Prepare data for Save As operation.

@@ -319,7 +319,13 @@ class IPCClientConnection:
                 exc_info=True,
             )
             try:
-                self._send_message(ErrorMessage(str(e)))
+                # Keep request_id so client can finish matching pending request.
+                self._send_message(ResponseMessage(
+                    request_id=req.id,
+                    ok=False,
+                    result=None,
+                    error=str(e),
+                ))
             except Exception as e:
                 logger.error(f"Failed to send response: {e}")
 
