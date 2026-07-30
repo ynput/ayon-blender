@@ -8,34 +8,31 @@ Qt UI processes. It handles:
 - Graceful handling of Blender unresponsiveness (render/processing)
 - Automatic reconnect support
 """
+from __future__ import annotations
 
 import os
-import sys
 import socket
 import logging
+import time
 import threading
 import collections
-from typing import Optional, Dict, Any, Callable
-from pathlib import Path
+from typing import Any, Callable
 
-# Add current directory to path for imports
-_current_dir = Path(__file__).parent
-if str(_current_dir) not in sys.path:
-    sys.path.insert(0, str(_current_dir))
-
-try:
-    from .ipc_protocol import (
-        Message, MessageType, HelloMessage, HelloAckMessage, ResponseMessage,
-        EventMessage, RequestMessage, PingMessage, PongMessage, parse_message
-    )
-except ImportError:
-    # Fallback for when module is run as script
-    from ipc_protocol import (
-        Message, MessageType, HelloMessage, HelloAckMessage, ResponseMessage,
-        EventMessage, RequestMessage, PingMessage, PongMessage, parse_message
-    )
+from .ipc_protocol import (
+    Message,
+    MessageType,
+    HelloMessage,
+    HelloAckMessage,
+    ResponseMessage,
+    RequestMessage,
+    PongMessage,
+    ErrorMessage,
+    read_message_from_socket,
+)
 
 logger = logging.getLogger(__name__)
+
+ChannelHandler = Callable[["IPCServer", RequestMessage], Any]
 
 
 class IPCServer:
@@ -54,15 +51,18 @@ class IPCServer:
         """
         self.host = host
         self.port = port
-        self.server_socket: Optional[socket.socket] = None
+        self.server_socket: socket.socket | None = None
         self.running = False
-        self.server_thread: Optional[threading.Thread] = None
-        self.clients: Dict[str, "IPCClientConnection"] = {}
+        self.server_thread: threading.Thread | None = None
+        self.clients: dict[str, "IPCClientConnection"] = {}
         self.session_token = os.urandom(16).hex()
-        self.request_handlers: Dict[str, Callable] = {}
-        self.event_queue = collections.deque()
-        self.pending_requests: Dict[str, Dict[str, Any]] = {}
-        self.response_callbacks: Dict[str, Callable] = {}
+
+        self.channel_handlers: dict[str, ChannelHandler] = {}
+
+        self.requests_queue: collections.deque[RequestMessage] = (
+            collections.deque()
+        )
+        self.response_callbacks: dict[str, Callable] = {}
         self._lock = threading.RLock()
 
     def start(self) -> int:
@@ -112,40 +112,38 @@ class IPCServer:
 
         logger.info("IPC server stopped")
 
-    def register_handler(self, method: str, handler: Callable):
+    def register_handler(
+        self, channel: str, handler: ChannelHandler
+    ):
         """Register a request handler.
 
         Args:
-            method: Method name (e.g. 'show_creator')
-            handler: Callable that accepts (params: Dict) -> Any
+            channel: Channel name.
+            handler: Callable that accepts (request: RequestMessage) -> Any
         """
-        self.request_handlers[method] = handler
-        logger.debug(f"Registered handler for method: {method}")
+        if channel in self.channel_handlers:
+            raise ValueError(
+                f"Handler already registered for channel: {channel}"
+            )
+        self.channel_handlers[channel] = handler
+        logger.debug(f"Registered handler for channel: {channel}")
 
-    def publish_event(self, topic: str, payload: Optional[Dict[str, Any]] = None):
-        """Publish an event to all connected clients.
-
-        Args:
-            topic: Event topic (e.g. 'render_started')
-            payload: Event data
-        """
-        if payload is None:
-            payload = {}
-
-        event = EventMessage(topic=topic, payload=payload)
+    def trigger_method(
+        self,
+        channel: str,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> RequestMessage:
+        msg = RequestMessage(channel=channel, method=method, params=params)
         with self._lock:
-            self.event_queue.append(event)
-
-    def send_event_to_all(self, topic: str, payload: Optional[Dict[str, Any]] = None):
-        """Publish event to all clients immediately."""
-        self.publish_event(topic, payload)
-        self.process_events()
+            self.requests_queue.append(msg)
+        return msg
 
     def get_session_token(self) -> str:
         """Get the session token for validating client connections."""
         return self.session_token
 
-    def process_events(self) -> bool:
+    def process_requests(self) -> bool:
         """Process pending events and dispatch to clients.
 
         Should be called from Blender main thread via timer callback.
@@ -153,23 +151,24 @@ class IPCServer:
         Returns:
             True if there were events to process
         """
-        events_processed = False
+        processed = False
 
         with self._lock:
-            while self.event_queue:
-                event = self.event_queue.popleft()
+            while self.requests_queue:
+                request = self.requests_queue.popleft()
                 # Send to all connected clients
                 for client in list(self.clients.values()):
                     try:
-                        client.send_message(event)
+                        client.send_message(request)
                     except Exception as e:
                         logger.warning(f"Failed to send event to client: {e}")
-                events_processed = True
+                processed = True
 
-        return events_processed
+        return processed
 
     def _server_loop(self):
         """Main server loop (runs in background thread)."""
+        threads = []
         while self.running:
             try:
                 # Accept connections with timeout to allow check of self.running
@@ -187,11 +186,19 @@ class IPCServer:
                     target=client.handle, daemon=True
                 )
                 client_thread.start()
+                threads.append((client, client_thread))
 
             except Exception as e:
                 if self.running:
                     logger.error(f"Server loop error: {e}", exc_info=True)
                 break
+
+        for client, thread in threads:
+            try:
+                client.close()
+            except Exception:
+                pass
+            thread.join(timeout=2)
 
         logger.debug("Server loop exited")
 
@@ -203,66 +210,59 @@ class IPCClientConnection:
         self.server = server
         self.socket = socket_obj
         self.addr = addr
-        self.session_id: Optional[str] = None
+        self.session_id: str | None = None
         self.authenticated = False
         self._lock = threading.RLock()
         self._connected = True
-        self._recv_buffer = b""
 
     def handle(self):
         """Handle client connection (runs in separate thread)."""
         try:
             self.socket.settimeout(30.0)
 
-            # Wait for HELLO message
-            hello_json = self._receive_line()
-            if not hello_json:
-                logger.warning(f"Client {self.addr} disconnected before HELLO")
-                return
+            while True:
+                msg_type = MessageType.from_socket(self.socket)
+                if msg_type is None:
+                    logger.debug(f"Client {self.addr} disconnected")
+                    return
 
-            try:
-                hello_msg = parse_message(hello_json)
-                if not isinstance(hello_msg, HelloMessage):
+                if msg_type != MessageType.HELLO:
                     self._send_error("Expected HELLO message")
                     return
 
-                # Validate session token
-                if hello_msg.data.get("session_token") != self.server.session_token:
-                    self._send_error("Invalid session token")
+                msg = HelloMessage.from_socket(self.socket)
+                if msg.version != "1.0":
+                    self._send_error("Unsupported protocol version")
                     return
 
-                self.session_id = str(hello_msg.data.get("session_id") or self.addr[1])
+                self.session_id = msg.session_id
                 self.authenticated = True
+                self._connected = True
 
                 with self.server._lock:
-                    self.server.clients[self.session_id] = self
-
-                # Send HELLO_ACK
-                ack = HelloAckMessage(session_id=self.session_id)
+                    self.server.clients[msg.session_id] = self
+                ack = HelloAckMessage(session_id=msg.session_id)
                 self._send_message(ack)
                 logger.info(f"Client {self.addr} authenticated: {self.session_id}")
-
-            except ValueError as e:
-                self._send_error(f"Invalid HELLO message: {e}")
-                return
+                break
 
             # Main message loop
             while self._connected:
                 try:
-                    msg_json = self._receive_line()
-                    if not msg_json:
+                    msg = self._receive_msg()
+                    if msg is None:
                         logger.debug(f"Client {self.addr} disconnected")
                         break
 
-                    msg = parse_message(msg_json)
                     self._handle_message(msg)
 
                 except socket.timeout:
                     # Client may be idle for long periods while Blender is busy.
+                    time.sleep(0.5)
                     continue
 
         except Exception as e:
-            logger.error(f"Error handling client {self.addr}: {e}")
+            logger.error(f"Error handling client {self.addr}: {e}", exc_info=True)
         finally:
             self.close()
 
@@ -284,52 +284,51 @@ class IPCClientConnection:
 
     def _handle_request(self, req: RequestMessage):
         """Handle incoming request."""
-        request_id = req.data.get("id")
-        method = req.data.get("method")
-        params = req.data.get("params", {})
+        channel = req.channel
 
-        logger.debug(f"Handling request {request_id}: {method}")
+        logger.debug(f"Handling request {req.id}: {req.method}")
 
         # Check if handler is registered
-        handler = self.server.request_handlers.get(method)
+        handler = self.server.channel_handlers.get(channel)
         if not handler:
             response = ResponseMessage(
-                request_id=request_id,
+                request_id=req.id,
                 ok=False,
-                error=f"Unknown method: {method}"
+                error=f"Unknown channel: {channel}"
             )
             self._send_message(response)
             return
 
-        # Store request and callback
-        def send_response(result=None, error=None):
-            """Send response back to client."""
+        try:
+            # Call handler (may be queued to main thread by handler)
+            result = handler(self.server, req)
+
             response = ResponseMessage(
-                request_id=request_id,
-                ok=error is None,
+                request_id=req.id,
+                ok=True,
                 result=result,
-                error=error
+                error=None
             )
             try:
                 self._send_message(response)
             except Exception as e:
                 logger.error(f"Failed to send response: {e}")
-
-        try:
-            # Call handler (may be queued to main thread by handler)
-            result = handler(params)
-            send_response(result=result)
         except Exception as e:
-            logger.error(f"Handler error for {method}: {e}")
-            send_response(error=str(e))
+            logger.error(
+                f"Handler error for {req.channel} {req.method}",
+                exc_info=True,
+            )
+            try:
+                self._send_message(ErrorMessage(str(e)))
+            except Exception as e:
+                logger.error(f"Failed to send response: {e}")
 
     def _send_message(self, msg: Message):
         """Send message to client."""
         with self._lock:
             if not self._connected:
                 raise RuntimeError("Client disconnected")
-            json_str = msg.to_json()
-            self.socket.sendall((json_str + "\n").encode("utf-8"))
+            self.socket.sendall(msg.to_bytes())
 
     def send_message(self, msg: Message):
         """Public method to send message to client."""
@@ -337,31 +336,20 @@ class IPCClientConnection:
 
     def _send_error(self, error_msg: str):
         """Send error message."""
-        msg = Message(MessageType.ERROR, error=error_msg)
+        msg = ErrorMessage(error=error_msg)
         try:
             self._send_message(msg)
         except Exception:
             pass
 
-    def _receive_line(self) -> Optional[str]:
-        """Receive a single line of JSON."""
+    def _receive_msg(self) -> Message | None:
         if not self._connected:
             return None
 
-        while True:
-            if b"\n" in self._recv_buffer:
-                line, self._recv_buffer = self._recv_buffer.split(b"\n", 1)
-                return line.decode("utf-8").strip()
-            try:
-                chunk = self.socket.recv(4096)
-                if not chunk:
-                    self._connected = False
-                    return None
-                self._recv_buffer += chunk
-            except socket.timeout:
-                raise
-
-        return None
+        msg = read_message_from_socket(self.socket)
+        if msg is None:
+            self._connected = False
+        return msg
 
     def close(self):
         """Close the client connection."""
@@ -376,33 +364,3 @@ class IPCClientConnection:
         if self.session_id:
             with self.server._lock:
                 self.server.clients.pop(self.session_id, None)
-
-
-# Global server instance
-_ipc_server: Optional[IPCServer] = None
-
-
-def get_ipc_server() -> IPCServer:
-    """Get or create the global IPC server instance."""
-    global _ipc_server
-    if _ipc_server is None:
-        _ipc_server = IPCServer()
-    return _ipc_server
-
-
-def start_ipc_server() -> int:
-    """Start the IPC server and return the port."""
-    server = get_ipc_server()
-    return server.start()
-
-
-def stop_ipc_server():
-    """Stop the IPC server."""
-    global _ipc_server
-    if _ipc_server:
-        _ipc_server.stop()
-        _ipc_server = None
-
-
-
-

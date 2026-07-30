@@ -1,3 +1,4 @@
+from .ipc_protocol import RequestMessage
 from .ipc_bridge import IPCServer
 from .ipc_client import IPCClient
 from .loader_ipc import (
@@ -9,6 +10,7 @@ from .loader_ipc import (
 
 
 __all__ = (
+    "RequestMessage",
     "IPCServer",
     "IPCClient",
     "BlenderLoaderBackendBridge",

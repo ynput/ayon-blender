@@ -1,4 +1,5 @@
 """Blender operators and menus for use with AYON."""
+from __future__ import annotations
 
 import os
 import sys
@@ -9,14 +10,14 @@ import collections
 import subprocess
 import logging
 from pathlib import Path
-from types import ModuleType
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional
 
 from qtpy import QtWidgets, QtCore
 
 import bpy
 import bpy.utils.previews
 
+from ayon_core.lib import get_ayon_launcher_args
 from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import (
     get_current_folder_path,
@@ -27,32 +28,58 @@ from ayon_core.pipeline.context_tools import (
     get_current_task_entity,
     version_up_current_workfile
 )
-from ayon_core.tools.utils import host_tools
 from ayon_core.style import load_stylesheet
 
-from ayon_blender.ipc_communication import (
-    IPCServer,
-    deserialize_from_ipc,
-    serialize_for_ipc,
-    BlenderLoaderBackendBridge,
-)
-from .workio import OpenFileCacher
+from ayon_blender.ipc_communication import IPCServer
+
+from .tools import BlenderWorkfilesController
 from . import pipeline
 from . import render_lib
-from .external_ui_host import create_external_ui_process_launcher
 
 logger = logging.getLogger(__name__)
-
 
 PREVIEW_COLLECTIONS: Dict = dict()
 TIMER_INTERVAL: float = 0.01
 
+
 # IPC and external UI process management
-_ipc_server_instance: Optional[IPCServer] = None
-_external_ui_process: Optional[subprocess.Popen] = None
-_loader_backend_bridge: Optional[BlenderLoaderBackendBridge] = None
-_external_ui_launcher = create_external_ui_process_launcher()
-USE_EXTERNAL_UI: bool = True  # Toggle to use in-process or external UI
+class _IPCConnection:
+    server: IPCServer | None = None
+    ui_process: subprocess.Popen | None = None
+    workfiles_controller: BlenderWorkfilesController = (
+        BlenderWorkfilesController()
+    )
+
+
+def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> subprocess.Popen:
+    launcher_script = Path(__file__).parent / "external_ui_host.py"
+    env = os.environ.copy()
+    env["AYON_IPC_HOST"] = ipc_host
+    env["AYON_IPC_PORT"] = str(ipc_port)
+    env["AYON_IPC_TOKEN"] = session_token
+    # USED to debug the external UI host process.
+    launch_args = get_ayon_launcher_args("run", str(launcher_script))
+    print("Launching external UI host with: %s", launch_args)
+    logger.info("Launching external UI host with: %s", launch_args)
+    return subprocess.Popen(
+        launch_args,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def _is_ipc_server_healthy() -> bool:
+    """Return whether IPC server instance is alive and listening."""
+    server = _IPCConnection.server
+    if server is None:
+        return False
+
+    thread = server.server_thread
+    if not server.running or thread is None or not thread.is_alive():
+        return False
+
+    return server.server_socket is not None
 
 
 def execute_function_in_main_thread(f):
@@ -69,38 +96,16 @@ class BlenderApplication:
 
     @classmethod
     def get_app(cls):
-        if cls._instance is None:
-            # If any other addon or plug-in may have initialed a Qt application
-            # before AYON then we should take the existing instance instead.
-            application = QtWidgets.QApplication.instance()
-            if application is None:
-                application = QtWidgets.QApplication(sys.argv)
-
-            # Ensure it is configured to our needs
-            cls._prepare_qapplication(application)
-            cls._instance = application
-
-        return cls._instance
-
-    @classmethod
-    def _prepare_qapplication(cls, application: QtWidgets.QApplication):
-        application.setQuitOnLastWindowClosed(False)
-        application.lastWindowClosed.connect(cls.reset)
-
-    @classmethod
-    def reset(cls):
-        cls._instance = None
+        print("Can't use Qt window anymore")
+        return None
 
     @classmethod
     def store_window(cls, identifier, window):
-        current_window = cls.get_window(identifier)
-        cls.blender_windows[identifier] = window
-        if current_window:
-            current_window.close()
-            # current_window.deleteLater()
+        print(f"Can't store window anymore '{identifier}'")
 
     @classmethod
     def get_window(cls, identifier):
+        print("Can't store window anymore")
         return cls.blender_windows.get(identifier)
 
 
@@ -173,166 +178,93 @@ class MainThreadItem:
 
 
 class GlobalClass:
-    app = None
     main_thread_callbacks = collections.deque()
-    is_windows = platform.system().lower() == "windows"
 
 
 def execute_in_main_thread(main_thead_item):
-    print("execute_in_main_thread")
     GlobalClass.main_thread_callbacks.append(main_thead_item)
 
 
 def _init_ipc_server():
     """Initialize the IPC server for external UI communication."""
-    global _ipc_server_instance, _external_ui_process
+    if _is_ipc_server_healthy():
+        return _IPCConnection.server
 
-    if _ipc_server_instance is not None:
-        return _ipc_server_instance
+    # Recover from stale server objects that are no longer listening.
+    if _IPCConnection.server is not None:
+        logger.warning("IPC server was stale; recreating it")
+        try:
+            _IPCConnection.server.stop()
+        except Exception:
+            logger.debug("Failed stopping stale IPC server", exc_info=True)
+        _IPCConnection.server = None
 
     try:
-        _ipc_server_instance = IPCServer()
-        port = _ipc_server_instance.start()
+        server = IPCServer()
+        port = server.start()
+        logger.info("IPC server listening on 127.0.0.1:%s", port)
 
         # Register handlers for common operations
-        _register_ipc_handlers(_ipc_server_instance)
+        _register_ipc_handlers(server)
+        _IPCConnection.server = server
 
         _ensure_external_ui_process()
 
-        return _ipc_server_instance
+        return _IPCConnection.server
 
     except Exception as e:
         logger.error(f"Failed to initialize IPC server: {e}", exc_info=True)
-        _ipc_server_instance = None
+        _IPCConnection.server = None
         return None
 
 
 def _ensure_external_ui_process():
     """Ensure external UI process is running when external UI mode is enabled."""
-    global _external_ui_process
-    if not USE_EXTERNAL_UI or _ipc_server_instance is None:
+    if not _is_ipc_server_healthy():
+        _init_ipc_server()
+
+    if _IPCConnection.server is None:
         return
 
-    if _external_ui_process and _external_ui_process.poll() is None:
+    if _IPCConnection.ui_process and _IPCConnection.ui_process.poll() is None:
         return
 
-    token = _ipc_server_instance.get_session_token()
-    _external_ui_process = _external_ui_launcher(
+    token = _IPCConnection.server.get_session_token()
+    _IPCConnection.ui_process = _external_ui_launcher(
         ipc_host="127.0.0.1",
-        ipc_port=_ipc_server_instance.port,
+        ipc_port=_IPCConnection.server.port,
         session_token=token,
     )
-    logger.info("External UI process launched (PID: %s)", _external_ui_process.pid)
+    logger.info(
+        "External UI process launched (PID: %s)",
+        _IPCConnection.ui_process.pid
+    )
 
 
 def _register_ipc_handlers(server: IPCServer):
     """Register request handlers for IPC server."""
-    global _loader_backend_bridge
 
-    if _loader_backend_bridge is None:
-        _loader_backend_bridge = BlenderLoaderBackendBridge(server)
-
-    def handle_show_tool(params: Dict) -> str:
-        """Handle request to show a tool (execute in main thread)."""
-        tool_name = params.get("tool", "")
-        tab = params.get("tab")
-
-        def _do_show():
-            try:
-                window = BlenderApplication.get_window(f"WM_OT_{tool_name}")
-                if window is None:
-                    window = host_tools.get_tool_by_name(tool_name)
-                    BlenderApplication.store_window(f"WM_OT_{tool_name}", window)
-
-                if hasattr(window, "show"):
-                    window.show()
-                    # Pull to front
-                    if hasattr(window, "raise_"):
-                        window.raise_()
-                    if hasattr(window, "activateWindow"):
-                        window.activateWindow()
-
-                if tab and hasattr(window, "show_tab"):
-                    window.show_tab(tab)
-
-                return f"Tool {tool_name} opened"
-            except Exception as e:
-                raise RuntimeError(f"Failed to show tool {tool_name}: {e}")
-
-        # Execute in main thread via callback
-        mti = MainThreadItem(_do_show)
-        execute_in_main_thread(mti)
-        return mti.wait()
-
-    def handle_show_publisher(params: Dict) -> str:
-        """Handle request to show publisher."""
-        tab = params.get("tab", "publish")
-
-        def _do_show():
-            try:
-                host_tools.show_publisher(tab=tab)
-                return f"Publisher opened (tab: {tab})"
-            except Exception as e:
-                raise RuntimeError(f"Failed to show publisher: {e}")
-
-        mti = MainThreadItem(_do_show)
-        execute_in_main_thread(mti)
-        return mti.wait()
-
-    def handle_refresh_manager(params: Dict) -> str:
-        """Handle request to refresh the manager."""
-        def _do_refresh():
-            manager = BlenderApplication.get_window("WM_OT_ayon_manager")
-            if manager and hasattr(manager, "refresh"):
-                manager.refresh()
-            return "Manager refreshed"
-
-        mti = MainThreadItem(_do_refresh)
-        execute_in_main_thread(mti)
-        return mti.wait()
-
-    def handle_loader_call(params: Dict):
-        """Handle frontend->backend loader controller RPC call."""
-        method_name = params.get("method")
-        args = deserialize_from_ipc(params.get("args") or [])
-        kwargs = deserialize_from_ipc(params.get("kwargs") or {})
-
-        if _loader_backend_bridge is None:
-            raise RuntimeError("Loader backend bridge was not initialized")
-
-        def _do_call():
-            return _loader_backend_bridge.call_method(method_name, args, kwargs)
-
-        mti = MainThreadItem(_do_call)
-        execute_in_main_thread(mti)
-        result = mti.wait()
-        return serialize_for_ipc(result)
-
-
-    server.register_handler("show_tool", handle_show_tool)
-    server.register_handler("show_publisher", handle_show_publisher)
-    server.register_handler("refresh_manager", handle_refresh_manager)
-    server.register_handler("loader_call", handle_loader_call)
+    _IPCConnection.workfiles_controller.register_ipc_handler(server)
 
 
 def _shutdown_ipc_server():
     """Shutdown the IPC server and external UI process."""
-    global _ipc_server_instance, _external_ui_process, _loader_backend_bridge
+    global _loader_backend_bridge
 
-    if _external_ui_process:
+    if _IPCConnection.ui_process:
         try:
-            _external_ui_process.terminate()
-            _external_ui_process.wait(timeout=5)
+            _IPCConnection.ui_process.terminate()
+            _IPCConnection.ui_process.wait(timeout=5)
         except Exception as e:
             logger.warning(f"Error terminating UI process: {e}")
-        _external_ui_process = None
+        _IPCConnection.ui_process = None
 
-    if _ipc_server_instance:
+    if _IPCConnection.server:
         try:
-            _ipc_server_instance.stop()
+            _IPCConnection.server.stop()
         except Exception as e:
             logger.error(f"Error stopping IPC server: {e}")
-        _ipc_server_instance = None
+        _IPCConnection.server = None
 
     _loader_backend_bridge = None
 
@@ -370,34 +302,17 @@ def _process_app_events() -> Optional[float]:
             dialog.activateWindow()
             dialog.open()
 
-        # Refresh Manager
-        if GlobalClass.app:
-            manager = BlenderApplication.get_window("WM_OT_ayon_manager")
-            if manager:
-                manager.refresh()
-
     # Process IPC events (send pending events to clients)
-    if _ipc_server_instance:
-        _ipc_server_instance.process_events()
+    # if _IPCConnection.server:
+    #     _IPCConnection.server.process_events()
 
-    if not GlobalClass.is_windows:
-        if OpenFileCacher.opening_file:
-            return TIMER_INTERVAL
-
-        app = GlobalClass.app
-        if app:
-            app.processEvents()
-            return TIMER_INTERVAL
     return TIMER_INTERVAL
 
 
-class LaunchQtApp(bpy.types.Operator):
+class LaunchToolOperator(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
-    _window: Optional[Union[QtWidgets.QDialog, ModuleType]] = None
     _tool_name: str = None
-    _init_args: Optional[List] = list()
-    _init_kwargs: Optional[Dict] = dict()
     bl_idname: str = None
 
     def __init__(self, *args, **kwargs):
@@ -406,11 +321,7 @@ class LaunchQtApp(bpy.types.Operator):
             raise NotImplementedError("Attribute `bl_idname` must be set!")
         print(f"Initialising {self.bl_idname}...")
 
-        # Initialize IPC if using external UI
-        if USE_EXTERNAL_UI:
-            _init_ipc_server()
-        else:
-            GlobalClass.app = BlenderApplication.get_app()
+        _init_ipc_server()
 
         if not bpy.app.timers.is_registered(_process_app_events):
             bpy.app.timers.register(
@@ -419,28 +330,9 @@ class LaunchQtApp(bpy.types.Operator):
             )
 
     def execute(self, context):
-        """Execute the operator.
-
-        The child class must implement `execute()` where it only has to set
-        `self._window` to the desired Qt window and then simply run
-        `return super().execute(context)`.
-        `self._window` is expected to have a `show` method.
-        If the `show` method requires arguments, you can set `self._show_args`
-        and `self._show_kwargs`. `args` should be a list, `kwargs` a
-        dictionary.
-        """
-
-        if USE_EXTERNAL_UI:
-            # Use IPC to communicate with external UI process
-            return self._execute_external_ui()
-        else:
-            # Use in-process Qt application (legacy)
-            return self._execute_inprocess_ui()
-
-    def _execute_external_ui(self):
         """Execute using external UI process via IPC."""
         _ensure_external_ui_process()
-        server = _ipc_server_instance
+        server = _IPCConnection.server
         if not server:
             return {"CANCELLED"}
 
@@ -449,103 +341,35 @@ class LaunchQtApp(bpy.types.Operator):
                 print("No tool name specified for external UI launch")
                 return {"CANCELLED"}
 
-            server.publish_event("open_tool", {
-                "tool": self._tool_name,
-                "tab": getattr(self, "_tab", None),
-            })
+            server.trigger_method(
+                self._tool_name,
+                "open",
+                {"tab": getattr(self, "_tab", None),}
+            )
             return {"FINISHED"}
 
         except Exception as e:
             logger.error(f"Error launching external UI: {e}", exc_info=True)
             return {"CANCELLED"}
 
-    def _execute_inprocess_ui(self):
-        """Execute using in-process Qt application (legacy)."""
-        if self._tool_name is None:
-            if self._window is None:
-                raise AttributeError("`self._window` is not set.")
-
-        else:
-            window = BlenderApplication.get_window(self.bl_idname)
-            if window is None:
-                window = host_tools.get_tool_by_name(self._tool_name)
-                BlenderApplication.store_window(self.bl_idname, window)
-            self._window = window
-
-        if not isinstance(self._window, (QtWidgets.QWidget, ModuleType)):
-            raise AttributeError(
-                "`window` should be a `QWidget or module`. Got: {}".format(
-                    str(type(self._window))
-                )
-            )
-
-        self.before_window_show()
-
-        def pull_to_front(window):
-            """Pull window forward to screen.
-
-            If Window is minimized this will un-minimize, then it can be raised
-            and activated to the front.
-            """
-            window.setWindowState(
-                (window.windowState() & ~QtCore.Qt.WindowMinimized) |
-                QtCore.Qt.WindowActive
-            )
-            window.raise_()
-            window.activateWindow()
-
-        if isinstance(self._window, ModuleType):
-            self._window.show()
-            pull_to_front(self._window)
-
-            # Pull window to the front
-            window = None
-            if hasattr(self._window, "window"):
-                window = self._window.window
-            elif hasattr(self._window, "_window"):
-                window = self._window.window
-
-            if window:
-                BlenderApplication.store_window(self.bl_idname, window)
-
-        else:
-            origin_flags = self._window.windowFlags()
-            on_top_flags = origin_flags | QtCore.Qt.WindowStaysOnTopHint
-            self._window.setWindowFlags(on_top_flags)
-            self._window.show()
-            pull_to_front(self._window)
-
-            # if on_top_flags != origin_flags:
-            #     self._window.setWindowFlags(origin_flags)
-            #     self._window.show()
-
-        return {'FINISHED'}
-
     def before_window_show(self):
         return
 
 
-class LaunchCreator(LaunchQtApp):
+class LaunchCreator(LaunchToolOperator):
     """Launch AYON Creator."""
 
     bl_idname = "wm.ayon_creator"
     bl_label = "Create..."
     _tool_name = "publisher"
-
-    def before_window_show(self):
-        if not USE_EXTERNAL_UI and self._window:
-            self._window.refresh()
+    _tab = "publish"
 
     def execute(self, context):
-        if USE_EXTERNAL_UI:
-            self._tab = "create"
-            return self._execute_external_ui()
-        else:
-            host_tools.show_publisher(tab="create")
-            return {"FINISHED"}
+        self._tab = "create"
+        return super().execute(context)
 
 
-class LaunchLoader(LaunchQtApp):
+class LaunchLoader(LaunchToolOperator):
     """Launch AYON Loader."""
 
     bl_idname = "wm.ayon_loader"
@@ -553,7 +377,7 @@ class LaunchLoader(LaunchQtApp):
     _tool_name = "loader"
 
 
-class LaunchPublisher(LaunchQtApp):
+class LaunchPublisher(LaunchToolOperator):
     """Launch AYON Publisher."""
 
     bl_idname = "wm.ayon_publisher"
@@ -561,15 +385,11 @@ class LaunchPublisher(LaunchQtApp):
     _tool_name = "publisher"
 
     def execute(self, context):
-        if USE_EXTERNAL_UI:
-            self._tab = "publish"
-            return self._execute_external_ui()
-        else:
-            host_tools.show_publisher(tab="publish")
-            return {"FINISHED"}
+        self._tab = "publish"
+        return super().execute(context)
 
 
-class LaunchManager(LaunchQtApp):
+class LaunchManager(LaunchToolOperator):
     """Launch AYON Manager."""
 
     bl_idname = "wm.ayon_manager"
@@ -577,7 +397,7 @@ class LaunchManager(LaunchQtApp):
     _tool_name = "sceneinventory"
 
 
-class LaunchLibrary(LaunchQtApp):
+class LaunchLibrary(LaunchToolOperator):
     """Launch Library Loader."""
 
     bl_idname = "wm.library_loader"
@@ -585,7 +405,7 @@ class LaunchLibrary(LaunchQtApp):
     _tool_name = "libraryloader"
 
 
-class LaunchWorkFiles(LaunchQtApp):
+class LaunchWorkFiles(LaunchToolOperator):
     """Launch AYON Work Files."""
 
     bl_idname = "wm.ayon_workfiles"
@@ -641,7 +461,7 @@ class CreateRenderSetup(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class VersionUpWorkfile(LaunchQtApp):
+class VersionUpWorkfile(LaunchToolOperator):
     """Perform Incremental Save Workfile."""
 
     bl_idname = "wm.ayon_version_up_workfile"
@@ -652,7 +472,7 @@ class VersionUpWorkfile(LaunchQtApp):
         return {"FINISHED"}
 
 
-class CreateFirstWorkfileFromTemplate(LaunchQtApp):
+class CreateFirstWorkfileFromTemplate(LaunchToolOperator):
     """Build Workfile from ayon template settings."""
 
     bl_idname = "wm.ayon_create_first_workfile_from_template"
@@ -663,7 +483,7 @@ class CreateFirstWorkfileFromTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
-class BuildWorkfileFromTemplate(LaunchQtApp):
+class BuildWorkfileFromTemplate(LaunchToolOperator):
     """Build Workfile from ayon template settings."""
 
     bl_idname = "wm.ayon_build_workfile_from_template"
@@ -675,7 +495,7 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 
 
 # TODO: implement update functionality when the load placeholder supported.
-# class UpdateWorkfileFromTemplate(LaunchQtApp):
+# class UpdateWorkfileFromTemplate(LaunchToolOperator):
 #     """Update Workfile from ayon template settings."""
 
 #     bl_idname = "wm.ayon_update_workfile_from_template"
@@ -686,7 +506,7 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 #         return {"FINISHED"}
 
 
-class OpenTemplate(LaunchQtApp):
+class OpenTemplate(LaunchToolOperator):
     """Open workfile template."""
 
     bl_idname = "wm.ayon_open_template"
@@ -697,8 +517,7 @@ class OpenTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
-
-class CreatePlaceholder(LaunchQtApp):
+class CreatePlaceholder(LaunchToolOperator):
     """Create Placeholder from ayon template settings."""
 
     bl_idname = "wm.ayon_create_placeholder"
@@ -711,7 +530,7 @@ class CreatePlaceholder(LaunchQtApp):
         return super().execute(context)
 
 
-class UpdatePlaceholder(LaunchQtApp):
+class UpdatePlaceholder(LaunchToolOperator):
     """Update Placeholder from ayon template settings."""
 
     bl_idname = "wm.ayon_update_placeholder"
@@ -835,31 +654,31 @@ def draw_ayon_menu(self, context):
     self.layout.menu(TOPBAR_MT_ayon.bl_idname)
 
 
-def _on_render_init(scene):
-    """Handle render initialization."""
-    if _ipc_server_instance:
-        _ipc_server_instance.publish_event("render_started", {
-            "scene": scene.name if scene else ""
-        })
-    logger.debug("Render started")
-
-
-def _on_render_complete(scene):
-    """Handle render completion."""
-    if _ipc_server_instance:
-        _ipc_server_instance.publish_event("render_finished", {
-            "scene": scene.name if scene else ""
-        })
-    logger.debug("Render completed")
-
-
-def _on_render_cancel(scene):
-    """Handle render cancellation."""
-    if _ipc_server_instance:
-        _ipc_server_instance.publish_event("render_cancelled", {
-            "scene": scene.name if scene else ""
-        })
-    logger.debug("Render cancelled")
+# def _on_render_init(scene):
+#     """Handle render initialization."""
+#     if _IPCConnection.server:
+#         _IPCConnection.server.publish_event("render_started", {
+#             "scene": scene.name if scene else ""
+#         })
+#     logger.debug("Render started")
+#
+#
+# def _on_render_complete(scene):
+#     """Handle render completion."""
+#     if _IPCConnection.server:
+#         _IPCConnection.server.publish_event("render_finished", {
+#             "scene": scene.name if scene else ""
+#         })
+#     logger.debug("Render completed")
+#
+#
+# def _on_render_cancel(scene):
+#     """Handle render cancellation."""
+#     if _IPCConnection.server:
+#         _IPCConnection.server.publish_event("render_cancelled", {
+#             "scene": scene.name if scene else ""
+#         })
+#     logger.debug("Render cancelled")
 
 
 classes = [
@@ -893,30 +712,26 @@ def register():
     pcoll.load("pyblish_menu_icon", str(pyblish_icon_file.absolute()), 'IMAGE')
     PREVIEW_COLLECTIONS["ayon"] = pcoll
 
-    # Initialize in-process Qt app only if not using external UI
-    if not USE_EXTERNAL_UI:
-        BlenderApplication.get_app()
-
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_editor_menus.append(draw_ayon_menu)
-
-    # Register render handlers for Blender busy state detection
-    bpy.app.handlers.render_init.append(_on_render_init)
-    bpy.app.handlers.render_complete.append(_on_render_complete)
-    bpy.app.handlers.render_cancel.append(_on_render_cancel)
+    #
+    # # Register render handlers for Blender busy state detection
+    # bpy.app.handlers.render_init.append(_on_render_init)
+    # bpy.app.handlers.render_complete.append(_on_render_complete)
+    # bpy.app.handlers.render_cancel.append(_on_render_cancel)
 
 
 def unregister():
     """Unregister the operators and menu."""
 
     # Unregister render handlers
-    try:
-        bpy.app.handlers.render_init.remove(_on_render_init)
-        bpy.app.handlers.render_complete.remove(_on_render_complete)
-        bpy.app.handlers.render_cancel.remove(_on_render_cancel)
-    except (ValueError, AttributeError):
-        pass
+    # try:
+    #     bpy.app.handlers.render_init.remove(_on_render_init)
+    #     bpy.app.handlers.render_complete.remove(_on_render_complete)
+    #     bpy.app.handlers.render_cancel.remove(_on_render_cancel)
+    # except (ValueError, AttributeError):
+    #     pass
 
     # Shutdown IPC server
     _shutdown_ipc_server()

@@ -10,6 +10,7 @@ via the IPC bridge. Features:
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 import socket
 import time
 import logging
@@ -23,12 +24,13 @@ from ayon_blender.ipc_communication.ipc_protocol import (
     HelloMessage,
     RequestMessage,
     ResponseMessage,
-    EventMessage,
     PongMessage,
-    parse_message
+    read_message_from_socket,
 )
 
 logger = logging.getLogger(__name__)
+
+ClientChannelHandler = Callable[["IPCClient", RequestMessage], Any]
 
 
 class ConnectionState:
@@ -48,12 +50,10 @@ class PendingRequest:
         request_id: str,
         method: str,
         timeout_sec: float = 30.0,
-        idempotency_key: str | None = None,
     ):
         self.request_id = request_id
         self.method = method
         self.timeout_sec = timeout_sec
-        self.idempotency_key = idempotency_key
         self.submitted_at = time.time()
         self.callback: Callable[[bool, Any, str | None], None] | None = None
         self.done = False
@@ -66,6 +66,13 @@ class PendingRequest:
     def mark_done(self):
         """Mark request as completed."""
         self.done = True
+
+
+@dataclass
+class RequestWaitData:
+    ok: bool = False
+    result: Any = None
+    error: str | None = None
 
 
 class IPCClient:
@@ -108,7 +115,7 @@ class IPCClient:
 
         self.pending_requests: dict[str, PendingRequest] = {}
         self.response_callbacks: dict[str, Callable] = {}
-        self.event_subscribers: dict[str, list[Callable]] = {}
+        self.channel_handlers: dict[str, ClientChannelHandler] = {}
 
         self.reconnect_attempts = 0
         self.last_heartbeat = time.time()
@@ -134,6 +141,11 @@ class IPCClient:
                 f"(session: {self.session_id})"
             )
 
+            # If previous receiver thread died, allow it to be recreated.
+            if self._receiver_thread and not self._receiver_thread.is_alive():
+                self._receiver_thread = None
+                self._running = False
+
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.settimeout(10.0)
             self.socket.connect((self.host, self.port))
@@ -148,13 +160,14 @@ class IPCClient:
             self._send_message(hello)
 
             # Receive HELLO_ACK
-            ack_json = self._receive_line()
-            if not ack_json:
+            msg = self._receive_msg()
+            if msg is None:
+                print("No HELLO_ACK received")
                 raise RuntimeError("No HELLO_ACK received")
 
-            ack = parse_message(ack_json)
-            if ack.type != MessageType.HELLO_ACK:
-                raise RuntimeError(f"Expected HELLO_ACK, got {ack.type}")
+            if msg.type != MessageType.HELLO_ACK:
+                print(f"Expected HELLO_ACK, got {msg.type}")
+                raise RuntimeError(f"Expected HELLO_ACK, got {msg.type}")
 
             self.connected = True
             self.state = ConnectionState.CONNECTED
@@ -164,8 +177,8 @@ class IPCClient:
 
             logger.info(f"Connected to Blender (session: {self.session_id})")
 
-            # Start receiver thread
-            if not self._running:
+            # Start receiver thread if needed (e.g. after reconnect).
+            if self._receiver_thread is None or not self._receiver_thread.is_alive():
                 self._running = True
                 self._receiver_thread = threading.Thread(
                     target=self._receiver_loop, daemon=True
@@ -199,7 +212,7 @@ class IPCClient:
                 pass
             self.socket = None
 
-        if self._receiver_thread:
+        if self._receiver_thread and self._receiver_thread is not threading.current_thread():
             self._receiver_thread.join(timeout=5)
         self._receiver_thread = None
 
@@ -223,22 +236,38 @@ class IPCClient:
         else:
             self.reconnect_attempts += 1
 
+    def register_channel_handler(
+        self, channel: str, handler: ClientChannelHandler
+    ):
+        """Register a request handler.
+
+        Args:
+            channel: Channel name.
+            handler: Callable that accepts (request: RequestMessage) -> Any
+        """
+        if channel in self.channel_handlers:
+            raise ValueError(
+                f"Handler already registered for channel: {channel}"
+            )
+        self.channel_handlers[channel] = handler
+        logger.debug(f"Registered handler for channel: {channel}")
+
     def send_request(
         self,
+        channel: str,
         method: str,
         params: dict[str, Any] | None = None,
         timeout_sec: float = 30.0,
         callback: Callable[[bool, Any, str | None], None] | None = None,
-        idempotency_key: str | None = None,
     ) -> str:
         """Send an async request to Blender.
 
         Args:
-            method: Method name to call in Blender
-            params: Parameters for the method
-            timeout_sec: Request timeout in seconds
-            callback: Optional callback(ok, result, error_msg)
-            idempotency_key: For request deduplication
+            channel: Channel to which the method belongs.
+            method: Method name to call in Blender.
+            params: Parameters for the method.
+            timeout_sec: Request timeout in seconds.
+            callback: Optional callback(ok, result, error_msg).
 
         Returns:
             Request ID
@@ -252,13 +281,12 @@ class IPCClient:
         if params is None:
             params = {}
 
-        request_id = str(uuid.uuid4())
+        request_id = uuid.uuid4().hex
         req = RequestMessage(
+            channel=channel,
             method=method,
             params=params,
             request_id=request_id,
-            timeout_sec=timeout_sec,
-            idempotency_key=idempotency_key,
         )
 
         with self._lock:
@@ -266,7 +294,6 @@ class IPCClient:
                 request_id=request_id,
                 method=method,
                 timeout_sec=timeout_sec,
-                idempotency_key=idempotency_key,
             )
             if callback:
                 self.response_callbacks[request_id] = callback
@@ -286,6 +313,7 @@ class IPCClient:
 
     def send_request_wait(
         self,
+        channel: str,
         method: str,
         params: dict[str, Any] | None = None,
         timeout_sec: float = 30.0,
@@ -293,6 +321,7 @@ class IPCClient:
         """Send a request and wait for response (blocking).
 
         Args:
+            channel: Channel name
             method: Method name
             params: Parameters
             timeout_sec: Timeout in seconds
@@ -301,52 +330,32 @@ class IPCClient:
             (success, result, error_msg)
         """
         done_event = threading.Event()
-        result_holder = {"ok": False, "result": None, "error": None}
+        result_holder = RequestWaitData()
 
         def callback(ok, result, error):
-            result_holder["ok"] = ok
-            result_holder["result"] = result
-            result_holder["error"] = error
+            result_holder.ok = ok
+            result_holder.result = result
+            result_holder.error = error
             done_event.set()
 
         self.send_request(
+            channel=channel,
             method=method,
             params=params,
             timeout_sec=timeout_sec,
             callback=callback,
         )
 
-        if done_event.wait(timeout=timeout_sec + 5):
-            return (
-                result_holder["ok"],
-                result_holder["result"],
-                result_holder["error"],
-            )
-        else:
-            return False, None, "Request timeout"
+        if not done_event.wait(timeout=timeout_sec + 5):
+            result_holder.ok = False
+            result_holder.result = None
+            result_holder.error = "Request timeout"
 
-    def subscribe(self, topic: str, callback: Callable[[dict[str, Any]], None]):
-        """Subscribe to an event topic.
-
-        Args:
-            topic: Event topic name
-            callback: Called when event is received
-        """
-        with self._lock:
-            if topic not in self.event_subscribers:
-                self.event_subscribers[topic] = []
-            self.event_subscribers[topic].append(callback)
-
-        logger.debug(f"Subscribed to event: {topic}")
-
-    def unsubscribe(self, topic: str, callback: Callable):
-        """Unsubscribe from an event topic."""
-        with self._lock:
-            if topic in self.event_subscribers:
-                try:
-                    self.event_subscribers[topic].remove(callback)
-                except ValueError:
-                    pass
+        return (
+            result_holder.ok,
+            result_holder.result,
+            result_holder.error,
+        )
 
     def get_state(self) -> str:
         """Get current connection state."""
@@ -365,72 +374,64 @@ class IPCClient:
         if not self.socket:
             raise RuntimeError("Not connected")
 
-        json_str = msg.to_json()
-        self.socket.sendall((json_str + "\n").encode("utf-8"))
+        self.socket.sendall(msg.to_bytes())
         self.last_heartbeat = time.time()
 
-    def _receive_line(self) -> str | None:
-        """Receive a single line of JSON."""
+    def _receive_msg(self) -> Message | None:
         if not self.socket:
             return None
 
-        while True:
-            if b"\n" in self._recv_buffer:
-                line, self._recv_buffer = self._recv_buffer.split(b"\n", 1)
-                return line.decode("utf-8").strip()
-            try:
-                chunk = self.socket.recv(4096)
-                if not chunk:
-                    return None
-                self._recv_buffer += chunk
-            except socket.timeout:
-                raise
+        return read_message_from_socket(self.socket)
 
     def _receiver_loop(self):
         """Receive and process messages (runs in background thread)."""
-        while self._running and self.connected:
-            try:
-                if not self.socket:
-                    break
+        try:
+            while self._running and self.connected:
+                try:
+                    if not self.socket:
+                        break
 
-                self.socket.settimeout(5.0)
-                msg_json = self._receive_line()
+                    self.socket.settimeout(5.0)
+                    msg = self._receive_msg()
 
-                if not msg_json:
-                    logger.info("Blender disconnected")
+                    if msg is None:
+                        logger.info("Blender disconnected")
+                        self.connected = False
+                        self.state = ConnectionState.DISCONNECTED
+                        break
+
+                    self._handle_message(msg)
+
+                except socket.timeout:
+                    # Check for pending request timeouts
+                    self._check_request_timeouts()
+
+                    # Check heartbeat (detect Blender busy)
+                    if time.time() - self.last_heartbeat > 60:
+                        if self.state != ConnectionState.BLENDER_BUSY:
+                            logger.warning("Blender unresponsive for 60s, marking busy")
+                            self.state = ConnectionState.BLENDER_BUSY
+                            self.blender_unresponsive_since = time.time()
+                    continue
+
+                except Exception as e:
+                    if self._running:
+                        logger.error(f"Receiver loop error: {e}", exc_info=True)
                     self.connected = False
                     self.state = ConnectionState.DISCONNECTED
                     break
-
-                msg = parse_message(msg_json)
-                self._handle_message(msg)
-
-            except socket.timeout:
-                # Check for pending request timeouts
-                self._check_request_timeouts()
-
-                # Check heartbeat (detect Blender busy)
-                if time.time() - self.last_heartbeat > 60:
-                    if self.state != ConnectionState.BLENDER_BUSY:
-                        logger.warning("Blender unresponsive for 60s, marking busy")
-                        self.state = ConnectionState.BLENDER_BUSY
-                        self.blender_unresponsive_since = time.time()
-                continue
-
-            except Exception as e:
-                if self._running:
-                    logger.error(f"Receiver loop error: {e}")
-                self.connected = False
-                self.state = ConnectionState.DISCONNECTED
-                break
+        finally:
+            # Ensure reconnect can spawn a fresh receiver thread.
+            self._running = False
+            self._receiver_thread = None
 
     def _handle_message(self, msg: Message):
         """Handle incoming message."""
         try:
-            if msg.type == MessageType.RESPONSE:
+            if msg.type == MessageType.REQUEST:
+                self._handle_request(msg)
+            elif msg.type == MessageType.RESPONSE:
                 self._handle_response(msg)
-            elif msg.type == MessageType.EVENT:
-                self._handle_event(msg)
             elif msg.type == MessageType.PING:
                 self._send_message(PongMessage())
             elif msg.type == MessageType.PONG:
@@ -446,12 +447,26 @@ class IPCClient:
         except Exception as e:
             logger.error(f"Error handling message: {e}")
 
+    def _handle_request(self, req: RequestMessage):
+        """Handle incoming request message."""
+        channel = req.channel
+        handler = self.channel_handlers.get(channel)
+
+        if not handler:
+            logger.warning(f"No handler registered for channel: {channel}")
+            return
+
+        try:
+            handler(self, req)
+        except Exception as e:
+            logger.error(f"Error in request handler for channel {channel}: {e}")
+
     def _handle_response(self, resp: ResponseMessage):
         """Handle response message."""
-        request_id = resp.data.get("id")
-        ok = resp.data.get("ok", False)
-        result = resp.data.get("result")
-        error = resp.data.get("error")
+        request_id = resp.request_id
+        ok = resp.ok
+        result = resp.result
+        error = resp.error
 
         logger.debug(f"Response for request {request_id}: ok={ok}")
 
@@ -464,22 +479,6 @@ class IPCClient:
                 callback(ok, result, error)
             except Exception as e:
                 logger.error(f"Error in response callback: {e}")
-
-    def _handle_event(self, event: EventMessage):
-        """Handle event message."""
-        topic = event.data.get("topic")
-        payload = event.data.get("payload", {})
-
-        logger.debug(f"Event received: {topic}")
-
-        with self._lock:
-            subscribers = self.event_subscribers.get(topic, [])
-
-        for callback in subscribers:
-            try:
-                callback(payload)
-            except Exception as e:
-                logger.error(f"Error in event subscriber: {e}")
 
     def _check_request_timeouts(self):
         """Check for expired requests and invoke callbacks."""

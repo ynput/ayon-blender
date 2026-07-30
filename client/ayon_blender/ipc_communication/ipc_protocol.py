@@ -11,206 +11,264 @@ Protocol is JSON-based with message types:
 - event: Event published by Blender
 - ping/pong: Keep-alive
 """
+from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, Dict, Optional
+import struct
+from typing import Any
 from enum import Enum
 
 
-class MessageType(str, Enum):
+class MessageType(int, Enum):
     """Message types in the IPC protocol."""
-    HELLO = "hello"
-    HELLO_ACK = "hello_ack"
-    REQUEST = "request"
-    RESPONSE = "response"
-    EVENT = "event"
-    PING = "ping"
-    PONG = "pong"
-    ERROR = "error"
+    HELLO = 1
+    HELLO_ACK = 2
+    PING = 3
+    PONG = 4
+    ERROR = 5
+    REQUEST = 6
+    RESPONSE = 7
+
+    @classmethod
+    def from_socket(cls, socket) -> MessageType | None:
+        """Read the message type from a socket."""
+        msg_type_b = socket.recv(2)
+        if not msg_type_b or len(msg_type_b) != 2:
+            return None
+        if len(msg_type_b) != 2:
+            raise ValueError(
+                f"Expected 2 bytes for message type, got {len(msg_type_b)}."
+            )
+        msg_type_value = struct.unpack(">H", msg_type_b)[0]
+        return cls(msg_type_value)
 
 
 class Message:
     """Base class for IPC messages."""
 
-    def __init__(self, msg_type: MessageType, **kwargs):
+    def __init__(self, msg_type: MessageType):
         self.type = msg_type
-        self.data = kwargs
 
-    def to_json(self) -> str:
-        """Serialize message to JSON."""
-        return json.dumps({
-            "type": self.type.value,
-            **self.data
-        })
-
-    @staticmethod
-    def from_json(json_str: str) -> "Message":
-        """Deserialize message from JSON."""
-        data = json.loads(json_str)
-        msg_type = MessageType(data.pop("type"))
-        return Message(msg_type, **data)
+    def to_bytes(self) -> bytes:
+        """Serialize the message to JSON bytes."""
+        return struct.pack(">H", self.type.value)
 
 
 class HelloMessage(Message):
     """Session negotiation message."""
 
-    def __init__(self, session_token: str, version: str = "1.0", **kwargs):
-        super().__init__(
-            MessageType.HELLO,
-            session_token=session_token,
-            version=version,
-            **kwargs
+    def __init__(
+        self,
+        session_token: str,
+        version: str = "1.0",
+        session_id: str = "",
+    ):
+        super().__init__(MessageType.HELLO)
+        self.session_token = session_token
+        self.version = version
+        self.session_id = session_id
+
+    def to_bytes(self) -> bytes:
+        """Serialize the message to JSON bytes."""
+        st_bytes = self.session_token.encode(encoding="utf-8")
+        version_bytes = self.version.encode(encoding="utf-8")
+        session_id_bytes = self.session_id.encode(encoding="utf-8")
+        content = super().to_bytes()
+        content += struct.pack(
+            ">III",
+            len(st_bytes),
+            len(version_bytes),
+            len(session_id_bytes)
+        )
+        content += st_bytes + version_bytes + session_id_bytes
+        return content
+
+    @classmethod
+    def from_socket(cls, socket):
+        """Deserialize the message from JSON bytes."""
+
+        st_len, version_len, session_id_len = struct.unpack(
+            ">III", socket.recv(12)
+        )
+        session_token_b = socket.recv(st_len)
+        version_b = socket.recv(version_len)
+        session_id_b = socket.recv(session_id_len)
+
+        return cls(
+            session_token_b.decode(encoding="utf-8"),
+            version_b.decode(encoding="utf-8"),
+            session_id_b.decode(encoding="utf-8"),
         )
 
 
 class HelloAckMessage(Message):
     """Acknowledgement of session."""
 
-    def __init__(self, session_id: str, **kwargs):
-        super().__init__(
-            MessageType.HELLO_ACK,
-            session_id=session_id,
-            **kwargs
-        )
+    def __init__(self, session_id: str):
+        super().__init__(MessageType.HELLO_ACK)
+        self.session_id = session_id
+
+    def to_bytes(self) -> bytes:
+        """Serialize the message to JSON bytes."""
+        session_id_b = self.session_id.encode(encoding="utf-8")
+        content = super().to_bytes()
+        content += struct.pack(">I", len(session_id_b)) + session_id_b
+        return content
+
+    @classmethod
+    def from_socket(cls, socket):
+        """Deserialize the message from JSON bytes."""
+
+        sid_len = struct.unpack(">I", socket.recv(4))[0]
+        session_id_b = socket.recv(sid_len)
+
+        return cls(session_id_b.decode(encoding="utf-8"))
 
 
-class RequestMessage(Message):
+class JsonMessage(Message):
+    def to_data(self) -> dict[str, Any]:
+        raise NotImplementedError("Subclasses must implement to_data method.")
+
+    def to_bytes(self) -> bytes:
+        """Serialize the message to JSON bytes."""
+        content = super().to_bytes()
+        data = self.to_data()
+        json_value = json.dumps(data).encode(encoding="utf-8")
+        content += struct.pack(">Q", len(json_value)) + json_value
+
+        return content
+
+    @classmethod
+    def from_socket(cls, socket):
+        """Deserialize the message from JSON bytes."""
+        json_len = struct.unpack(">Q", socket.recv(8))[0]
+        json_value = socket.recv(json_len)
+        data = json.loads(json_value.decode(encoding="utf-8"))
+
+        return cls(**data)
+
+
+class RequestMessage(JsonMessage):
     """Request message from client to Blender."""
 
     def __init__(
         self,
+        channel: str,
         method: str,
-        params: Optional[Dict[str, Any]] = None,
-        request_id: Optional[str] = None,
-        idempotency_key: Optional[str] = None,
-        timeout_sec: float = 30.0,
-        **kwargs
-    ):
+        params: dict[str, Any] | None = None,
+        request_id: str | None = None,
+    ) -> None:
         if request_id is None:
-            request_id = str(uuid.uuid4())
+            request_id = uuid.uuid4().hex
         if params is None:
             params = {}
 
-        super().__init__(
-            MessageType.REQUEST,
-            id=request_id,
-            method=method,
-            params=params,
-            idempotency_key=idempotency_key,
-            timeout_sec=timeout_sec,
-            **kwargs
-        )
+        self.id: str = request_id
+        self.channel: str = channel
+        self.method: str = method
+        self.params: dict[str, Any] = params
+
+        super().__init__(MessageType.REQUEST)
+
+    def to_data(self) -> dict[str, Any]:
+        """Serialize the message to JSON bytes."""
+        return {
+            "request_id": self.id,
+            "channel": self.channel,
+            "method": self.method,
+            "params": self.params,
+        }
 
 
-class ResponseMessage(Message):
+class ResponseMessage(JsonMessage):
     """Response message from Blender to client."""
 
     def __init__(
         self,
         request_id: str,
         ok: bool = True,
-        result: Optional[Any] = None,
-        error: Optional[str] = None,
-        **kwargs
+        result: Any = None,
+        error: str | None = None,
     ):
-        super().__init__(
-            MessageType.RESPONSE,
-            id=request_id,
-            ok=ok,
-            result=result,
-            error=error,
-            **kwargs
-        )
+        self.request_id = request_id
+        self.ok = ok
+        self.result = result
+        self.error = error
 
+        super().__init__(MessageType.RESPONSE)
 
-class EventMessage(Message):
-    """Event published by Blender."""
-
-    def __init__(
-        self,
-        topic: str,
-        payload: Optional[Dict[str, Any]] = None,
-        **kwargs
-    ):
-        if payload is None:
-            payload = {}
-
-        super().__init__(
-            MessageType.EVENT,
-            topic=topic,
-            payload=payload,
-            **kwargs
-        )
+    def to_data(self) -> dict[str, Any]:
+        """Serialize the message to JSON bytes."""
+        return {
+            "request_id": self.request_id,
+            "ok": self.ok,
+            "result": self.result,
+            "error": self.error,
+        }
 
 
 class PingMessage(Message):
     """Keep-alive ping message."""
 
-    def __init__(self, **kwargs):
-        super().__init__(MessageType.PING, **kwargs)
+    def __init__(self):
+        super().__init__(MessageType.PING)
 
 
 class PongMessage(Message):
     """Keep-alive pong message."""
 
-    def __init__(self, **kwargs):
-        super().__init__(MessageType.PONG, **kwargs)
+    def __init__(self):
+        super().__init__(MessageType.PONG)
 
 
 class ErrorMessage(Message):
     """Error message."""
 
-    def __init__(self, error: str, **kwargs):
-        super().__init__(MessageType.ERROR, error=error, **kwargs)
+    def __init__(self, error: str):
+        super().__init__(MessageType.ERROR)
+        self.error = error
+
+    def to_bytes(self) -> bytes:
+        """Serialize the message to JSON bytes."""
+        error_bytes = self.error.encode(encoding="utf-8")
+        content = super().to_bytes()
+        content += struct.pack(">I", len(error_bytes)) + error_bytes
+        return content
+
+    @classmethod
+    def from_socket(cls, socket):
+        """Deserialize the message from JSON bytes."""
+        error_len = struct.unpack(">I", socket.recv(4))[0]
+        error_b = socket.recv(error_len)
+        return cls(error_b.decode(encoding="utf-8"))
 
 
-def parse_message(json_str: str) -> Message:
-    """Parse incoming JSON message and return appropriate message object."""
-    try:
-        data = json.loads(json_str)
-        msg_type = MessageType(data.pop("type"))
+def read_message_from_socket(socket) -> Message | None:
+    """Read a message from a stream and return the appropriate message object."""
+    msg_type = MessageType.from_socket(socket)
+    if msg_type is None:
+        return None
 
-        if msg_type == MessageType.HELLO:
-            return HelloMessage(
-                session_token=data.pop("session_token"),
-                version=data.pop("version", "1.0"),
-                **data
-            )
-        elif msg_type == MessageType.HELLO_ACK:
-            return HelloAckMessage(session_id=data.pop("session_id"), **data)
-        elif msg_type == MessageType.REQUEST:
-            return RequestMessage(
-                method=data.pop("method"),
-                params=data.pop("params", {}),
-                request_id=data.pop("id", None),
-                idempotency_key=data.pop("idempotency_key", None),
-                timeout_sec=data.pop("timeout_sec", 30.0),
-                **data
-            )
-        elif msg_type == MessageType.RESPONSE:
-            return ResponseMessage(
-                request_id=data.pop("id"),
-                ok=data.pop("ok", True),
-                result=data.pop("result", None),
-                error=data.pop("error", None),
-                **data
-            )
-        elif msg_type == MessageType.EVENT:
-            return EventMessage(
-                topic=data.pop("topic"),
-                payload=data.pop("payload", {}),
-                **data
-            )
-        elif msg_type == MessageType.PING:
-            return PingMessage(**data)
-        elif msg_type == MessageType.PONG:
-            return PongMessage(**data)
-        elif msg_type == MessageType.ERROR:
-            return ErrorMessage(error=data.pop("error"), **data)
-        else:
-            return Message(msg_type, **data)
+    if msg_type == MessageType.PING:
+        return PingMessage()
 
-    except (json.JSONDecodeError, KeyError, ValueError) as e:
-        raise ValueError(f"Failed to parse message: {e}")
+    if msg_type == MessageType.PONG:
+        return PongMessage()
 
+    if msg_type == MessageType.HELLO:
+        return HelloMessage.from_socket(socket)
+
+    if msg_type == MessageType.HELLO_ACK:
+        return HelloAckMessage.from_socket(socket)
+
+    if msg_type == MessageType.REQUEST:
+        return RequestMessage.from_socket(socket)
+
+    if msg_type == MessageType.RESPONSE:
+        return ResponseMessage.from_socket(socket)
+
+    if msg_type == MessageType.ERROR:
+        return ErrorMessage.from_socket(socket)
+
+    raise ValueError(f"Unknown message type: {msg_type}")
