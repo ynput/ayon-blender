@@ -47,7 +47,8 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             return
 
         if req.method == "emit_event":
-            self.emit_event(**req.params)
+            execute_in_main_thread(self.emit_event, **req.params)
+            return
 
     def _show_window(self):
         if self.window is None:
