@@ -21,6 +21,8 @@ from enum import Enum
 
 from .json_encoding import DataEncoder, DataDecoder
 
+MAX_PAGE_SIZE, = struct.unpack(">Q", b'\xff\xff\xff\xff\xff\xff\xff\xff')
+
 
 class MessageType(int, Enum):
     """Message types in the IPC protocol."""
@@ -139,18 +141,31 @@ class JsonMessage(Message):
         json_value = json.dumps(
             data, cls=DataEncoder
         ).encode(encoding="utf-8")
-        content += struct.pack(">Q", len(json_value)) + json_value
+
+        pages = []
+        while len(json_value) > MAX_PAGE_SIZE:
+            pages.append(json_value[:MAX_PAGE_SIZE])
+            json_value = json_value[MAX_PAGE_SIZE:]
+
+        if json_value:
+            pages.append(json_value)
+
+        content += struct.pack(">Q", len(pages))
+        for page in pages:
+            content += struct.pack(">Q", len(page)) + page
 
         return content
 
     @classmethod
     def from_socket(cls, socket):
         """Deserialize the message from JSON bytes."""
-        json_len = struct.unpack(">Q", socket.recv(8))[0]
-        json_value = socket.recv(json_len)
-        data = json.loads(
-            json_value.decode(encoding="utf-8"), cls=DataDecoder
-        )
+        pages_len, = struct.unpack(">Q", socket.recv(8))
+        json_value = b""
+        for _ in range(pages_len):
+            page_len, = struct.unpack(">Q", socket.recv(8))
+            json_value += socket.recv(page_len)
+        json_str = json_value.decode(encoding="utf-8")
+        data = json.loads(json_str, cls=DataDecoder)
         return cls(**data)
 
 
