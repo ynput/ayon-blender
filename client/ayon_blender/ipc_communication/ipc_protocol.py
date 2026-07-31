@@ -19,6 +19,8 @@ import struct
 from typing import Any
 from enum import Enum
 
+from .json_encoding import DataEncoder, DataDecoder
+
 
 class MessageType(int, Enum):
     """Message types in the IPC protocol."""
@@ -134,7 +136,9 @@ class JsonMessage(Message):
         """Serialize the message to JSON bytes."""
         content = super().to_bytes()
         data = self.to_data()
-        json_value = json.dumps(data).encode(encoding="utf-8")
+        json_value = json.dumps(
+            data, cls=DataEncoder
+        ).encode(encoding="utf-8")
         content += struct.pack(">Q", len(json_value)) + json_value
 
         return content
@@ -144,7 +148,10 @@ class JsonMessage(Message):
         """Deserialize the message from JSON bytes."""
         json_len = struct.unpack(">Q", socket.recv(8))[0]
         json_value = socket.recv(json_len)
-        data = json.loads(json_value.decode(encoding="utf-8"))
+        data = json.loads(
+            json_value.decode(encoding="utf-8"), cls=DataDecoder
+        )
+        print(data)
 
         return cls(**data)
 

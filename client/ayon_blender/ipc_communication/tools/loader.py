@@ -192,42 +192,30 @@ class BlenderLoaderFrontend(FrontendLoaderController):
     def get_project_items(
         self, sender: str | None = None
     ) -> list[ProjectItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_project_items",
             {"sender": sender},
             True
         )
-        return [
-            ProjectItem.from_data(item)
-            for item in items
-        ]
 
     def get_project_status_items(
         self, project_name: str | None
     ) -> list[StatusItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_project_status_items",
             {"project_name": project_name},
             True
         )
-        return [
-            StatusItem.from_data(item)
-            for item in items
-        ]
 
     def get_product_type_icons_mapping(
         self,
         project_name: str,
         sender: str | None = None
     ) -> ProductTypeIconMapping:
-        mapping = self._trigger_method(
+        return self._trigger_method(
             "get_product_type_icons_mapping",
             {"project_name": project_name, "sender": sender},
             True
-        )
-        return ProductTypeIconMapping(
-            mapping["default"],
-            mapping["definitions"],
         )
 
     def get_project_settings(self, project_name: str | None) -> dict[str, Any]:
@@ -238,28 +226,20 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         )
 
     def get_project_anatomy_tags(self, project_name: str) -> list[TagItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_project_anatomy_tags",
             {"project_name": project_name},
             True
         )
-        return [
-            TagItem(name=item["name"], color=item["color"])
-            for item in items
-        ]
 
     def get_folder_type_items(
         self, project_name: str, sender: str | None = None
     ) -> list[FolderTypeItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_folder_type_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return [
-            FolderTypeItem.from_data(item)
-            for item in items
-        ]
 
     def get_folder_items(
         self, project_name: str, sender: str | None = None
@@ -276,32 +256,24 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         folder_ids: set[str],
         sender: str | None = None,
     ) -> list[TaskItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_task_items",
             {
                 "project_name": project_name,
-                "folder_ids": list(folder_ids),
+                "folder_ids": folder_ids,
                 "sender": sender
             },
             True
         )
-        return [
-            TaskItem.from_data(item)
-            for item in items
-        ]
 
     def get_task_type_items(
         self, project_name: str, sender: str | None = None
     ) -> list[TaskTypeItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_task_type_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return [
-            TaskTypeItem.from_data(item)
-            for item in items
-        ]
 
     def get_folder_labels(
         self, project_name: str, folder_ids: set[str]
@@ -310,7 +282,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "get_folder_labels",
             {
                 "project_name": project_name,
-                "folder_ids": list(folder_ids),
+                "folder_ids": folder_ids,
             },
             True
         )
@@ -343,24 +315,20 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         folder_ids: set[str],
         sender: str | None = None,
     ) -> list[ProductItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_product_items",
             {
                 "project_name": project_name,
-                "folder_ids": list(folder_ids),
+                "folder_ids": folder_ids,
                 "sender": sender,
             },
             True
         )
-        return [
-            ProductItem.from_data(item)
-            for item in items
-        ]
 
     def get_product_item(
         self, project_name: str, product_id: str
     ) -> ProductItem | None:
-        item = self._trigger_method(
+        return self._trigger_method(
             "get_product_item",
             {
                 "project_name": project_name,
@@ -368,22 +336,15 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             },
             True
         )
-        if item is not None:
-            return ProductItem.from_data(item)
-        return item
 
     def get_product_type_items(
         self, project_name: str
     ) -> list[ProductTypeItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_product_type_items",
             {"project_name": project_name},
             True
         )
-        return [
-            ProductTypeItem.from_data(item)
-            for item in items
-        ]
 
     def get_representation_items(
         self,
@@ -391,19 +352,15 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         version_ids: set[str],
         sender: str | None = None,
     ) -> list[RepreItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_representation_items",
             {
                 "project_name": project_name,
-                "version_ids": list(version_ids),
+                "version_ids": version_ids,
                 "sender": sender,
             },
             True
         )
-        return [
-            RepreItem.from_data(item)
-            for item in items
-        ]
 
     def get_version_thumbnail_ids(
         self, project_name: str, version_ids: set[str]
@@ -412,7 +369,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "get_version_thumbnail_ids",
             {
                 "project_name": project_name,
-                "version_ids": list(version_ids),
+                "version_ids": version_ids,
             },
             True
         )
@@ -424,7 +381,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "get_folder_thumbnail_ids",
             {
                 "project_name": project_name,
-                "folder_ids": list(folder_ids),
+                "folder_ids": folder_ids,
             },
             True
         )
@@ -439,7 +396,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "get_versions_representation_count",
             {
                 "project_name": project_name,
-                "version_ids": list(version_ids),
+                "version_ids": version_ids,
                 "sender": sender,
             },
             True
@@ -456,7 +413,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             {
                 "project_name": project_name,
                 "entity_type": entity_type,
-                "entity_ids": list(entity_ids),
+                "entity_ids": entity_ids,
             },
             True
         )
@@ -469,32 +426,32 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         )
 
     def get_selected_folder_ids(self) -> set[str]:
-        return set(self._trigger_method(
+        return self._trigger_method(
             "get_selected_folder_ids",
             {},
             True
-        ))
+        )
 
     def get_selected_task_ids(self) -> set[str]:
-        return set(self._trigger_method(
+        return self._trigger_method(
             "get_selected_task_ids",
             {},
             True
-        ))
+        )
 
     def get_selected_version_ids(self) -> set[str]:
-        return set(self._trigger_method(
+        return self._trigger_method(
             "get_selected_version_ids",
             {},
             True
-        ))
+        )
 
     def get_selected_representation_ids(self) -> set[str]:
-        return set(self._trigger_method(
+        return self._trigger_method(
             "get_selected_representation_ids",
             {},
             True
-        ))
+        )
 
     def set_selected_project(self, project_name: str | None) -> None:
         self._trigger_method(
@@ -504,28 +461,28 @@ class BlenderLoaderFrontend(FrontendLoaderController):
     def set_selected_folders(self, folder_ids: list[str]) -> None:
         self._trigger_method(
             "set_selected_folders",
-            {"folder_ids": list(folder_ids)},
+            {"folder_ids": folder_ids},
             False
         )
 
     def set_selected_tasks(self, task_ids: set[str | None]) -> None:
         self._trigger_method(
             "set_selected_tasks",
-            {"task_ids": list(task_ids)},
+            {"task_ids": task_ids},
             False
         )
 
     def set_selected_versions(self, version_ids: set[str]) -> None:
         self._trigger_method(
             "set_selected_versions",
-            {"version_ids": list(version_ids)},
+            {"version_ids": version_ids},
             False
         )
 
     def set_selected_representations(self, repre_ids: set[str]) -> None:
         self._trigger_method(
             "set_selected_representations",
-            {"repre_ids": list(repre_ids)},
+            {"repre_ids": repre_ids},
             False
         )
 
@@ -535,19 +492,15 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         entity_ids: set[str],
         entity_type: str,
     ) -> list[ActionItem]:
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_action_items",
             {
                 "project_name": project_name,
-                "entity_ids": list(entity_ids),
+                "entity_ids": entity_ids,
                 "entity_type": entity_type,
             },
             True
         )
-        return [
-            ActionItem.from_data(item)
-            for item in items
-        ]
 
     def trigger_action_item(
         self,
@@ -563,7 +516,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "trigger_action_item",
             {
                 "project_name": project_name,
-                "entity_ids": list(selected_ids),
+                "entity_ids": selected_ids,
                 "entity_type": selected_entity_type,
                 "identifier": identifier,
                 "data": data,
@@ -583,7 +536,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "change_products_group",
             {
                 "project_name": project_name,
-                "product_ids": list(product_ids),
+                "product_ids": product_ids,
                 "group_name": group_name,
             },
             False
@@ -645,7 +598,7 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "get_version_sync_availability",
             {
                 "project_name": project_name,
-                "version_ids": list(version_ids),
+                "version_ids": version_ids,
             },
             True
         )
@@ -657,16 +610,12 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             "get_representations_sync_status",
             {
                 "project_name": project_name,
-                "representation_ids": list(representation_ids),
+                "representation_ids": representation_ids,
             },
             True
         )
 
     def get_product_types_filter(self) -> ProductTypesFilter:
-        filder_def = self._trigger_method(
+        return self._trigger_method(
             "get_product_types_filter", {}, True
-        )
-        return ProductTypesFilter(
-            product_types=filder_def["product_types"],
-            is_allow_list=filder_def["is_allow_list"],
         )
