@@ -26,19 +26,14 @@ class BlenderPublisherBackend(PublisherController):
 
         if data is None:
             data = {}
-        super().emit_event(topic, data, source)
-
-        new_data = {}
-        for key, value in data.items():
-            if isinstance(value, set):
-                value = list(value)
-            new_data[key] = value
 
         self._ipc_server.trigger_method(
             self.channel_name,
             "emit_event",
-            {"topic": topic, "data": new_data, "source": source},
+            {"topic": topic, "data": data, "source": source},
         )
+
+        super().emit_event(topic, data, source)
 
     def _channel_handler(
         self, ipc_server: IPCServer, message: RequestMessage
@@ -55,6 +50,15 @@ class BlenderPublisherBackend(PublisherController):
 
         func = getattr(self, method_name)
         if method_name in (
+            "save_changes",
+            "create",
+            "trigger_convertor_items",
+        ):
+            item = execute_in_main_thread(func, **message.params)
+            item.wait()
+            return item.result
+
+        if method_name in (
             "set_instances_context_info",
             "set_instances_active_state",
             "set_instances_create_attr_values",
@@ -64,10 +68,7 @@ class BlenderPublisherBackend(PublisherController):
             "trigger_pre_create_button_callback",
             "trigger_create_button_callback",
             "trigger_publish_button_callback",
-            "create",
-            "trigger_convertor_items",
             "remove_instances",
-            "save_changes",
             "publish",
             "validate",
             "stop_publish",
@@ -77,3 +78,14 @@ class BlenderPublisherBackend(PublisherController):
             return None
 
         return func(**message.params)
+
+    def _start_publish(self, up_validation):
+        self._publish_model.set_publish_up_validation(up_validation)
+        self._publish_model.start_publish(wait=False)
+        execute_in_main_thread(self._next_process)
+
+    def _next_process(self):
+        if self._publish_model.is_running():
+            func = self._publish_model.get_next_process_func()
+            func()
+            execute_in_main_thread(self._next_process)

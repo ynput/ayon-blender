@@ -513,7 +513,7 @@ class BlenderPublisherFrontend(AbstractPublisherFrontend):
 
     def _handle_request(self, req: RequestMessage):
         if req.method == "show":
-            execute_in_main_thread(self._show_window)
+            execute_in_main_thread(self._show_window, **req.params)
 
         elif req.method == "emit_event":
             execute_in_main_thread(self.emit_event, **req.params)
