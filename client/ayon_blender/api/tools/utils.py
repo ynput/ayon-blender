@@ -15,3 +15,17 @@ def get_ui_process_script_path() -> Path:
 
     """
     return SRIPT_PATH
+
+
+def show_message(title: str, message: str, level: str = "warning") -> None:
+    # TODO implement
+    print("DEV WARNING Missing implementation: 'show_message'")
+    # from ayon_core.tools.utils import show_message_dialog
+    # from .ops import BlenderApplication
+    #
+    # BlenderApplication.get_app()
+    #
+    # show_message_dialog(
+    #     title=title,
+    #     message=message,
+    #     level="warning")

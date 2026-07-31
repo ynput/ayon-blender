@@ -37,6 +37,7 @@ from ayon_core.lib import (
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
 
+from .tools import show_message
 from .workio import OpenFileCacher
 from . import lib
 from . import ops
@@ -223,29 +224,6 @@ def uninstall():
     if not IS_HEADLESS:
         ops.unregister()
 
-
-def show_message(title, message):
-    from ayon_core.tools.utils import show_message_dialog
-    from .ops import BlenderApplication
-
-    BlenderApplication.get_app()
-
-    show_message_dialog(
-        title=title,
-        message=message,
-        level="warning")
-
-
-def message_window(title, message):
-    from .ops import (
-        MainThreadItem,
-        execute_in_main_thread,
-        _process_app_events
-    )
-
-    mti = MainThreadItem(show_message, title, message)
-    execute_in_main_thread(mti)
-    _process_app_events()
 
 
 def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
@@ -465,9 +443,10 @@ def on_open():
         if unit_scale != prev_unit_scale:
             bpy.context.scene.unit_settings.scale_length = unit_scale
 
-            message_window(
+            show_message(
                 "Base file unit scale changed",
-                "Base file unit scale changed to match the project settings.")
+                "Base file unit scale changed to match the project settings."
+            )
 
 
 def on_before_save(event):
