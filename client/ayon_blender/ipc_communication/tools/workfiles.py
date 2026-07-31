@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 import time
 import typing
 from typing import Any
@@ -23,29 +22,14 @@ from ayon_core.tools.common_models import (
     TaskTypeItem,
 )
 from ayon_core.tools.common_models.users import UserItem
-
 from ayon_core.lib.events import QueuedEventSystem
+
+from ayon_blender.ipc_communication import WaitCallback
 
 from .utils import execute_in_main_thread
 
 if typing.TYPE_CHECKING:
     from ayon_blender.ipc_communication import IPCClient, RequestMessage
-
-
-class WaitCallback:
-    def __init__(self):
-        self._event = threading.Event()
-        self.response = None
-
-    def __call__(self, response):
-        self.response = response
-        self._event.set()
-
-    def is_done(self):
-        return self._event.is_set()
-
-    def wait(self, timeout: float | None = None) -> bool:
-        return self._event.wait(timeout)
 
 
 class WorkerTask(QtCore.QObject, QtCore.QRunnable):
@@ -60,32 +44,15 @@ class WorkerTask(QtCore.QObject, QtCore.QRunnable):
         self.func(*self.args, **self.kwargs)
 
 
+# TODO validate if can be thread pool on 'BlenderWorkfilesFrontend'
 class Worker(QtCore.QObject):
     def __init__(self):
+        super().__init__()
         self._thread_pool = QtCore.QThreadPool()
         self._thread_pool.setMaxThreadCount(1)
 
     def do_task(self, task):
         self._thread_pool.start(task)
-
-    def trigger_method(self, client, channel_name, method, params, callback):
-        """Trigger method on backend in a separate thread.
-
-        Args:
-            client (IPCClient): IPC client.
-            method (str): Method name.
-            params (dict): Parameters for the method.
-            callback (Callable): Callback to call with the response.
-
-        """
-        def run():
-            client.send_request(
-                channel_name, method, params, callback=callback
-            )
-
-        task = WorkerTask(client.send_request, channel_name, method, params, callback=callback)
-        self._thread_pool.start(task)
-        return task
 
 
 class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
@@ -102,7 +69,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         self._client: IPCClient = client
         self._worker = Worker()
 
-    def _handle_request(self, client: IPCClient, req: RequestMessage):
+    def _handle_request(self, req: RequestMessage):
         if req.method == "show":
             execute_in_main_thread(self._show_window)
 
@@ -164,7 +131,9 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             raise RuntimeError(f"No response payload for '{method_name}'")
 
         if not response.ok:
-            raise RuntimeError(response.error or f"Request '{method_name}' failed")
+            raise RuntimeError(
+                response.error or f"Request '{method_name}' failed"
+            )
         return response.result
 
     def is_host_valid(self):
@@ -513,7 +482,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             dict[str, Any]: Expected selection data.
 
         """
-        self._trigger_method(
+        return self._trigger_method(
             "get_expected_selection_data", {}, True
         )
 
@@ -524,10 +493,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             folder_id (str): Folder id which was selected.
 
         """
-        self._trigger_method(
+        return self._trigger_method(
             "expected_folder_selected",
             {"folder_id": folder_id},
-            False
+            True
         )
 
     def expected_task_selected(self, folder_id, task_name):
@@ -538,10 +507,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             task_name (str): Task name which was selected.
 
         """
-        self._trigger_method(
+        return self._trigger_method(
             "expected_task_selected",
             {"folder_id": folder_id, "task_name": task_name},
-            False
+            True
         )
 
     def expected_representation_selected(
@@ -555,14 +524,14 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             representation_id (str): Representation id which was selected.
 
         """
-        self._trigger_method(
+        return self._trigger_method(
             "expected_representation_selected",
             {
                 "folder_id": folder_id,
                 "task_name": task_name,
                 "representation_id": representation_id
             },
-            False
+            True
         )
 
     def expected_workfile_selected(self, folder_id, task_name, workfile_name):
@@ -574,14 +543,14 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             workfile_name (str): Workfile filename which was selected.
 
         """
-        self._trigger_method(
+        return self._trigger_method(
             "expected_workfile_selected",
             {
                 "folder_id": folder_id,
                 "task_name": task_name,
                 "workfile_name": workfile_name
             },
-            False
+            True
         )
 
     def go_to_current_context(self):

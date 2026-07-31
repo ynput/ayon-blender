@@ -160,8 +160,11 @@ class IPCServer:
                 for client in list(self.clients.values()):
                     try:
                         client.send_message(request)
-                    except Exception as e:
-                        logger.warning(f"Failed to send event to client: {e}")
+                    except Exception:
+                        logger.warning(
+                            f"Failed to send event to client",
+                            exc_info=True
+                        )
                 processed = True
 
         return processed
@@ -312,7 +315,7 @@ class IPCClientConnection:
             try:
                 self._send_message(response)
             except Exception as e:
-                logger.error(f"Failed to send response: {e}")
+                logger.error(f"Failed to send response", exc_info=True)
         except Exception as e:
             logger.error(
                 f"Handler error for {req.channel} {req.method}",
@@ -327,7 +330,7 @@ class IPCClientConnection:
                     error=str(e),
                 ))
             except Exception as e:
-                logger.error(f"Failed to send response: {e}")
+                logger.error(f"Failed to send response", exc_info=True)
 
     def _send_message(self, msg: Message):
         """Send message to client."""

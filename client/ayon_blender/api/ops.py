@@ -1,6 +1,7 @@
 """Blender operators and menus for use with AYON."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 import os
 import time
 import subprocess
@@ -16,7 +17,8 @@ from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import (
     get_current_folder_path,
     get_current_task_name,
-    get_current_project_name
+    get_current_project_name,
+    registered_host,
 )
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity,
@@ -25,7 +27,11 @@ from ayon_core.pipeline.context_tools import (
 
 from ayon_blender.ipc_communication import IPCServer
 
-from .ui_tools import BlenderWorkfilesController, get_ui_process_script_path
+from .ui_tools import (
+    get_ui_process_script_path,
+    BlenderLoaderBackend,
+    BlenderWorkfilesBackend,
+)
 from .execution import process_main_thread_callbacks
 from . import pipeline
 from . import render_lib
@@ -36,17 +42,28 @@ PREVIEW_COLLECTIONS: Dict = dict()
 TIMER_INTERVAL: float = 0.01
 
 
+@dataclass
+class _ToolBackends:
+    workfiles_backend: BlenderWorkfilesBackend
+    loader_backend: BlenderLoaderBackend
+
+
 # IPC and external UI process management
 class _IPCConnection:
     server: IPCServer | None = None
     ui_process: subprocess.Popen | None = None
-    workfiles_controller: BlenderWorkfilesController | None = None
+    ui_backends: _ToolBackends | None = None
 
 
-def _init_tool_controllers():
+def _init_tool_controllers() -> _ToolBackends:
     """Initialize tool controllers for IPC communication."""
-    if _IPCConnection.workfiles_controller is None:
-        _IPCConnection.workfiles_controller = BlenderWorkfilesController()
+    if _IPCConnection.ui_backends is None:
+        host = registered_host()
+        _IPCConnection.ui_backends = _ToolBackends(
+            workfiles_backend=BlenderWorkfilesBackend(host),
+            loader_backend=BlenderLoaderBackend(host),
+        )
+    return _IPCConnection.ui_backends
 
 
 def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> subprocess.Popen:
@@ -149,8 +166,9 @@ def _ensure_external_ui_process():
 
 def _register_ipc_handlers(server: IPCServer):
     """Register request handlers for IPC server."""
-    _init_tool_controllers()
-    _IPCConnection.workfiles_controller.register_ipc_handler(server)
+    tool_backends = _init_tool_controllers()
+    tool_backends.workfiles_backend.register_ipc_handler(server)
+    tool_backends.loader_backend.register_ipc_handler(server)
 
 
 def _shutdown_ipc_server() -> None:

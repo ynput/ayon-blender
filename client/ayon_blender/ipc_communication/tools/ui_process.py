@@ -10,6 +10,7 @@ import psutil
 from ayon_blender.ipc_communication import IPCClient
 from ayon_blender.ipc_communication.tools import (
     BlenderWorkfilesFrontend,
+    BlenderLoaderFrontend,
     start_main_thread_helper,
     execute_in_main_thread,
 )
@@ -48,6 +49,7 @@ def main():
 
     start_main_thread_helper()
     _workfiles = BlenderWorkfilesFrontend(ipc)
+    _loader = BlenderLoaderFrontend(ipc)
 
     # Keep the process alive and attempt reconnection if Blender restarts.
     def _tick():

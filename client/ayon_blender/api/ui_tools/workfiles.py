@@ -6,7 +6,7 @@ from ayon_blender.ipc_communication import IPCServer, RequestMessage
 from ayon_blender.api.execution import execute_in_main_thread
 
 
-class BlenderWorkfilesController(BaseWorkfileController):
+class BlenderWorkfilesBackend(BaseWorkfileController):
     channel_name = "workfiles"
 
     def __init__(self, *args, **kwargs):
@@ -28,12 +28,11 @@ class BlenderWorkfilesController(BaseWorkfileController):
         if data is None:
             data = {}
         self.event_system.emit(topic, data, source)
-        if self._ipc_server is not None:
-            self._ipc_server.trigger_method(
-                self.channel_name,
-                "emit_event",
-                {"topic": topic, "data": data, "source": source},
-            )
+        self._ipc_server.trigger_method(
+            self.channel_name,
+            "emit_event",
+            {"topic": topic, "data": data, "source": source},
+        )
 
     def _channel_handler(
         self, ipc_server: IPCServer, message: RequestMessage
@@ -58,6 +57,8 @@ class BlenderWorkfilesController(BaseWorkfileController):
             return None
 
         output = func(**message.params)
+        if output is None:
+            return None
 
         if method_name == "get_folder_items":
             return {

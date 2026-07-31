@@ -30,7 +30,23 @@ from ayon_blender.ipc_communication.ipc_protocol import (
 
 logger = logging.getLogger(__name__)
 
-ClientChannelHandler = Callable[["IPCClient", RequestMessage], Any]
+ClientChannelHandler = Callable[[RequestMessage], Any]
+
+
+class WaitCallback:
+    def __init__(self):
+        self._event = threading.Event()
+        self.response: ResponseMessage | None = None
+
+    def __call__(self, response: ResponseMessage) -> None:
+        self.response = response
+        self._event.set()
+
+    def is_done(self) -> bool:
+        return self._event.is_set()
+
+    def wait(self, timeout: float | None = None) -> bool:
+        return self._event.wait(timeout)
 
 
 class ConnectionState:
@@ -161,11 +177,9 @@ class IPCClient:
             # Receive HELLO_ACK
             msg = self._receive_msg()
             if msg is None:
-                print("No HELLO_ACK received")
                 raise RuntimeError("No HELLO_ACK received")
 
             if msg.type != MessageType.HELLO_ACK:
-                print(f"Expected HELLO_ACK, got {msg.type}")
                 raise RuntimeError(f"Expected HELLO_ACK, got {msg.type}")
 
             self.connected = True
@@ -307,7 +321,7 @@ class IPCClient:
             logger.debug(f"Sent request {request_id}: {method}")
             return request_id
         except Exception as e:
-            logger.error(f"Failed to send request: {e}")
+            logger.error(f"Failed to send request", exc_info=True)
             with self._lock:
                 self.pending_requests.pop(request_id, None)
             if callback is not None:
@@ -339,12 +353,7 @@ class IPCClient:
         Returns:
             ResponseMessage
         """
-        done_event = threading.Event()
-        output = {}
-        def callback(req):
-            output["_"] = req
-            print("Callback called with", req)
-            done_event.set()
+        callback = WaitCallback()
 
         request_id = self.send_request(
             channel=channel,
@@ -354,7 +363,7 @@ class IPCClient:
             callback=callback,
         )
 
-        if not done_event.wait(timeout=timeout_sec + 5):
+        if not callback.wait(timeout=timeout_sec + 5):
             return ResponseMessage(
                 ok=False,
                 result=None,
@@ -362,7 +371,7 @@ class IPCClient:
                 request_id=request_id,
             )
 
-        return output["_"]
+        return callback.response
 
     def get_state(self) -> str:
         """Get current connection state."""
@@ -447,6 +456,8 @@ class IPCClient:
                     self.state = ConnectionState.CONNECTED
                     self.blender_unresponsive_since = None
                 self.last_heartbeat = time.time()
+            elif msg.type == MessageType.ERROR:
+                self._handle_error(msg)
             else:
                 logger.warning(f"Unexpected message type: {msg.type}")
 
@@ -463,7 +474,7 @@ class IPCClient:
             return
 
         try:
-            handler(self, req)
+            handler(req)
         except Exception as e:
             logger.error(f"Error in request handler for channel {channel}: {e}")
 
