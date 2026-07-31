@@ -84,10 +84,13 @@ class BlenderLoaderFrontend(FrontendLoaderController):
             execute_in_main_thread(self.emit_event, **req.params)
 
     def _show_window(self):
-        if self._window is None:
-            self._window = LoaderWindow(controller=self)
+        if self.window is None:
+            self.window = LoaderWindow(controller=self)
+            self.window.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
 
-        self._window.show()
+        self.window.show()
+        self.window.raise_()
+        self.window.activateWindow()
 
     def _trigger_method(
         self,

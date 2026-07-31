@@ -79,8 +79,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
     def _show_window(self):
         if self.window is None:
             self.window = WorkfilesToolWindow(controller=self)
+            self.window.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
 
         self.window.show()
+        self.window.raise_()
+        self.window.activateWindow()
 
     def _trigger_method(
         self,
