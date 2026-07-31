@@ -284,7 +284,7 @@ class LaunchPublisher(LaunchToolOperator):
     bl_idname = "wm.ayon_publisher"
     bl_label = "Publish..."
     _tool_name = "publisher"
-    _params = {"tab": "publish"}
+    # _params = {"tab": "publish"}
 
     def execute(self, context):
         return super().execute(context)
