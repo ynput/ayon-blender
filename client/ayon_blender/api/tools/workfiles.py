@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 from ayon_core.tools.workfiles.control import BaseWorkfileController
 
 from ayon_blender.ipc_communication import IPCServer, RequestMessage
+from ayon_blender.api.execution import execute_in_main_thread
 
 
 class BlenderWorkfilesController(BaseWorkfileController):
@@ -49,6 +48,15 @@ class BlenderWorkfilesController(BaseWorkfileController):
             return None
 
         func = getattr(self, method_name)
+        if method_name in (
+            "open_workfile",
+            "save_as_workfile",
+            "copy_workfile_representation",
+            "duplicate_workfile",
+        ):
+            execute_in_main_thread(func, **message.params)
+            return None
+
         output = func(**message.params)
 
         if method_name == "get_folder_items":
