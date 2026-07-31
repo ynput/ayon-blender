@@ -2,17 +2,11 @@
 from __future__ import annotations
 
 import os
-import sys
-import platform
 import time
-import traceback
-import collections
 import subprocess
 import logging
 from pathlib import Path
 from typing import Dict, Optional
-
-from qtpy import QtWidgets, QtCore
 
 import bpy
 import bpy.utils.previews
@@ -28,11 +22,11 @@ from ayon_core.pipeline.context_tools import (
     get_current_task_entity,
     version_up_current_workfile
 )
-from ayon_core.style import load_stylesheet
 
 from ayon_blender.ipc_communication import IPCServer
 
 from .tools import BlenderWorkfilesController, get_ui_process_script_path
+from .execution import process_main_thread_callbacks
 from . import pipeline
 from . import render_lib
 
@@ -67,8 +61,7 @@ def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> s
     return subprocess.Popen(
         launch_args,
         env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
     )
 
 
@@ -83,14 +76,6 @@ def _is_ipc_server_healthy() -> bool:
         return False
 
     return server.server_socket is not None
-
-
-def execute_function_in_main_thread(f):
-    """Decorator to move a function call into main thread items"""
-    def wrapper(*args, **kwargs):
-        mti = MainThreadItem(f, *args, **kwargs)
-        execute_in_main_thread(mti)
-    return wrapper
 
 
 class BlenderApplication:
@@ -110,82 +95,6 @@ class BlenderApplication:
     def get_window(cls, identifier):
         print("Can't store window anymore")
         return cls.blender_windows.get(identifier)
-
-
-class MainThreadItem:
-    """Structure to store information about callback in main thread.
-
-    Item should be used to execute callback in main thread which may be needed
-    for execution of Qt objects.
-
-    Item store callback (callable variable), arguments and keyword arguments
-    for the callback. Item hold information about it's process.
-    """
-    not_set = object()
-    sleep_time = 0.1
-
-    def __init__(self, callback, *args, **kwargs):
-        self.done = False
-        self.exception = self.not_set
-        self.result = self.not_set
-        self.callback = callback
-        self.args = args
-        self.kwargs = kwargs
-
-    def execute(self):
-        """Execute callback and store its result.
-
-        Method must be called from main thread. Item is marked as `done`
-        when callback execution finished. Store output of callback of exception
-        information when callback raises one.
-        """
-        print("Executing process in main thread")
-        if self.done:
-            print("- item is already processed")
-            return
-
-        callback = self.callback
-        args = self.args
-        kwargs = self.kwargs
-        print("Running callback: {}".format(str(callback)))
-        try:
-            result = callback(*args, **kwargs)
-            self.result = result
-
-        except Exception:
-            self.exception = sys.exc_info()
-
-        finally:
-            print("Done")
-            self.done = True
-
-    def wait(self):
-        """Wait for result from main thread.
-
-        This method stops current thread until callback is executed.
-
-        Returns:
-            object: Output of callback. May be any type or object.
-
-        Raises:
-            Exception: Reraise any exception that happened during callback
-                execution.
-        """
-        while not self.done:
-            print(self.done)
-            time.sleep(self.sleep_time)
-
-        if self.exception is self.not_set:
-            return self.result
-        raise self.exception
-
-
-class GlobalClass:
-    main_thread_callbacks = collections.deque()
-
-
-def execute_in_main_thread(main_thead_item):
-    GlobalClass.main_thread_callbacks.append(main_thead_item)
 
 
 def _init_ipc_server():
@@ -286,30 +195,7 @@ def _process_app_events() -> Optional[float]:
     None, so the function is not run again and will be unregistered.
     """
     # Process main thread callbacks
-    while GlobalClass.main_thread_callbacks:
-        main_thread_item = GlobalClass.main_thread_callbacks.popleft()
-        main_thread_item.execute()
-        if main_thread_item.exception is not MainThreadItem.not_set:
-            _clc, val, tb = main_thread_item.exception
-            msg = str(val)
-            detail = "\n".join(traceback.format_exception(_clc, val, tb))
-            dialog = QtWidgets.QMessageBox(
-                QtWidgets.QMessageBox.Warning,
-                "Error",
-                msg)
-            dialog.setMinimumWidth(500)
-            dialog.setDetailedText(detail)
-            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            dialog.setStyleSheet(load_stylesheet())
-            # Ensure the dialog stays on top and is properly focused
-            dialog.setWindowFlags(
-                dialog.windowFlags() |
-                QtCore.Qt.WindowStaysOnTopHint |
-                QtCore.Qt.Dialog
-            )
-            dialog.raise_()
-            dialog.activateWindow()
-            dialog.open()
+    process_main_thread_callbacks()
 
     # Process IPC requests (send pending events to clients)
     if _IPCConnection.server:
