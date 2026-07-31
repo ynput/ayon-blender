@@ -1,7 +1,8 @@
 import json
 
 from ayon_core.lib import IconBase, get_icon_def_from_data
-
+from ayon_core.host.interfaces import WorkfileInfo
+from ayon_core.host import PublishedWorkfileInfo
 from ayon_core.tools.common_models import (
     TagItem,
     ProductTypeIconMapping,
@@ -12,6 +13,7 @@ from ayon_core.tools.common_models import (
     FolderTypeItem,
     TaskTypeItem,
 )
+from ayon_core.tools.common_models.users import UserItem
 from ayon_core.tools.loader.abstract import (
     ProductItem,
     ProductTypeItem,
@@ -19,7 +21,10 @@ from ayon_core.tools.loader.abstract import (
     ActionItem,
     ProductTypesFilter,
 )
-from ayon_core.tools.common_models.users import UserItem
+from ayon_core.tools.workfiles.abstract import (
+    WorkareaFilepathResult,
+    PublishedWorkfileWrap,
+)
 
 OBJ_TYPE_ID_KEY = "__obj_type__"
 
@@ -56,6 +61,8 @@ class DataEncoder(json.JSONEncoder):
                 ProductItem,
                 RepreItem,
                 ActionItem,
+                WorkfileInfo,
+                PublishedWorkfileInfo,
             )
         ):
             data = obj.to_data()
@@ -91,6 +98,22 @@ class DataEncoder(json.JSONEncoder):
                 OBJ_TYPE_ID_KEY: type_name,
                 "name": obj.name,
                 "color": obj.color,
+            }
+
+        if isinstance(obj, WorkareaFilepathResult):
+            return {
+                OBJ_TYPE_ID_KEY: type_name,
+                "root": obj.root,
+                "filename": obj.filename,
+                "exists": obj.exists,
+                "filepath": obj.filepath,
+            }
+
+        if isinstance(obj, PublishedWorkfileWrap):
+            return {
+                OBJ_TYPE_ID_KEY: type_name,
+                "info": obj.info,
+                "comment": obj.comment,
             }
 
         return super().default(obj)
@@ -144,6 +167,26 @@ class DataDecoder(json.JSONDecoder):
 
     def decode_ActionItem(self, obj):
         return ActionItem.from_data(obj)
+
+    def decode_WorkfileInfo(self, obj):
+        return WorkfileInfo.from_data(obj)
+
+    def decode_PublishedWorkfileInfo(self, obj):
+        return PublishedWorkfileInfo.from_data(obj)
+
+    def decode_WorkareaFilepathResult(self, obj):
+        return WorkareaFilepathResult(
+            root=obj["root"],
+            filename=obj["filename"],
+            exists=obj["exists"],
+            filepath=obj["filepath"]
+        )
+
+    def decode_PublishedWorkfileWrap(self, obj):
+        return PublishedWorkfileWrap(
+            info=obj["info"],
+            comment=obj["comment"]
+        )
 
     def decode_UserItem(self, obj):
         return UserItem(**obj)

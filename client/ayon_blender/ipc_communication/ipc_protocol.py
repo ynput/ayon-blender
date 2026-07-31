@@ -151,8 +151,6 @@ class JsonMessage(Message):
         data = json.loads(
             json_value.decode(encoding="utf-8"), cls=DataDecoder
         )
-        print(data)
-
         return cls(**data)
 
 

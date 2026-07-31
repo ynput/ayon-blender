@@ -229,13 +229,9 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             dict[str, UserItem]: User items by username.
 
         """
-        data = self._trigger_method(
+        return self._trigger_method(
             "get_user_items_by_name", {}, True
         )
-        return {
-            key: UserItem(**value)
-            for key, value in data.items()
-        }
 
     def get_folder_type_items(self, project_name, sender=None):
         """Folder type items for a project.
@@ -254,15 +250,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[FolderTypeItem]: Folder type information.
 
         """
-        folder_type_items = self._trigger_method(
+        return self._trigger_method(
             "get_folder_type_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return [
-            FolderTypeItem.from_data(item)
-            for item in folder_type_items
-        ]
 
     def get_task_type_items(self, project_name, sender=None):
         """Task type items for a project.
@@ -281,15 +273,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[TaskTypeItem]: Task type information.
 
         """
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_task_type_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return [
-            TaskTypeItem.from_data(item)
-            for item in items
-        ]
 
     # Host information
     def get_workfile_extensions(self):
@@ -574,15 +562,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 for visualisation of folder hierarchy.
 
         """
-        folder_items = self._trigger_method(
+        return self._trigger_method(
             "get_folder_items",
             {"project_name": project_name, "sender": sender},
             True
         )
-        return {
-            entity_id: FolderItem.from_data(entity)
-            for entity_id, entity in folder_items.items()
-        }
 
     def get_task_items(self, project_name, folder_id, sender):
         """Task items.
@@ -601,7 +585,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 for visualisation of tasks.
 
         """
-        task_items = self._trigger_method(
+        return self._trigger_method(
             "get_task_items",
             {
                 "project_name": project_name,
@@ -610,10 +594,6 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             },
             True
         )
-        return [
-            TaskItem.from_data(item)
-            for item in task_items
-        ]
 
     def has_unsaved_changes(self):
         """Has host unsaved change in currently running session.
@@ -655,7 +635,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[WorkfileInfo]: List of workarea file items.
 
         """
-        items = self._trigger_method(
+        return self._trigger_method(
             "get_workarea_file_items",
             {
                 "folder_id": folder_id,
@@ -664,7 +644,6 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             },
             True
         )
-        return [WorkfileInfo.from_data(item) for item in items]
 
     def get_workarea_save_as_data(self, folder_id, task_id):
         """Prepare data for Save As operation.
@@ -709,7 +688,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             WorkareaFilepathResult: Result of the operation.
 
         """
-        data = self._trigger_method(
+        return self._trigger_method(
             "fill_workarea_filepath",
             {
                 "folder_id": folder_id,
@@ -720,12 +699,6 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 "comment": comment,
             },
             True
-        )
-        return WorkareaFilepathResult(
-            root=data["root"],
-            filename=data["filename"],
-            exists=data["exists"],
-            filepath=data["filepath"]
         )
 
     def get_published_file_items(self, folder_id: str, task_id: str):
@@ -739,12 +712,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[PublishedWorkfileInfo]: List of published file items.
 
         """
-        data = self._trigger_method(
+        return self._trigger_method(
             "get_published_file_items",
             {"folder_id": folder_id, "task_id": task_id},
             True
         )
-        return [PublishedWorkfileInfo.from_data(item) for item in data]
 
     def get_published_workfile_info(
         self,
@@ -762,14 +734,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 if not found.
 
         """
-        data = self._trigger_method(
+        return self._trigger_method(
             "get_published_workfile_info",
             {"folder_id": folder_id, "representation_id": representation_id},
             True
-        )
-        return PublishedWorkfileWrap(
-            info=data["info"],
-            comment=data["comment"],
         )
 
     def get_workfile_info(self, folder_id, task_id, rootless_path):
@@ -785,7 +753,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 invalid context.
 
         """
-        data = self._trigger_method(
+        return self._trigger_method(
             "get_workfile_info",
             {
                 "folder_id": folder_id,
@@ -794,9 +762,6 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
              },
             True
         )
-        if data is None:
-            return None
-        return WorkfileInfo.from_data(data)
 
     def save_workfile_info(
         self,
