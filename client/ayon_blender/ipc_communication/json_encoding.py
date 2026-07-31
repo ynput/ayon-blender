@@ -1,8 +1,13 @@
+from dataclasses import asdict
 import json
 
-from ayon_core.lib import IconBase, get_icon_def_from_data
 from ayon_core.host.interfaces import WorkfileInfo
 from ayon_core.host import PublishedWorkfileInfo
+from ayon_core.lib import IconBase, get_icon_def_from_data
+from ayon_core.lib.attribute_definitions import (
+    AbstractAttrDef,
+    deserialize_attr_def,
+)
 from ayon_core.tools.common_models import (
     TagItem,
     ProductTypeIconMapping,
@@ -13,6 +18,8 @@ from ayon_core.tools.common_models import (
     FolderTypeItem,
     TaskTypeItem,
 )
+from ayon_core.pipeline.create import InstanceContextInfo, ConvertorItem
+from ayon_core.pipeline.publish import PublishReport
 from ayon_core.tools.common_models.users import UserItem
 from ayon_core.tools.loader.abstract import (
     ProductItem,
@@ -20,6 +27,15 @@ from ayon_core.tools.loader.abstract import (
     RepreItem,
     ActionItem,
     ProductTypesFilter,
+)
+from ayon_core.tools.publisher.models.create import (
+    InstanceItem,
+    CreatorItem,
+)
+from ayon_core.tools.publisher.models.publish import PublishErrorInfo
+from ayon_core.tools.publisher.abstract import (
+    CommentDef,
+    PublishAttrDefsInfo,
 )
 from ayon_core.tools.workfiles.abstract import (
     WorkareaFilepathResult,
@@ -48,6 +64,11 @@ class DataEncoder(json.JSONEncoder):
             data[OBJ_TYPE_ID_KEY] = "IconBase"
             return data
 
+        if isinstance(obj, AbstractAttrDef):
+            data = obj.serialize()
+            data[OBJ_TYPE_ID_KEY] = "AbstractAttrDef"
+            return data
+
         type_name = type(obj).__name__
         if isinstance(
             obj, (
@@ -58,9 +79,16 @@ class DataEncoder(json.JSONEncoder):
                 ProductTypeItem,
                 FolderItem,
                 TaskItem,
+                # Loader
                 ProductItem,
                 RepreItem,
                 ActionItem,
+                # Publisher
+                ConvertorItem,
+                CommentDef,
+                CreatorItem,
+                PublishReport,
+                # Workfile
                 WorkfileInfo,
                 PublishedWorkfileInfo,
             )
@@ -79,6 +107,14 @@ class DataEncoder(json.JSONEncoder):
                 "active": obj.active,
             }
 
+        if isinstance(obj, TagItem):
+            return {
+                OBJ_TYPE_ID_KEY: type_name,
+                "name": obj.name,
+                "color": obj.color,
+            }
+
+        # Loader
         if isinstance(obj, ProductTypesFilter):
             return {
                 OBJ_TYPE_ID_KEY: type_name,
@@ -93,13 +129,52 @@ class DataEncoder(json.JSONEncoder):
                 "definitions": obj._definitions,
             }
 
-        if isinstance(obj, TagItem):
+        # Publisher
+        if isinstance(obj, InstanceItem):
             return {
                 OBJ_TYPE_ID_KEY: type_name,
-                "name": obj.name,
-                "color": obj.color,
+                "instance_id": obj.id,
+                "creator_identifier": obj.creator_identifier,
+                "label": obj.label,
+                "group_label": obj.group_label,
+                "product_base_type": obj.product_base_type,
+                "product_type": obj.product_type,
+                "product_name": obj.product_name,
+                "variant": obj.variant,
+                "folder_path": obj.folder_path,
+                "task_name": obj.task_name,
+                "is_active": obj.is_active,
+                "is_mandatory": obj.is_mandatory,
+                "has_promised_context": obj.has_promised_context,
+                "parent_instance_id": obj.parent_instance_id,
+                "parent_flags": obj.parent_flags,
             }
 
+        if isinstance(obj, PublishAttrDefsInfo):
+            data = asdict(obj)
+            data[OBJ_TYPE_ID_KEY] = type_name
+            return data
+
+        if isinstance(obj, InstanceContextInfo):
+            return {
+                OBJ_TYPE_ID_KEY: type_name,
+                "folder_path": obj.folder_path,
+                "task_name": obj.task_name,
+                "folder_is_valid": obj.folder_is_valid,
+                "task_is_valid": obj.task_is_valid,
+            }
+
+        if isinstance(obj, PublishErrorInfo):
+            return {
+                OBJ_TYPE_ID_KEY: type_name,
+                "message": obj.message,
+                "is_unknown_error": obj.is_unknown_error,
+                "description": obj.description,
+                "title": obj.title,
+                "detail": obj.detail,
+            }
+
+        # Workfiles
         if isinstance(obj, WorkareaFilepathResult):
             return {
                 OBJ_TYPE_ID_KEY: type_name,
@@ -138,6 +213,15 @@ class DataDecoder(json.JSONDecoder):
     def decode_IconBase(self, obj):
         return get_icon_def_from_data(obj)
 
+    def decode_AbstractAttrDef(self, obj):
+        return deserialize_attr_def(obj)
+
+    def decode_UserItem(self, obj):
+        return UserItem(**obj)
+
+    def decode_TagItem(self, obj):
+        return TagItem(**obj)
+
     def decode_ProjectItem(self, obj):
         return ProjectItem.from_data(obj)
 
@@ -159,6 +243,7 @@ class DataDecoder(json.JSONDecoder):
     def decode_TaskItem(self, obj):
         return TaskItem.from_data(obj)
 
+    # Loader
     def decode_ProductItem(self, obj):
         return ProductItem.from_data(obj)
 
@@ -168,6 +253,13 @@ class DataDecoder(json.JSONDecoder):
     def decode_ActionItem(self, obj):
         return ActionItem.from_data(obj)
 
+    def decode_ProductTypesFilter(self, obj):
+        return ProductTypesFilter(**obj)
+
+    def decode_ProductTypeIconMapping(self, obj):
+        return ProductTypeIconMapping(obj["default"], obj["definitions"])
+
+    # Workfiles
     def decode_WorkfileInfo(self, obj):
         return WorkfileInfo.from_data(obj)
 
@@ -188,15 +280,38 @@ class DataDecoder(json.JSONDecoder):
             comment=obj["comment"]
         )
 
-    def decode_UserItem(self, obj):
-        return UserItem(**obj)
+    # Publisher
+    def decode_InstanceContextInfo(self, obj):
+        return InstanceContextInfo(
+            folder_path=obj["folder_path"],
+            task_name=obj["task_name"],
+            folder_is_valid=obj["folder_is_valid"],
+            task_is_valid=obj["task_is_valid"],
+        )
 
-    def decode_ProductTypesFilter(self, obj):
-        return ProductTypesFilter(**obj)
+    def decode_PublishErrorInfo(self, obj):
+        return PublishErrorInfo(
+            message=obj["message"],
+            is_unknown_error=obj["is_unknown_error"],
+            description=obj["description"],
+            title=obj["title"],
+        )
 
-    def decode_ProductTypeIconMapping(self, obj):
-        return ProductTypeIconMapping(obj["default"], obj["definitions"])
+    def decode_InstanceItem(self, obj):
+        return InstanceItem(**obj)
 
-    def decode_TagItem(self, obj):
-        return TagItem(**obj)
+    def decode_CreatorItem(self, obj):
+        return CreatorItem.from_data(obj)
+
+    def decode_PublishAttrDefsInfo(self, obj):
+        return PublishAttrDefsInfo(**obj)
+
+    def decode_ConvertorItem(self, obj):
+        return ConvertorItem.from_data(obj)
+
+    def decode_CommentDef(self, obj):
+        return CommentDef.from_data(obj)
+
+    def decode_PublishReport(self, obj):
+        return PublishReport.from_data(obj)
 

@@ -3,6 +3,7 @@ from .utils import (
     execute_in_main_thread,
 )
 from .loader import BlenderLoaderFrontend
+from .publisher import BlenderPublisherFrontend
 from .workfiles import BlenderWorkfilesFrontend
 
 
@@ -11,5 +12,6 @@ __all__ = (
     "execute_in_main_thread",
 
     "BlenderLoaderFrontend",
+    "BlenderPublisherFrontend",
     "BlenderWorkfilesFrontend",
 )

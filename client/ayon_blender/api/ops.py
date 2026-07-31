@@ -30,6 +30,7 @@ from ayon_blender.ipc_communication import IPCServer
 from .ui_tools import (
     get_ui_process_script_path,
     BlenderLoaderBackend,
+    BlenderPublisherBackend,
     BlenderWorkfilesBackend,
 )
 from .execution import process_main_thread_callbacks
@@ -44,8 +45,9 @@ TIMER_INTERVAL: float = 0.01
 
 @dataclass
 class _ToolBackends:
-    workfiles_backend: BlenderWorkfilesBackend
     loader_backend: BlenderLoaderBackend
+    publisher_backend: BlenderPublisherBackend
+    workfiles_backend: BlenderWorkfilesBackend
 
 
 # IPC and external UI process management
@@ -60,8 +62,9 @@ def _init_tool_controllers() -> _ToolBackends:
     if _IPCConnection.ui_backends is None:
         host = registered_host()
         _IPCConnection.ui_backends = _ToolBackends(
-            workfiles_backend=BlenderWorkfilesBackend(host),
             loader_backend=BlenderLoaderBackend(host),
+            publisher_backend=BlenderPublisherBackend(host),
+            workfiles_backend=BlenderWorkfilesBackend(host),
         )
     return _IPCConnection.ui_backends
 
@@ -167,8 +170,9 @@ def _ensure_external_ui_process():
 def _register_ipc_handlers(server: IPCServer):
     """Register request handlers for IPC server."""
     tool_backends = _init_tool_controllers()
-    tool_backends.workfiles_backend.register_ipc_handler(server)
     tool_backends.loader_backend.register_ipc_handler(server)
+    tool_backends.publisher_backend.register_ipc_handler(server)
+    tool_backends.workfiles_backend.register_ipc_handler(server)
 
 
 def _shutdown_ipc_server() -> None:
