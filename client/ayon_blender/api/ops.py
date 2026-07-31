@@ -7,7 +7,7 @@ import time
 import subprocess
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 import bpy
 import bpy.utils.previews
