@@ -79,22 +79,10 @@ def _is_ipc_server_healthy() -> bool:
 
 
 class BlenderApplication:
-    _instance = None
-    blender_windows = {}
-
-    @classmethod
-    def get_app(cls):
-        print("Can't use Qt window anymore")
-        return None
-
     @classmethod
     def store_window(cls, identifier, window):
+        # TODO remove
         print(f"Can't store window anymore '{identifier}'")
-
-    @classmethod
-    def get_window(cls, identifier):
-        print("Can't store window anymore")
-        return cls.blender_windows.get(identifier)
 
 
 def _init_ipc_server():
@@ -165,10 +153,8 @@ def _register_ipc_handlers(server: IPCServer):
     _IPCConnection.workfiles_controller.register_ipc_handler(server)
 
 
-def _shutdown_ipc_server():
+def _shutdown_ipc_server() -> None:
     """Shutdown the IPC server and external UI process."""
-    global _loader_backend_bridge
-
     if _IPCConnection.ui_process:
         try:
             _IPCConnection.ui_process.terminate()
@@ -184,10 +170,8 @@ def _shutdown_ipc_server():
             logger.error(f"Error stopping IPC server: {e}")
         _IPCConnection.server = None
 
-    _loader_backend_bridge = None
 
-
-def _process_app_events() -> Optional[float]:
+def _process_app_events() -> float:
     """Process the events of the Qt app if the window is still visible.
 
     If the app has any top level windows and at least one of them is visible
