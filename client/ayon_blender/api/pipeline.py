@@ -37,7 +37,7 @@ from ayon_core.lib import (
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
 
-from .tools import show_message
+from .ui_tools import show_message
 from .workio import OpenFileCacher
 from . import lib
 from . import ops

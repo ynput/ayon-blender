@@ -25,7 +25,7 @@ from ayon_core.pipeline.context_tools import (
 
 from ayon_blender.ipc_communication import IPCServer
 
-from .tools import BlenderWorkfilesController, get_ui_process_script_path
+from .ui_tools import BlenderWorkfilesController, get_ui_process_script_path
 from .execution import process_main_thread_callbacks
 from . import pipeline
 from . import render_lib
