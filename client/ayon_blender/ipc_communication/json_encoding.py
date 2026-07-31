@@ -320,5 +320,21 @@ class DataDecoder(json.JSONDecoder):
         return PublishReport.from_data(obj)
 
     def decode_PublishErrorsReport(self, obj):
-        return PublishErrorsReport.from_data(obj)
+        # TODO fix bug in ayon-core where 'from_data' is wrong
+        from ayon_core.tools.publisher.models.publish import (
+            PublishErrorItem,
+            PublishPluginActionItem,
+        )
 
+        error_items = [
+            PublishErrorItem.from_data(error_item)
+            for error_item in obj["error_items"]
+        ]
+        plugin_action_items = {}
+        for plugin_id, action_items in obj["plugin_action_items"].items():
+            action_items = plugin_action_items.setdefault(plugin_id, [])
+            for action_item in action_items:
+                item = PublishPluginActionItem.from_data(action_item)
+                action_items.append(item)
+
+        return PublishErrorsReport(error_items, plugin_action_items)
