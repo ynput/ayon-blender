@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-import sys
 import time
 from typing import Any, Callable
 
@@ -44,8 +43,8 @@ class MainThreadItem:
             result = callback(*args, **kwargs)
             self.result = result
 
-        except Exception:
-            self.exception = sys.exc_info()
+        except Exception as exc:
+            self.exception = exc
 
         finally:
             self.done = True
