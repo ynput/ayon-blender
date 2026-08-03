@@ -5,7 +5,6 @@ from typing import Any, Callable
 
 from qtpy import QtCore
 
-from ayon_core.lib import IconBase
 from ayon_core.lib.events import QueuedEventSystem
 
 from ayon_core.pipeline.create import InstanceContextInfo, ConvertorItem
@@ -36,6 +35,7 @@ from ayon_blender.ipc_communication import WaitCallback
 from .utils import execute_in_main_thread
 
 if typing.TYPE_CHECKING:
+    from ayon_core.lib import IconBase
     from ayon_blender.ipc_communication.tools import CommunicationInfo
     from ayon_blender.ipc_communication import RequestMessage
 

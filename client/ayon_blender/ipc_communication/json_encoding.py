@@ -3,7 +3,7 @@ import json
 
 from ayon_core.host.interfaces import WorkfileInfo
 from ayon_core.host import PublishedWorkfileInfo
-from ayon_core.lib import IconBase, get_icon_def_from_data
+from ayon_core.lib import get_icon_def_from_data
 from ayon_core.lib.attribute_definitions import (
     AbstractAttrDef,
     deserialize_attr_def,
@@ -44,6 +44,10 @@ from ayon_core.tools.workfiles.abstract import (
     WorkareaFilepathResult,
     PublishedWorkfileWrap,
 )
+try:
+    from ayon_core.lib import IconBase
+except ImportError:
+    IconBase = type("IconBase", (), {"to_data": lambda self: {}})
 
 OBJ_TYPE_ID_KEY = "__obj_type__"
 
