@@ -209,7 +209,12 @@ class IPCServer:
 class IPCClientConnection:
     """Represents a single client connection to the IPC server."""
 
-    def __init__(self, server: IPCServer, socket_obj: socket.socket, addr: tuple):
+    def __init__(
+        self,
+        server: IPCServer,
+        socket_obj: socket.socket,
+        addr: tuple,
+    ):
         self.server = server
         self.socket = socket_obj
         self.addr = addr

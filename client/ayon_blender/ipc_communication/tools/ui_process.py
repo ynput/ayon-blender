@@ -8,6 +8,7 @@ import time
 import psutil
 
 from ayon_blender.ipc_communication import IPCClient
+from ayon_blender.ipc_communication.tools.utils import CommunicationInfo
 from ayon_blender.ipc_communication.tools import (
     BlenderWorkfilesFrontend,
     BlenderLoaderFrontend,
@@ -49,9 +50,12 @@ def main():
         sys.exit(2)
 
     start_main_thread_helper()
-    _workfiles = BlenderWorkfilesFrontend(ipc)
-    _loader = BlenderLoaderFrontend(ipc)
-    _publisher = BlenderPublisherFrontend(ipc)
+
+    com_info = CommunicationInfo(ipc)
+
+    _workfiles = BlenderWorkfilesFrontend(com_info)
+    _loader = BlenderLoaderFrontend(com_info)
+    _publisher = BlenderPublisherFrontend(com_info)
 
     # Keep the process alive and attempt reconnection if Blender restarts.
     def _tick():
@@ -64,6 +68,9 @@ def main():
             ipc.reconnect_with_backoff()
             return
 
+        _workfiles.on_parent_process_exit()
+        _loader.on_parent_process_exit()
+        _publisher.on_parent_process_exit()
         logger.error("Blender process has exited")
         if ipc.is_connected():
             ipc.disconnect()

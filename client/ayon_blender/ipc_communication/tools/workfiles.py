@@ -29,7 +29,10 @@ from ayon_blender.ipc_communication import WaitCallback
 from .utils import execute_in_main_thread
 
 if typing.TYPE_CHECKING:
-    from ayon_blender.ipc_communication import IPCClient, RequestMessage
+    from ayon_blender.ipc_communication import (
+        CommunicationInfo,
+        RequestMessage,
+    )
 
 
 class WorkerTask(QtCore.QObject, QtCore.QRunnable):
@@ -58,15 +61,14 @@ class Worker(QtCore.QObject):
 class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
     window = None
     channel_name = "workfiles"
-    _response_timeout_sec = 35.0
 
-    def __init__(self, client: IPCClient):
-        client.register_channel_handler(
+    def __init__(self, com_info: CommunicationInfo):
+        com_info.client.register_channel_handler(
             self.channel_name, self._handle_request
         )
 
         self._event_system = QueuedEventSystem()
-        self._client: IPCClient = client
+        self._com_info: CommunicationInfo = com_info
         self._worker = Worker()
 
     def _handle_request(self, req: RequestMessage):
@@ -85,7 +87,13 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         self.window.raise_()
         self.window.activateWindow()
 
-    def _trigger_method(
+    def _trigger_method(self, method_name: str, **kwargs) -> Any | None:
+        self._trigger(method_name, kwargs, False)
+
+    def _trigger_getter(self, method_name: str, **kwargs) -> Any | None:
+        return self._trigger(method_name, kwargs, True)
+
+    def _trigger(
         self,
         method_name: str,
         params: dict[str, Any],
@@ -104,7 +112,8 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         response_callback = WaitCallback()
         task = WorkerTask(
-            self._client.send_request, self.channel_name,
+            self._com_info.send_request,
+            self.channel_name,
             method_name,
             params,
             callback=response_callback
@@ -113,21 +122,17 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         if not wait:
             return None
 
-        # TODO simplify - do not timeout, instead regularly check for process
         app = QtCore.QCoreApplication.instance()
-        timeout_at = time.monotonic() + self._response_timeout_sec
         while not response_callback.is_done():
-            # Keep UI/queued callbacks responsive while waiting.
-            if app is not None:
-                app.processEvents(QtCore.QEventLoop.AllEvents, 5)
-
-            remaining = timeout_at - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError(
-                    f"Timeout waiting for '{method_name}' response "
-                    f"after {self._response_timeout_sec:.1f}s"
+            if not self._com_info.is_parent_process_alive():
+                raise RuntimeError(
+                    "Parent process has exited"
+                    f" while waiting for '{method_name}'"
                 )
-            response_callback.wait(min(0.01, remaining))
+
+            app.processEvents(QtCore.QEventLoop.AllEvents, 5)
+
+            response_callback.wait(0.01)
 
         response = response_callback.response
         if response is None:
@@ -146,9 +151,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             bool: True if host is valid.
 
         """
-        return self._trigger_method(
-            "is_host_valid", {}, True
-        )
+        return self._trigger_getter("is_host_valid")
 
     def get_current_project_name(self):
         """Project name from current context of host.
@@ -157,9 +160,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             str: Name of project.
 
         """
-        return self._trigger_method(
-            "get_current_project_name", {}, True
-        )
+        return self._trigger_getter("get_current_project_name")
 
     def get_workfile_extensions(self):
         """Get possible workfile extensions.
@@ -170,9 +171,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             Iterable[str]: List of extensions.
 
         """
-        return self._trigger_method(
-            "get_workfile_extensions", {}, True
-        )
+        return self._trigger_getter("get_workfile_extensions")
 
     def is_save_enabled(self):
         """Is workfile save enabled.
@@ -181,9 +180,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             bool: True if save is enabled.
 
         """
-        return self._trigger_method(
-            "is_save_enabled", {}, True
-        )
+        return self._trigger_getter("is_save_enabled")
 
     def set_save_enabled(self, enabled):
         """Enable or disabled workfile save.
@@ -194,8 +191,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "set_save_enabled",
-            {"enabled": enabled},
-            False
+            enabled=enabled,
         )
 
     def get_window_subtitle(self) -> str | None:
@@ -205,9 +201,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             str | None: Window subtitle.
 
         """
-        return self._trigger_method(
-            "get_window_subtitle", {}, True
-        )
+        return self._trigger_getter("get_window_subtitle")
 
     def emit_event(self, topic, data, source):
         self._event_system.emit(topic, data, source)
@@ -232,9 +226,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             dict[str, UserItem]: User items by username.
 
         """
-        return self._trigger_method(
-            "get_user_items_by_name", {}, True
-        )
+        return self._trigger_getter("get_user_items_by_name")
 
     def get_folder_type_items(self, project_name, sender=None):
         """Folder type items for a project.
@@ -253,10 +245,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[FolderTypeItem]: Folder type information.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_folder_type_items",
-            {"project_name": project_name, "sender": sender},
-            True
+            project_name=project_name,
+            sender=sender,
         )
 
     def get_task_type_items(self, project_name, sender=None):
@@ -276,10 +268,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[TaskTypeItem]: Task type information.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_task_type_items",
-            {"project_name": project_name, "sender": sender},
-            True
+            project_name=project_name,
+            sender=sender,
         )
 
     # Host information
@@ -291,9 +283,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 current host.
 
         """
-        return self._trigger_method(
-            "get_workfile_extensions", {}, True
-        )
+        return self._trigger_getter("get_workfile_extensions")
 
     # Selection information
     def get_selected_folder_id(self):
@@ -303,9 +293,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             Union[str, None]: Folder id or None if no folder is selected.
 
         """
-        return self._trigger_method(
-            "get_selected_folder_id", {}, True
-        )
+        return self._trigger_getter("get_selected_folder_id")
 
     def set_selected_folder(self, folder_id):
         """Change selected folder.
@@ -317,8 +305,9 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 is selected.
 
         """
-        return self._trigger_method(
-            "set_selected_folder", {"folder_id": folder_id}, True
+        self._trigger_method(
+            "set_selected_folder",
+            folder_id=folder_id,
         )
 
     def get_selected_task_id(self):
@@ -328,9 +317,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             Union[str, None]: Task id or None if no folder is selected.
 
         """
-        return self._trigger_method(
-            "get_selected_task_id", {}, True
-        )
+        return self._trigger_getter("get_selected_task_id")
 
     def get_selected_task_name(self):
         """Currently selected task name.
@@ -338,9 +325,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         Returns:
             Union[str, None]: Task name or None if no folder is selected.
         """
-        return self._trigger_method(
-            "get_selected_task_name", {}, True
-        )
+        return self._trigger_getter("get_selected_task_name")
 
     def set_selected_task(self, task_id, task_name):
         """Change selected task.
@@ -352,10 +337,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 is selected.
 
         """
-        return self._trigger_method(
+        self._trigger_method(
             "set_selected_task",
-            {"task_id": task_id, "task_name": task_name},
-            False
+            task_id=task_id,
+            task_name=task_name,
         )
 
     def get_selected_workfile_path(self):
@@ -365,9 +350,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             Union[str, None]: Selected workfile path.
 
         """
-        return self._trigger_method(
-            "get_selected_workfile_path", {}, True
-        )
+        return self._trigger_getter("get_selected_workfile_path")
 
     def set_selected_workfile_path(
         self, rootless_path, path, workfile_entity_id
@@ -380,14 +363,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             workfile_entity_id (Union[str, None]): Workfile entity id.
 
         """
-        return self._trigger_method(
+        self._trigger_method(
             "set_selected_workfile_path",
-            {
-                "rootless_path": rootless_path,
-                "path": path,
-                "workfile_entity_id": workfile_entity_id
-            },
-            False
+            rootless_path=rootless_path,
+            path=path,
+            workfile_entity_id=workfile_entity_id,
         )
 
     def get_selected_representation_id(self):
@@ -398,9 +378,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 is selected.
 
         """
-        return self._trigger_method(
-            "get_selected_representation_id", {}, True
-        )
+        return self._trigger_getter("get_selected_representation_id")
 
     def set_selected_representation_id(self, representation_id):
         """Change selected representation.
@@ -410,10 +388,9 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 representation id.
 
         """
-        return self._trigger_method(
+        self._trigger_method(
             "set_selected_representation_id",
-            {"representation_id": representation_id},
-            False
+            representation_id=representation_id,
         )
 
     def get_selected_context(self):
@@ -423,9 +400,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             dict[str, Union[str, None]]: Selected context.
 
         """
-        return self._trigger_method(
-            "get_selected_context", {}, True
-        )
+        return self._trigger_getter("get_selected_context")
 
     def set_expected_selection(
         self,
@@ -454,13 +429,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "set_expected_selection",
-            {
-                "folder_id": folder_id,
-                "task_name": task_name,
-                "workfile_name": workfile_name,
-                "representation_id": representation_id
-            },
-            False
+            folder_id=folder_id,
+            task_name=task_name,
+            workfile_name=workfile_name,
+            representation_id=representation_id,
         )
 
     def get_expected_selection_data(self):
@@ -473,9 +445,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             dict[str, Any]: Expected selection data.
 
         """
-        return self._trigger_method(
-            "get_expected_selection_data", {}, True
-        )
+        return self._trigger_getter("get_expected_selection_data")
 
     def expected_folder_selected(self, folder_id):
         """Expected folder was selected in UI.
@@ -484,10 +454,9 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             folder_id (str): Folder id which was selected.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "expected_folder_selected",
-            {"folder_id": folder_id},
-            True
+            folder_id=folder_id,
         )
 
     def expected_task_selected(self, folder_id, task_name):
@@ -498,10 +467,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             task_name (str): Task name which was selected.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "expected_task_selected",
-            {"folder_id": folder_id, "task_name": task_name},
-            True
+            folder_id=folder_id,
+            task_name=task_name,
         )
 
     def expected_representation_selected(
@@ -515,14 +484,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             representation_id (str): Representation id which was selected.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "expected_representation_selected",
-            {
-                "folder_id": folder_id,
-                "task_name": task_name,
-                "representation_id": representation_id
-            },
-            True
+            folder_id=folder_id,
+            task_name=task_name,
+            representation_id=representation_id,
         )
 
     def expected_workfile_selected(self, folder_id, task_name, workfile_name):
@@ -534,20 +500,17 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             workfile_name (str): Workfile filename which was selected.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "expected_workfile_selected",
-            {
-                "folder_id": folder_id,
-                "task_name": task_name,
-                "workfile_name": workfile_name
-            },
-            True
+            folder_id=folder_id,
+            task_name=task_name,
+            workfile_name=workfile_name,
         )
 
     def go_to_current_context(self):
         """Set expected selection to current context."""
 
-        self._trigger_method("go_to_current_context", {}, False)
+        self._trigger_method("go_to_current_context")
 
     def get_folder_items(self, project_name, sender):
         """Folder items to visualize project hierarchy.
@@ -565,10 +528,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 for visualisation of folder hierarchy.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_folder_items",
-            {"project_name": project_name, "sender": sender},
-            True
+            project_name=project_name,
+            sender=sender,
         )
 
     def get_task_items(self, project_name, folder_id, sender):
@@ -588,14 +551,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 for visualisation of tasks.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_task_items",
-            {
-                "project_name": project_name,
-                "folder_id": folder_id,
-                "sender": sender
-            },
-            True
+            project_name=project_name,
+            folder_id=folder_id,
+            sender=sender,
         )
 
     def has_unsaved_changes(self):
@@ -605,9 +565,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             bool: Has unsaved changes.
 
         """
-        return self._trigger_method(
-            "has_unsaved_changes", {}, True
-        )
+        return self._trigger_getter("has_unsaved_changes")
 
     def get_workarea_dir_by_context(self, folder_id, task_id):
         """Get workarea directory by context.
@@ -620,10 +578,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             str: Workarea directory.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_workarea_dir_by_context",
-            {"folder_id": folder_id, "task_id": task_id},
-            True
+            folder_id=folder_id,
+            task_id=task_id,
         )
 
     def get_workarea_file_items(self, folder_id, task_name, sender=None):
@@ -638,14 +596,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[WorkfileInfo]: List of workarea file items.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_workarea_file_items",
-            {
-                "folder_id": folder_id,
-                "task_name": task_name,
-                "sender": sender
-            },
-            True
+            folder_id=folder_id,
+            task_name=task_name,
+            sender=sender,
         )
 
     def get_workarea_save_as_data(self, folder_id, task_id):
@@ -662,10 +617,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             dict[str, Any]: Data for Save As operation.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_workarea_save_as_data",
-            {"folder_id": folder_id, "task_id": task_id},
-            True
+            folder_id=folder_id,
+            task_id=task_id,
         )
 
     def fill_workarea_filepath(
@@ -691,17 +646,14 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             WorkareaFilepathResult: Result of the operation.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "fill_workarea_filepath",
-            {
-                "folder_id": folder_id,
-                "task_id": task_id,
-                "extension": extension,
-                "use_last_version": use_last_version,
-                "version": version,
-                "comment": comment,
-            },
-            True
+            folder_id=folder_id,
+            task_id=task_id,
+            extension=extension,
+            use_last_version=use_last_version,
+            version=version,
+            comment=comment,
         )
 
     def get_published_file_items(self, folder_id: str, task_id: str):
@@ -715,10 +667,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
             list[PublishedWorkfileInfo]: List of published file items.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_published_file_items",
-            {"folder_id": folder_id, "task_id": task_id},
-            True
+            folder_id=folder_id,
+            task_id=task_id,
         )
 
     def get_published_workfile_info(
@@ -737,10 +689,10 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 if not found.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_published_workfile_info",
-            {"folder_id": folder_id, "representation_id": representation_id},
-            True
+            folder_id=folder_id,
+            representation_id=representation_id,
         )
 
     def get_workfile_info(self, folder_id, task_id, rootless_path):
@@ -756,14 +708,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
                 invalid context.
 
         """
-        return self._trigger_method(
+        return self._trigger_getter(
             "get_workfile_info",
-            {
-                "folder_id": folder_id,
-                "task_id": task_id,
-                "rootless_path": rootless_path
-             },
-            True
+            folder_id=folder_id,
+            task_id=task_id,
+            rootless_path=rootless_path
         )
 
     def save_workfile_info(
@@ -792,14 +741,11 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "save_workfile_info",
-            {
-                "task_id": task_id,
-                "rootless_path": rootless_path,
-                "version": version,
-                "comment": comment,
-                "description": description
-            },
-            False
+            task_id=task_id,
+            rootless_pat=rootless_path,
+            version=version,
+            comment=comment,
+            description=description,
         )
 
     def reset(self):
@@ -809,7 +755,7 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         'controller.reset.finished' at the end.
 
         """
-        self._trigger_method("reset", {}, False)
+        self._trigger_method("reset")
 
     def open_workfile(self, folder_id, task_id, filepath):
         """Open a workfile for context.
@@ -822,18 +768,15 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "open_workfile",
-            {
-                "folder_id": folder_id,
-                "task_id": task_id,
-                "filepath": filepath
-            },
-            False
+            folder_id=folder_id,
+            task_id=task_id,
+            filepath=filepath,
         )
 
     def save_current_workfile(self):
         """Save state of current workfile."""
 
-        self._trigger_method("save_current_workfile", {}, False)
+        self._trigger_method("save_current_workfile")
 
     def save_as_workfile(
         self,
@@ -862,17 +805,14 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "save_as_workfile",
-            {
-                "folder_id": folder_id,
-                "task_id": task_id,
-                "rootless_workdir": rootless_workdir,
-                "workdir": workdir,
-                "filename": filename,
-                "version": version,
-                "comment": comment,
-                "description": description
-            },
-            False
+            folder_id=folder_id,
+            task_id=task_id,
+            rootless_workdir=rootless_workdir,
+            workdir=workdir,
+            filename=filename,
+            version=version,
+            comment=comment,
+            description=description,
         )
 
     def copy_workfile_representation(
@@ -908,19 +848,16 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "copy_workfile_representation",
-            {
-                "representation_id": representation_id,
-                "representation_filepath": representation_filepath,
-                "folder_id": folder_id,
-                "task_id": task_id,
-                "workdir": workdir,
-                "filename": filename,
-                "rootless_workdir": rootless_workdir,
-                "version": version,
-                "comment": comment,
-                "description": description
-            },
-            False
+            representation_id=representation_id,
+            representation_filepath=representation_filepath,
+            folder_id=folder_id,
+            task_id=task_id,
+            workdir=workdir,
+            filename=filename,
+            rootless_workdir=rootless_workdir,
+            version=version,
+            comment=comment,
+            description=description,
         )
 
     def duplicate_workfile(
@@ -952,16 +889,13 @@ class BlenderWorkfilesFrontend(AbstractWorkfilesFrontend):
         """
         self._trigger_method(
             "duplicate_workfile",
-            {
-                "folder_id": folder_id,
-                "task_id": task_id,
-                "src_filepath": src_filepath,
-                "rootless_workdir": rootless_workdir,
-                "workdir": workdir,
-                "filename": filename,
-                "version": version,
-                "comment": comment,
-                "description": description
-            },
-            False
+            folder_id=folder_id,
+            task_id=task_id,
+            src_filepath=src_filepath,
+            rootless_workdir=rootless_workdir,
+            workdir=workdir,
+            filename=filename,
+            version=version,
+            comment=comment,
+            description=description,
         )

@@ -1,10 +1,49 @@
 from __future__ import annotations
 
 import collections
+import platform
+import typing
 
 from qtpy import QtCore
 
 from ayon_core.lib import Logger
+
+if typing.TYPE_CHECKING:
+    from typing import Any, Callable
+    from ayon_blender.ipc_communication import ResponseMessage, RequestMessage
+
+PLATFORM_NAME = platform.system().lower()
+
+
+class CommunicationInfo:
+    def __init__(self, client):
+        self.client = client
+        self._parent_process_is_alive = True
+
+    def send_request(
+        self,
+        channel: str,
+        method: str,
+        params: dict[str, Any] | None = None,
+        callback: Callable[[ResponseMessage], None] | None = None,
+    ) -> None:
+        self.client.send_request(
+            channel,
+            method,
+            params,
+            callback,
+        )
+
+    def register_channel_handler(
+        self, channel: str, handler: Callable[[RequestMessage], None]
+    ) -> None:
+        self.client.register_channel_handler(channel, handler)
+
+    def is_parent_process_alive(self) -> bool:
+        return self._parent_process_is_alive
+
+    def on_parent_process_close(self) -> None:
+        self._parent_process_is_alive = False
 
 
 class WrappedCallbackItem:
@@ -61,7 +100,7 @@ def execute_in_main_thread(callback, *args, **kwargs):
     _MainThreadHelper.queue.append(item)
 
 
-def process_queue():
+def _process_main_thread_queue():
     """Process all items in the queue.
 
     Method must be called from main thread. All items in the queue are
@@ -75,8 +114,8 @@ def process_queue():
 class _MainThreadHelper:
     queue = collections.deque()
     timer = QtCore.QTimer()
-    timer.setInterval(300)
-    timer.timeout.connect(process_queue)
+    timer.setInterval(10)
+    timer.timeout.connect(_process_main_thread_queue)
 
 
 def start_main_thread_helper():

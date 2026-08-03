@@ -30,7 +30,7 @@ from ayon_blender.ipc_communication.ipc_protocol import (
 
 logger = logging.getLogger(__name__)
 
-ClientChannelHandler = Callable[[RequestMessage], Any]
+ClientChannelHandler = Callable[[RequestMessage], None]
 
 
 class WaitCallback:
@@ -65,20 +65,13 @@ class PendingRequest:
         self,
         request_id: str,
         method: str,
-        timeout_sec: float = 30.0,
         callback: Callable[[ResponseMessage], Any] | None = None
     ):
         self.request_id = request_id
         self.method = method
-        self.timeout_sec = timeout_sec
         self.submitted_at = time.time()
         self.callback: Callable[[ResponseMessage], Any] | None = callback
         self.done = False
-
-    def is_expired(self) -> bool:
-        """Check if request has timed out."""
-        elapsed = time.time() - self.submitted_at
-        return elapsed > self.timeout_sec
 
     def mark_done(self):
         """Mark request as completed."""
@@ -270,7 +263,6 @@ class IPCClient:
         channel: str,
         method: str,
         params: dict[str, Any] | None = None,
-        timeout_sec: float = 30.0,
         callback: Callable[[ResponseMessage], None] | None = None,
     ) -> str:
         """Send an async request to Blender.
@@ -279,7 +271,6 @@ class IPCClient:
             channel: Channel to which the method belongs.
             method: Method name to call in Blender.
             params: Parameters for the method.
-            timeout_sec: Request timeout in seconds.
             callback: Optional callback(ok, result, error_msg).
 
         Returns:
@@ -312,7 +303,6 @@ class IPCClient:
             self.pending_requests[request_id] = PendingRequest(
                 request_id=request_id,
                 method=method,
-                timeout_sec=timeout_sec,
                 callback=callback,
             )
 
@@ -334,44 +324,6 @@ class IPCClient:
                     )
                 )
             raise
-
-    def send_request_wait(
-        self,
-        channel: str,
-        method: str,
-        params: dict[str, Any] | None = None,
-        timeout_sec: float = 30.0,
-    ) -> ResponseMessage:
-        """Send a request and wait for response (blocking).
-
-        Args:
-            channel: Channel name
-            method: Method name
-            params: Parameters
-            timeout_sec: Timeout in seconds
-
-        Returns:
-            ResponseMessage
-        """
-        callback = WaitCallback()
-
-        request_id = self.send_request(
-            channel=channel,
-            method=method,
-            params=params,
-            timeout_sec=timeout_sec,
-            callback=callback,
-        )
-
-        if not callback.wait(timeout=timeout_sec + 5):
-            return ResponseMessage(
-                ok=False,
-                result=None,
-                error="Request timeout",
-                request_id=request_id,
-            )
-
-        return callback.response
 
     def get_state(self) -> str:
         """Get current connection state."""

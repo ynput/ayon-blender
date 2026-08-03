@@ -36,7 +36,8 @@ from ayon_blender.ipc_communication import WaitCallback
 from .utils import execute_in_main_thread
 
 if typing.TYPE_CHECKING:
-    from ayon_blender.ipc_communication import IPCClient, RequestMessage
+    from ayon_blender.ipc_communication.tools import CommunicationInfo
+    from ayon_blender.ipc_communication import RequestMessage
 
 
 class WorkerTask(QtCore.QObject, QtCore.QRunnable):
@@ -69,13 +70,13 @@ class Worker(QtCore.QObject):
 class BlenderPublisherFrontend(AbstractPublisherFrontend):
     channel_name = "publisher"
 
-    def __init__(self, client: IPCClient):
-        client.register_channel_handler(
+    def __init__(self, com_info: CommunicationInfo) -> None:
+        com_info.register_channel_handler(
             self.channel_name, self._handle_request
         )
         self._window = None
         self._event_system = QueuedEventSystem()
-        self._client: IPCClient = client
+        self._com_info: CommunicationInfo = com_info
         self._worker = Worker()
 
     def emit_card_message(
@@ -511,7 +512,7 @@ class BlenderPublisherFrontend(AbstractPublisherFrontend):
         self._window.raise_()
         self._window.activateWindow()
 
-    def _handle_request(self, req: RequestMessage):
+    def _handle_request(self, req: RequestMessage) -> None:
         if req.method == "show":
             execute_in_main_thread(self._show_window, **req.params)
 
@@ -537,7 +538,7 @@ class BlenderPublisherFrontend(AbstractPublisherFrontend):
         """
         response_callback = WaitCallback()
         task = WorkerTask(
-            self._client.send_request,
+            self._com_info.send_request,
             self.channel_name,
             method_name,
             params or {},
@@ -547,13 +548,16 @@ class BlenderPublisherFrontend(AbstractPublisherFrontend):
         if not wait:
             return None
 
-        # TODO simplify - do not timeout, instead regularly check for process
-        #   and client connection
         app = QtCore.QCoreApplication.instance()
         while not response_callback.is_done():
+            if not self._com_info.is_parent_process_alive():
+                raise RuntimeError(
+                    "Parent process has exited"
+                    f" while waiting for '{method_name}'"
+                )
+
             # Keep UI/queued callbacks responsive while waiting.
-            if app is not None:
-                app.processEvents(QtCore.QEventLoop.AllEvents, 5)
+            app.processEvents(QtCore.QEventLoop.AllEvents, 5)
             response_callback.wait(0.01)
 
         response = response_callback.response
@@ -569,5 +573,5 @@ class BlenderPublisherFrontend(AbstractPublisherFrontend):
     def _trigger_method(self, method_name: str, **params) -> Any | None:
         return self._trigger(method_name, params, False)
 
-    def _trigger_getter(self, method_name: str, **params) -> Any | None:
+    def _trigger_getter(self, method_name: str, **params):
         return self._trigger(method_name, params, True)
