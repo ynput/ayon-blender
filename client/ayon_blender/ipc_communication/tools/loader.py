@@ -400,8 +400,8 @@ class BlenderLoaderFrontend(FrontendLoaderController):
         self._trigger_method(
             "trigger_action_item",
             project_name=project_name,
-            entity_ids=selected_ids,
-            entity_type=selected_entity_type,
+            selected_ids=selected_ids,
+            selected_entity_type=selected_entity_type,
             identifier=identifier,
             data=data,
             options=options,
