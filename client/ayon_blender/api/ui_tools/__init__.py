@@ -1,13 +1,8 @@
-from .utils import get_ui_process_script_path, show_message
-from .loader import BlenderLoaderBackend
-from .publisher import BlenderPublisherBackend
-from .workfiles import BlenderWorkfilesBackend
+from .communication import IPCHandler
+from .utils import show_message
 
 
 __all__ = (
-    "get_ui_process_script_path",
+    "IPCHandler",
     "show_message",
-    "BlenderLoaderBackend",
-    "BlenderPublisherBackend",
-    "BlenderWorkfilesBackend",
 )

@@ -1,10 +1,7 @@
 """Blender operators and menus for use with AYON."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
-import time
-import subprocess
 import logging
 from pathlib import Path
 from typing import Dict
@@ -12,28 +9,19 @@ from typing import Dict
 import bpy
 import bpy.utils.previews
 
-from ayon_core.lib import get_ayon_launcher_args
 from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import (
     get_current_folder_path,
     get_current_task_name,
     get_current_project_name,
-    registered_host,
 )
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity,
     version_up_current_workfile
 )
 
-from ayon_blender.ipc_communication import IPCServer
-
-from .ui_tools import (
-    get_ui_process_script_path,
-    BlenderLoaderBackend,
-    BlenderPublisherBackend,
-    BlenderWorkfilesBackend,
-)
 from .execution import process_main_thread_callbacks
+from .ui_tools import IPCHandler
 from . import pipeline
 from . import render_lib
 
@@ -41,156 +29,6 @@ logger = logging.getLogger(__name__)
 
 PREVIEW_COLLECTIONS: Dict = dict()
 TIMER_INTERVAL: float = 0.01
-
-
-@dataclass
-class _ToolBackends:
-    loader_backend: BlenderLoaderBackend
-    publisher_backend: BlenderPublisherBackend
-    workfiles_backend: BlenderWorkfilesBackend
-
-
-# IPC and external UI process management
-class _IPCConnection:
-    server: IPCServer | None = None
-    ui_process: subprocess.Popen | None = None
-    ui_backends: _ToolBackends | None = None
-
-
-def _init_tool_controllers() -> _ToolBackends:
-    """Initialize tool controllers for IPC communication."""
-    if _IPCConnection.ui_backends is None:
-        host = registered_host()
-        _IPCConnection.ui_backends = _ToolBackends(
-            loader_backend=BlenderLoaderBackend(host),
-            publisher_backend=BlenderPublisherBackend(host),
-            workfiles_backend=BlenderWorkfilesBackend(host),
-        )
-    return _IPCConnection.ui_backends
-
-
-def _external_ui_launcher(ipc_host: str, ipc_port: int, session_token: str) -> subprocess.Popen:
-    launcher_script = get_ui_process_script_path()
-    env = os.environ.copy()
-    env["AYON_IPC_PID"] = str(os.getpid())
-    env["AYON_IPC_HOST"] = ipc_host
-    env["AYON_IPC_PORT"] = str(ipc_port)
-    env["AYON_IPC_TOKEN"] = session_token
-    launch_args = get_ayon_launcher_args("run", str(launcher_script))
-    logger.info("Launching external UI host with: %s", launch_args)
-    return subprocess.Popen(
-        launch_args,
-        env=env,
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-    )
-
-
-def _is_ipc_server_healthy() -> bool:
-    """Return whether IPC server instance is alive and listening."""
-    server = _IPCConnection.server
-    if server is None:
-        return False
-
-    thread = server.server_thread
-    if not server.running or thread is None or not thread.is_alive():
-        return False
-
-    return server.server_socket is not None
-
-
-class BlenderApplication:
-    @classmethod
-    def store_window(cls, identifier, window):
-        # TODO remove
-        print(f"Can't store window anymore '{identifier}'")
-
-
-def _init_ipc_server():
-    """Initialize the IPC server for external UI communication."""
-    if _is_ipc_server_healthy():
-        return _IPCConnection.server
-
-    # Recover from stale server objects that are no longer listening.
-    if _IPCConnection.server is not None:
-        logger.warning("IPC server was stale; recreating it")
-        try:
-            _IPCConnection.server.stop()
-        except Exception:
-            logger.debug("Failed stopping stale IPC server", exc_info=True)
-        _IPCConnection.server = None
-
-    try:
-        server = IPCServer()
-        port = server.start()
-        logger.info("IPC server listening on 127.0.0.1:%s", port)
-
-        # Register handlers for common operations
-        _register_ipc_handlers(server)
-        _IPCConnection.server = server
-
-        _ensure_external_ui_process()
-
-        return _IPCConnection.server
-
-    except Exception as e:
-        logger.error(f"Failed to initialize IPC server: {e}", exc_info=True)
-        _IPCConnection.server = None
-        return None
-
-
-def _ensure_external_ui_process():
-    """Ensure external UI process is running when external UI mode is enabled."""
-    if not _is_ipc_server_healthy():
-        _init_ipc_server()
-
-    if _IPCConnection.server is None:
-        return
-
-    if _IPCConnection.ui_process and _IPCConnection.ui_process.poll() is None:
-        return
-
-    token = _IPCConnection.server.get_session_token()
-    _IPCConnection.ui_process = _external_ui_launcher(
-        ipc_host="127.0.0.1",
-        ipc_port=_IPCConnection.server.port,
-        session_token=token,
-    )
-    logger.info(
-        "External UI process launched (PID: %s)",
-        _IPCConnection.ui_process.pid
-    )
-    # TODO better way to wait for the external UI process
-    # - maybe store requests to send if client is not connected?
-    for _ in range(300):
-        if _IPCConnection.server.clients:
-            break
-        time.sleep(0.1)
-
-
-def _register_ipc_handlers(server: IPCServer):
-    """Register request handlers for IPC server."""
-    tool_backends = _init_tool_controllers()
-    tool_backends.loader_backend.register_ipc_handler(server)
-    tool_backends.publisher_backend.register_ipc_handler(server)
-    tool_backends.workfiles_backend.register_ipc_handler(server)
-
-
-def _shutdown_ipc_server() -> None:
-    """Shutdown the IPC server and external UI process."""
-    if _IPCConnection.ui_process:
-        try:
-            _IPCConnection.ui_process.terminate()
-            _IPCConnection.ui_process.wait(timeout=5)
-        except Exception as e:
-            logger.warning(f"Error terminating UI process: {e}")
-        _IPCConnection.ui_process = None
-
-    if _IPCConnection.server:
-        try:
-            _IPCConnection.server.stop()
-        except Exception as e:
-            logger.error(f"Error stopping IPC server: {e}")
-        _IPCConnection.server = None
 
 
 def _process_app_events() -> float:
@@ -204,10 +42,16 @@ def _process_app_events() -> float:
     process_main_thread_callbacks()
 
     # Process IPC requests (send pending events to clients)
-    if _IPCConnection.server:
-        _IPCConnection.server.process_requests()
+    IPCHandler.process_requests()
 
     return TIMER_INTERVAL
+
+
+class BlenderApplication:
+    @classmethod
+    def store_window(cls, identifier, window):
+        # TODO remove
+        print(f"Can't store window anymore '{identifier}'")
 
 
 class LaunchToolOperator(bpy.types.Operator):
@@ -223,7 +67,7 @@ class LaunchToolOperator(bpy.types.Operator):
             raise NotImplementedError("Attribute `bl_idname` must be set!")
         print(f"Initialising {self.bl_idname}...")
 
-        _init_ipc_server()
+        IPCHandler.init()
 
         if not bpy.app.timers.is_registered(_process_app_events):
             bpy.app.timers.register(
@@ -233,21 +77,17 @@ class LaunchToolOperator(bpy.types.Operator):
 
     def execute(self, context):
         """Execute using external UI process via IPC."""
-        _ensure_external_ui_process()
-        server = _IPCConnection.server
-        if not server:
+        if not self._tool_name:
+            print("No tool name specified for external UI launch")
             return {"CANCELLED"}
-
         try:
-            if not self._tool_name:
-                print("No tool name specified for external UI launch")
-                return {"CANCELLED"}
 
-            server.trigger_method(
+            if not IPCHandler.execute(
                 self._tool_name,
                 "show",
                 self._params,
-            )
+            ):
+                return {"CANCELLED"}
             return {"FINISHED"}
 
         except Exception as e:
@@ -635,7 +475,7 @@ def unregister():
     #     pass
 
     # Shutdown IPC server
-    _shutdown_ipc_server()
+    IPCHandler.shutdown()
 
     pcoll = PREVIEW_COLLECTIONS.pop("ayon")
     bpy.utils.previews.remove(pcoll)

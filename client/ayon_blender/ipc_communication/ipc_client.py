@@ -363,7 +363,7 @@ class IPCClient:
                     msg = self._receive_msg()
 
                     if msg is None:
-                        logger.info("Blender disconnected")
+                        logger.info("Parent process disconnected")
                         self.connected = False
                         self.state = ConnectionState.DISCONNECTED
                         break

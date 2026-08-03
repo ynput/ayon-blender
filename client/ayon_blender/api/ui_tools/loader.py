@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from ayon_core.lib import IconBase
 from ayon_core.tools.loader.control import LoaderController
 
 from ayon_blender.ipc_communication import IPCServer, RequestMessage

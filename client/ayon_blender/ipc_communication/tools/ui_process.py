@@ -10,6 +10,7 @@ import psutil
 from ayon_blender.ipc_communication import IPCClient
 from ayon_blender.ipc_communication.tools.utils import CommunicationInfo
 from ayon_blender.ipc_communication.tools import (
+    BlenderGenericFrontend,
     BlenderWorkfilesFrontend,
     BlenderLoaderFrontend,
     BlenderPublisherFrontend,
@@ -53,6 +54,7 @@ def main():
 
     com_info = CommunicationInfo(ipc)
 
+    _generic = BlenderGenericFrontend(com_info)
     _workfiles = BlenderWorkfilesFrontend(com_info)
     _loader = BlenderLoaderFrontend(com_info)
     _publisher = BlenderPublisherFrontend(com_info)

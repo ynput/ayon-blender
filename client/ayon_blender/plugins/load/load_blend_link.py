@@ -16,7 +16,7 @@ from ayon_blender.api.pipeline import (
     containerise,
     get_container_name,
 )
-from ayon_blender.api.tools import show_message
+from ayon_blender.api.ui_tools import show_message
 
 
 class BlendLinkLoader(plugin.BlenderLoader):
