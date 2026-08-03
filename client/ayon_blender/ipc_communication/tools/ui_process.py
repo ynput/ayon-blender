@@ -68,9 +68,6 @@ def main():
             ipc.reconnect_with_backoff()
             return
 
-        _workfiles.on_parent_process_exit()
-        _loader.on_parent_process_exit()
-        _publisher.on_parent_process_exit()
         logger.error("Blender process has exited")
         if ipc.is_connected():
             ipc.disconnect()
