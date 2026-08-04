@@ -4,7 +4,6 @@ import logging
 import itertools
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
-    TemplateProfileNotFound,
     AbstractTemplateBuilder,
     PlaceholderPlugin,
     PlaceholderItem,
@@ -184,23 +183,38 @@ def set_folder_path_for_ayon_instances(folder_path: str) -> None:
         imprint(obj_or_col, {"folderPath": folder_path})
 
 
+def trigger_on_app_launch() -> None:
+    """Build the workfile template during application
+    launch if the setting is enabled.
+    """
+    builder = BlenderTemplateBuilder(registered_host())
+    preset = builder.get_template_preset()
+    if preset.execute_on_new_file:
+        return
+    builder.trigger_on_app_launch()
+
+
+def trigger_on_new_file() -> None:
+    """Build the workfile template during new file creation
+    if the setting is enabled.
+    """
+    builder = BlenderTemplateBuilder(registered_host())
+    builder.trigger_on_new_file()
+
+
 def create_first_workfile_from_template() -> None:
     """Create the first workfile from template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
-    try:
-        builder.build_template(workfile_creation_enabled=True)
-
-    except TemplateProfileNotFound:
-        log.warning(
-            "Template profile not found. Skipping..."
-        )
+    builder.create_first_workfile_version()
 
 
-def build_workfile_template(*args) -> None:
+def build_workfile_template() -> None:
     """Build the workfile template."""
     builder = BlenderTemplateBuilder(registered_host())
-    builder.build_template()
-
+    preset = builder.get_template_preset()
+    if not preset.has_valid_path():
+        return
+    builder.build_template(preset=preset)
 
 # def update_workfile_template(*args) -> None:
 #     """Update the workfile template."""
