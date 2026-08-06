@@ -113,8 +113,6 @@ class ExtractPlayblast(
 
         # `instance.data["files"]` must be `str` if single frame
         files = list(frame_collection)
-        if len(files) == 1:
-            files = files[0]
 
         tags = ["review"]
         if not instance.data.get("keepImages"):
