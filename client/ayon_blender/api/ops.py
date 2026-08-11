@@ -1,16 +1,10 @@
 """Blender operators and menus for use with AYON."""
+from __future__ import annotations
 
 import os
-import sys
-import platform
-import time
-import traceback
-import collections
+import logging
 from pathlib import Path
-from types import ModuleType
-from typing import Dict, List, Optional, Union
-
-from qtpy import QtWidgets, QtCore
+from typing import Dict
 
 import bpy
 import bpy.utils.previews
@@ -19,70 +13,22 @@ from ayon_core.settings import get_project_settings
 from ayon_core.pipeline import (
     get_current_folder_path,
     get_current_task_name,
-    get_current_project_name
+    get_current_project_name,
 )
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity,
     version_up_current_workfile
 )
-from ayon_core.tools.utils import host_tools
-from ayon_core.style import load_stylesheet
+from ayon_core.tools.ipc_utils import IPCHostTools
 
-from .workio import OpenFileCacher
 from .execution import process_main_thread_callbacks
 from . import pipeline
 from . import render_lib
 
+logger = logging.getLogger(__name__)
 
 PREVIEW_COLLECTIONS: Dict = dict()
 TIMER_INTERVAL: float = 0.01
-
-
-class BlenderApplication:
-    _instance = None
-    blender_windows = {}
-
-    @classmethod
-    def get_app(cls):
-        if cls._instance is None:
-            # If any other addon or plug-in may have initialed a Qt application
-            # before AYON then we should take the existing instance instead.
-            application = QtWidgets.QApplication.instance()
-            if application is None:
-                application = QtWidgets.QApplication(sys.argv)
-
-            # Ensure it is configured to our needs
-            cls._prepare_qapplication(application)
-            cls._instance = application
-
-        return cls._instance
-
-    @classmethod
-    def _prepare_qapplication(cls, application: QtWidgets.QApplication):
-        application.setQuitOnLastWindowClosed(False)
-        application.lastWindowClosed.connect(cls.reset)
-
-    @classmethod
-    def reset(cls):
-        cls._instance = None
-
-    @classmethod
-    def store_window(cls, identifier, window):
-        current_window = cls.get_window(identifier)
-        cls.blender_windows[identifier] = window
-        if current_window:
-            current_window.close()
-            # current_window.deleteLater()
-
-    @classmethod
-    def get_window(cls, identifier):
-        return cls.blender_windows.get(identifier)
-
-
-class GlobalClass:
-    app = None
-    main_thread_callbacks = collections.deque()
-    is_windows = platform.system().lower() == "windows"
 
 
 def _process_app_events() -> float:
@@ -94,16 +40,23 @@ def _process_app_events() -> float:
     """
     # Process main thread callbacks
     process_main_thread_callbacks()
+
+    # Process IPC requests (send pending events to clients)
+    IPCHostTools.process_requests()
+
     return TIMER_INTERVAL
 
 
-class LaunchQtApp(bpy.types.Operator):
+class BlenderApplication:
+    @classmethod
+    def store_window(cls, identifier, window):
+        # TODO remove
+        print(f"Can't store window anymore '{identifier}'")
+
+
+class LaunchToolOperator(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
-    _window: Optional[Union[QtWidgets.QDialog, ModuleType]] = None
-    _tool_name: str = None
-    _init_args: Optional[List] = list()
-    _init_kwargs: Optional[Dict] = dict()
     bl_idname: str = None
 
     def __init__(self, *args, **kwargs):
@@ -111,7 +64,6 @@ class LaunchQtApp(bpy.types.Operator):
         if self.bl_idname is None:
             raise NotImplementedError("Attribute `bl_idname` must be set!")
         print(f"Initialising {self.bl_idname}...")
-        GlobalClass.app = BlenderApplication.get_app()
 
         if not bpy.app.timers.is_registered(_process_app_events):
             bpy.app.timers.register(
@@ -120,140 +72,71 @@ class LaunchQtApp(bpy.types.Operator):
             )
 
     def execute(self, context):
-        """Execute the operator.
+        """Execute using external UI process via IPC."""
+        raise ValueError(
+            f"Tool '{self.__class__.__name__}' is not implemented "
+        )
 
-        The child class must implement `execute()` where it only has to set
-        `self._window` to the desired Qt window and then simply run
-        `return super().execute(context)`.
-        `self._window` is expected to have a `show` method.
-        If the `show` method requires arguments, you can set `self._show_args`
-        and `self._show_kwargs`. `args` should be a list, `kwargs` a
-        dictionary.
-        """
-
-        if self._tool_name is None:
-            if self._window is None:
-                raise AttributeError("`self._window` is not set.")
-
-        else:
-            window = BlenderApplication.get_window(self.bl_idname)
-            if window is None:
-                window = host_tools.get_tool_by_name(self._tool_name)
-                BlenderApplication.store_window(self.bl_idname, window)
-            self._window = window
-
-        if not isinstance(self._window, (QtWidgets.QWidget, ModuleType)):
-            raise AttributeError(
-                "`window` should be a `QWidget or module`. Got: {}".format(
-                    str(type(self._window))
-                )
-            )
-
-        self.before_window_show()
-
-        def pull_to_front(window):
-            """Pull window forward to screen.
-
-            If Window is minimized this will un-minimize, then it can be raised
-            and activated to the front.
-            """
-            window.setWindowState(
-                (window.windowState() & ~QtCore.Qt.WindowMinimized) |
-                QtCore.Qt.WindowActive
-            )
-            window.raise_()
-            window.activateWindow()
-
-        if isinstance(self._window, ModuleType):
-            self._window.show()
-            pull_to_front(self._window)
-
-            # Pull window to the front
-            window = None
-            if hasattr(self._window, "window"):
-                window = self._window.window
-            elif hasattr(self._window, "_window"):
-                window = self._window.window
-
-            if window:
-                BlenderApplication.store_window(self.bl_idname, window)
-
-        else:
-            origin_flags = self._window.windowFlags()
-            on_top_flags = origin_flags | QtCore.Qt.WindowStaysOnTopHint
-            self._window.setWindowFlags(on_top_flags)
-            self._window.show()
-            pull_to_front(self._window)
-
-            # if on_top_flags != origin_flags:
-            #     self._window.setWindowFlags(origin_flags)
-            #     self._window.show()
-
-        return {'FINISHED'}
-
-    def before_window_show(self):
-        return
-
-
-class LaunchCreator(LaunchQtApp):
+class LaunchCreator(LaunchToolOperator):
     """Launch AYON Creator."""
 
     bl_idname = "wm.ayon_creator"
     bl_label = "Create..."
-    _tool_name = "creator"
-
-    def before_window_show(self):
-        self._window.refresh()
 
     def execute(self, context):
-        host_tools.show_publisher(tab="create")
+        IPCHostTools.show_publisher(tab="create")
         return {"FINISHED"}
 
 
-class LaunchLoader(LaunchQtApp):
+class LaunchLoader(LaunchToolOperator):
     """Launch AYON Loader."""
 
     bl_idname = "wm.ayon_loader"
     bl_label = "Load..."
-    _tool_name = "loader"
+
+    def execute(self, context):
+        IPCHostTools.show_loader()
+        return {"FINISHED"}
 
 
-class LaunchPublisher(LaunchQtApp):
+class LaunchPublisher(LaunchToolOperator):
     """Launch AYON Publisher."""
 
     bl_idname = "wm.ayon_publisher"
     bl_label = "Publish..."
 
     def execute(self, context):
-        host_tools.show_publisher(tab="publish")
+        IPCHostTools.show_publisher()
         return {"FINISHED"}
 
 
-class LaunchManager(LaunchQtApp):
+class LaunchManager(LaunchToolOperator):
     """Launch AYON Manager."""
 
     bl_idname = "wm.ayon_manager"
     bl_label = "Manage..."
-    _tool_name = "sceneinventory"
 
 
-class LaunchLibrary(LaunchQtApp):
+class LaunchLibrary(LaunchToolOperator):
     """Launch Library Loader."""
 
     bl_idname = "wm.library_loader"
     bl_label = "Library..."
-    _tool_name = "libraryloader"
+
+    def execute(self, context):
+        IPCHostTools.show_loader()
+        return {"FINISHED"}
 
 
-class LaunchWorkFiles(LaunchQtApp):
+class LaunchWorkFiles(LaunchToolOperator):
     """Launch AYON Work Files."""
 
     bl_idname = "wm.ayon_workfiles"
     bl_label = "Work Files..."
-    _tool_name = "workfiles"
 
     def execute(self, context):
-        return super().execute(context)
+        IPCHostTools.show_workfiles()
+        return {"FINISHED"}
 
 
 class SetFrameRange(bpy.types.Operator):
@@ -301,7 +184,7 @@ class CreateRenderSetup(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class VersionUpWorkfile(LaunchQtApp):
+class VersionUpWorkfile(LaunchToolOperator):
     """Perform Incremental Save Workfile."""
 
     bl_idname = "wm.ayon_version_up_workfile"
@@ -312,7 +195,7 @@ class VersionUpWorkfile(LaunchQtApp):
         return {"FINISHED"}
 
 
-class CreateFirstWorkfileFromTemplate(LaunchQtApp):
+class CreateFirstWorkfileFromTemplate(LaunchToolOperator):
     """Build Workfile from ayon template settings."""
 
     bl_idname = "wm.ayon_create_first_workfile_from_template"
@@ -323,7 +206,7 @@ class CreateFirstWorkfileFromTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
-class BuildWorkfileFromTemplate(LaunchQtApp):
+class BuildWorkfileFromTemplate(LaunchToolOperator):
     """Build Workfile from ayon template settings."""
 
     bl_idname = "wm.ayon_build_workfile_from_template"
@@ -335,7 +218,7 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 
 
 # TODO: implement update functionality when the load placeholder supported.
-# class UpdateWorkfileFromTemplate(LaunchQtApp):
+# class UpdateWorkfileFromTemplate(LaunchToolOperator):
 #     """Update Workfile from ayon template settings."""
 
 #     bl_idname = "wm.ayon_update_workfile_from_template"
@@ -346,42 +229,41 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 #         return {"FINISHED"}
 
 
-class OpenTemplate(LaunchQtApp):
+class OpenTemplate(LaunchToolOperator):
     """Open workfile template."""
 
     bl_idname = "wm.ayon_open_template"
     bl_label = "Open Template"
-    def execute(self, context):
-        from .workfile_template_builder import open_template
-        open_template()
-        return {"FINISHED"}
+    # def execute(self, context):
+    #     from .workfile_template_builder import open_template
+    #     open_template()
+    #     return {"FINISHED"}
 
 
-
-class CreatePlaceholder(LaunchQtApp):
+class CreatePlaceholder(LaunchToolOperator):
     """Create Placeholder from ayon template settings."""
 
     bl_idname = "wm.ayon_create_placeholder"
     bl_label = "Create Placeholder"
-    def execute(self, context):
-        from .workfile_template_builder import create_placeholder
-        window = create_placeholder()
-        BlenderApplication.store_window(self.bl_idname, window)
-        self._window = window
-        return super().execute(context)
+    # def execute(self, context):
+    #     from .workfile_template_builder import create_placeholder
+    #     window = create_placeholder()
+    #     BlenderApplication.store_window(self.bl_idname, window)
+    #     self._window = window
+    #     return super().execute(context)
 
 
-class UpdatePlaceholder(LaunchQtApp):
+class UpdatePlaceholder(LaunchToolOperator):
     """Update Placeholder from ayon template settings."""
 
     bl_idname = "wm.ayon_update_placeholder"
     bl_label = "Update Placeholder"
-    def execute(self, context):
-        from .workfile_template_builder import update_placeholder
-        window = update_placeholder()
-        BlenderApplication.store_window(self.bl_idname, window)
-        self._window = window
-        return super().execute(context)
+    # def execute(self, context):
+    #     from .workfile_template_builder import update_placeholder
+    #     window = update_placeholder()
+    #     BlenderApplication.store_window(self.bl_idname, window)
+    #     self._window = window
+    #     return super().execute(context)
 
 
 class TOPBAR_MT_ayon_Templated_Workfile(bpy.types.Menu):
@@ -526,7 +408,6 @@ def register():
     pcoll.load("pyblish_menu_icon", str(pyblish_icon_file.absolute()), 'IMAGE')
     PREVIEW_COLLECTIONS["ayon"] = pcoll
 
-    BlenderApplication.get_app()
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_editor_menus.append(draw_ayon_menu)
@@ -534,6 +415,10 @@ def register():
 
 def unregister():
     """Unregister the operators and menu."""
+
+
+    # Shutdown IPC server
+    IPCHostTools.shutdown()
 
     pcoll = PREVIEW_COLLECTIONS.pop("ayon")
     bpy.utils.previews.remove(pcoll)
