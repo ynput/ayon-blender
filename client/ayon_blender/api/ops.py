@@ -29,20 +29,13 @@ from ayon_core.tools.utils import host_tools
 from ayon_core.style import load_stylesheet
 
 from .workio import OpenFileCacher
+from .execution import process_main_thread_callbacks
 from . import pipeline
 from . import render_lib
 
 
 PREVIEW_COLLECTIONS: Dict = dict()
 TIMER_INTERVAL: float = 0.01
-
-
-def execute_function_in_main_thread(f):
-    """Decorator to move a function call into main thread items"""
-    def wrapper(*args, **kwargs):
-        mti = MainThreadItem(f, *args, **kwargs)
-        execute_in_main_thread(mti)
-    return wrapper
 
 
 class BlenderApplication:
@@ -86,131 +79,21 @@ class BlenderApplication:
         return cls.blender_windows.get(identifier)
 
 
-class MainThreadItem:
-    """Structure to store information about callback in main thread.
-
-    Item should be used to execute callback in main thread which may be needed
-    for execution of Qt objects.
-
-    Item store callback (callable variable), arguments and keyword arguments
-    for the callback. Item hold information about it's process.
-    """
-    not_set = object()
-    sleep_time = 0.1
-
-    def __init__(self, callback, *args, **kwargs):
-        self.done = False
-        self.exception = self.not_set
-        self.result = self.not_set
-        self.callback = callback
-        self.args = args
-        self.kwargs = kwargs
-
-    def execute(self):
-        """Execute callback and store its result.
-
-        Method must be called from main thread. Item is marked as `done`
-        when callback execution finished. Store output of callback of exception
-        information when callback raises one.
-        """
-        print("Executing process in main thread")
-        if self.done:
-            print("- item is already processed")
-            return
-
-        callback = self.callback
-        args = self.args
-        kwargs = self.kwargs
-        print("Running callback: {}".format(str(callback)))
-        try:
-            result = callback(*args, **kwargs)
-            self.result = result
-
-        except Exception:
-            self.exception = sys.exc_info()
-
-        finally:
-            print("Done")
-            self.done = True
-
-    def wait(self):
-        """Wait for result from main thread.
-
-        This method stops current thread until callback is executed.
-
-        Returns:
-            object: Output of callback. May be any type or object.
-
-        Raises:
-            Exception: Reraise any exception that happened during callback
-                execution.
-        """
-        while not self.done:
-            print(self.done)
-            time.sleep(self.sleep_time)
-
-        if self.exception is self.not_set:
-            return self.result
-        raise self.exception
-
-
 class GlobalClass:
     app = None
     main_thread_callbacks = collections.deque()
     is_windows = platform.system().lower() == "windows"
 
 
-def execute_in_main_thread(main_thead_item):
-    print("execute_in_main_thread")
-    GlobalClass.main_thread_callbacks.append(main_thead_item)
-
-
-def _process_app_events() -> Optional[float]:
+def _process_app_events() -> float:
     """Process the events of the Qt app if the window is still visible.
 
     If the app has any top level windows and at least one of them is visible
     return the time after which this function should be run again. Else return
     None, so the function is not run again and will be unregistered.
     """
-    while GlobalClass.main_thread_callbacks:
-        main_thread_item = GlobalClass.main_thread_callbacks.popleft()
-        main_thread_item.execute()
-        if main_thread_item.exception is not MainThreadItem.not_set:
-            _clc, val, tb = main_thread_item.exception
-            msg = str(val)
-            detail = "\n".join(traceback.format_exception(_clc, val, tb))
-            dialog = QtWidgets.QMessageBox(
-                QtWidgets.QMessageBox.Warning,
-                "Error",
-                msg)
-            dialog.setMinimumWidth(500)
-            dialog.setDetailedText(detail)
-            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            dialog.setStyleSheet(load_stylesheet())
-            # Ensure the dialog stays on top and is properly focused
-            dialog.setWindowFlags(
-                dialog.windowFlags() |
-                QtCore.Qt.WindowStaysOnTopHint |
-                QtCore.Qt.Dialog
-            )
-            dialog.raise_()
-            dialog.activateWindow()
-            dialog.open()
-
-        # Refresh Manager
-        if GlobalClass.app:
-            manager = BlenderApplication.get_window("WM_OT_ayon_manager")
-            if manager:
-                manager.refresh()
-
-    if not GlobalClass.is_windows:
-        if OpenFileCacher.opening_file:
-            return TIMER_INTERVAL
-
-        app = GlobalClass.app
-        if app:
-            app.processEvents()
-            return TIMER_INTERVAL
+    # Process main thread callbacks
+    process_main_thread_callbacks()
     return TIMER_INTERVAL
 
 

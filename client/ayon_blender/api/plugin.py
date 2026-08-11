@@ -26,10 +26,7 @@ from .constants import (
     AYON_INSTANCES,
     AYON_PROPERTY
 )
-from .ops import (
-    MainThreadItem,
-    execute_in_main_thread
-)
+from .execution import execute_in_main_thread
 from .lib import (
     imprint,
     get_blender_version,
@@ -563,8 +560,7 @@ class BlenderLoader(LoaderPlugin):
              namespace: Optional[str] = None,
              options: Optional[Dict] = None) -> Optional[bpy.types.Collection]:
         """ Run the loader on Blender main thread"""
-        mti = MainThreadItem(self._load, context, name, namespace, options)
-        execute_in_main_thread(mti)
+        execute_in_main_thread(self._load, context, name, namespace, options)
 
     def _load(self,
               context: dict,
@@ -608,8 +604,7 @@ class BlenderLoader(LoaderPlugin):
 
     def update(self, container: Dict, context: Dict):
         """ Run the update on Blender main thread"""
-        mti = MainThreadItem(self.exec_update, container, context)
-        execute_in_main_thread(mti)
+        execute_in_main_thread(self.exec_update, container, context)
 
     def exec_remove(self, container: Dict) -> bool:
         """Must be implemented by a subclass"""
@@ -617,8 +612,7 @@ class BlenderLoader(LoaderPlugin):
 
     def remove(self, container: Dict) -> bool:
         """ Run the remove on Blender main thread"""
-        mti = MainThreadItem(self.exec_remove, container)
-        execute_in_main_thread(mti)
+        execute_in_main_thread(self.exec_remove, container)
 
     def switch(self, container, context):
         # Support switch in scene inventory
