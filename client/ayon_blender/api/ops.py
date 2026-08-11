@@ -115,6 +115,10 @@ class LaunchManager(LaunchToolOperator):
 
     bl_idname = "wm.ayon_manager"
     bl_label = "Manage..."
+    # TODO implement
+    # def execute(self, context):
+    #     IPCHostTools.show_sceneinventory()
+    #     return {"FINISHED"}
 
 
 class LaunchLibrary(LaunchToolOperator):
@@ -200,6 +204,7 @@ class CreateFirstWorkfileFromTemplate(LaunchToolOperator):
 
     bl_idname = "wm.ayon_create_first_workfile_from_template"
     bl_label = "Create First Workfile from Template"
+
     def execute(self, context):
         from .workfile_template_builder import create_first_workfile_from_template
         create_first_workfile_from_template()
@@ -211,6 +216,7 @@ class BuildWorkfileFromTemplate(LaunchToolOperator):
 
     bl_idname = "wm.ayon_build_workfile_from_template"
     bl_label = "Build Workfile from Template"
+
     def execute(self, context):
         from .workfile_template_builder import build_workfile_template
         build_workfile_template()
@@ -234,6 +240,7 @@ class OpenTemplate(LaunchToolOperator):
 
     bl_idname = "wm.ayon_open_template"
     bl_label = "Open Template"
+    # TODO implement
     # def execute(self, context):
     #     from .workfile_template_builder import open_template
     #     open_template()
@@ -245,6 +252,7 @@ class CreatePlaceholder(LaunchToolOperator):
 
     bl_idname = "wm.ayon_create_placeholder"
     bl_label = "Create Placeholder"
+    # TODO implement
     # def execute(self, context):
     #     from .workfile_template_builder import create_placeholder
     #     window = create_placeholder()
@@ -258,6 +266,7 @@ class UpdatePlaceholder(LaunchToolOperator):
 
     bl_idname = "wm.ayon_update_placeholder"
     bl_label = "Update Placeholder"
+    # TODO implement
     # def execute(self, context):
     #     from .workfile_template_builder import update_placeholder
     #     window = update_placeholder()
