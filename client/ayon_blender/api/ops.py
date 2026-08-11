@@ -188,7 +188,7 @@ class CreateRenderSetup(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class VersionUpWorkfile(LaunchToolOperator):
+class VersionUpWorkfile(bpy.types.Operator):
     """Perform Incremental Save Workfile."""
 
     bl_idname = "wm.ayon_version_up_workfile"
@@ -199,7 +199,7 @@ class VersionUpWorkfile(LaunchToolOperator):
         return {"FINISHED"}
 
 
-class CreateFirstWorkfileFromTemplate(LaunchToolOperator):
+class CreateFirstWorkfileFromTemplate(bpy.types.Operator):
     """Build Workfile from ayon template settings."""
 
     bl_idname = "wm.ayon_create_first_workfile_from_template"
@@ -211,7 +211,7 @@ class CreateFirstWorkfileFromTemplate(LaunchToolOperator):
         return {"FINISHED"}
 
 
-class BuildWorkfileFromTemplate(LaunchToolOperator):
+class BuildWorkfileFromTemplate(bpy.types.Operator):
     """Build Workfile from ayon template settings."""
 
     bl_idname = "wm.ayon_build_workfile_from_template"
