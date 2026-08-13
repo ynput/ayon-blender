@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
+import threading
 import time
 from typing import Any, Callable
 
@@ -70,6 +71,7 @@ class MainThreadItem:
 
 
 class _LocalData:
+    main_thread: threading.Thread = threading.current_thread()
     main_thread_callbacks: deque[MainThreadItem] = deque()
 
 
@@ -79,7 +81,10 @@ def add_main_thread_item(main_thread_item: MainThreadItem) -> None:
 
 def execute_in_main_thread(func: Callable, *args, **kwargs) -> MainThreadItem:
     main_thread_item = MainThreadItem(func, args, kwargs)
-    add_main_thread_item(main_thread_item)
+    if threading.current_thread() is _LocalData.main_thread:
+        main_thread_item.execute()
+    else:
+        add_main_thread_item(main_thread_item)
     return main_thread_item
 
 
