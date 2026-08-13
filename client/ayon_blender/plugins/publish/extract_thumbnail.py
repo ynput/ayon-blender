@@ -76,10 +76,11 @@ class ExtractThumbnail(plugin.BlenderExtractor):
         representation = {
             "name": "thumbnail",
             "ext": "jpg",
-            "files": thumbnail,
+            "files": [thumbnail],
             "stagingDir": stagingdir,
             "thumbnail": True
         }
+        self.log.debug(f"representation: {representation}")
         instance.data["representations"].append(representation)
 
     def _fix_output_path(self, filepath):
