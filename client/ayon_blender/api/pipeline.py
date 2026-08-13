@@ -104,7 +104,9 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
             *args: Arguments to be passed to the function.
             **kwargs: Keyword arguments to be passed to the function.
         """
-        execute_in_main_thread(func, *args, **kwargs)
+        item = execute_in_main_thread(func, *args, **kwargs)
+        item.wait()
+        return item.result
 
     def get_containers(self) -> Iterator:
         """List containers from active Blender scene."""
