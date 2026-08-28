@@ -190,7 +190,7 @@ class ExtractPlayblastModel(BaseSettingsModel):
             "When enabled, publishing the playblast will also include image planes in the capture. "
             "Only active for Blender 5.2 or newer."
         )
-
+    )
     @validator("presets")
     def validate_json(cls, value):
         return validate_json_dict(value)
