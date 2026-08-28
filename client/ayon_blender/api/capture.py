@@ -307,9 +307,10 @@ def maintain_camera_settings(window, camera, image_planes):
     target_camera = window.scene.objects.get(camera)
     current_image_plane = None
     if target_camera:
-        current_image_plane = target_camera.data.show_background_images
         window.scene.camera = target_camera
-        target_camera.data.show_background_images = image_planes
+        if hasattr(target_camera.data, "show_background_images"):
+            current_image_plane = target_camera.data.show_background_images
+            target_camera.data.show_background_images = bool(image_planes)
     try:
         yield
     finally:
