@@ -8,7 +8,7 @@ import bpy
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import capture, plugin
-from ayon_blender.api.lib import maintained_time
+from ayon_blender.api.lib import maintained_time, get_blender_version
 
 
 class ExtractPlayblast(
@@ -28,6 +28,7 @@ class ExtractPlayblast(
     order = pyblish.api.ExtractorOrder + 0.01
 
     presets = "{}"
+    image_planes = False
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -65,6 +66,11 @@ class ExtractPlayblast(
 
         self.log.debug(f"Outputting images to {path}")
 
+        if self.image_planes:
+            instance.data["image_planes"] = self.image_planes
+            if get_blender_version() < (5, 2):
+                self.log.warning("Image planes are only supported in Blender 5.2 or newer.")
+
         presets = json.loads(self.presets)
         preset = presets.get("default")
         preset.update({
@@ -74,7 +80,10 @@ class ExtractPlayblast(
             "filename": path,
             "overwrite": True,
             "isolate": isolate,
+            "image_planes": self.image_planes,
+            "log": self.log,
         })
+        self.log.debug(f"Using preset: {preset}")
         preset.setdefault(
             "image_settings",
             {
