@@ -202,7 +202,8 @@ def applied_view(window, camera, isolate=None, options=None, image_planes=False,
         space.overlay.show_overlays = False
 
     if image_planes:
-        log.warning("overlays option needs to be enabled to showcase background images.")
+        if log:
+            log.warning("Overlay visibility must be enabled to display background images (image planes).")
         space.overlay.show_overlays = True
 
 
