@@ -8,7 +8,7 @@ import bpy
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import capture, plugin
-from ayon_blender.api.lib import maintained_time, get_blender_version
+from ayon_blender.api.lib import maintained_time
 
 
 class ExtractPlayblast(
@@ -68,8 +68,6 @@ class ExtractPlayblast(
 
         if self.image_planes:
             instance.data["image_planes"] = self.image_planes
-            if get_blender_version() < (5, 2):
-                self.log.warning("Image planes are only supported in Blender 5.2 or newer.")
 
         presets = json.loads(self.presets)
         preset = presets.get("default")

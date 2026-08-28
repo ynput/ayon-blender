@@ -467,8 +467,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 "model": {
                     "image_settings": {
                         "file_format": "PNG",
-                        "color_mode": "RGB",
-                        "quality": 100
+                        "color_mode": "RGB"
                     },
                     "display_options": {
                         "shading": {
@@ -488,8 +487,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 "rig": {
                     "image_settings": {
                         "file_format": "PNG",
-                        "color_mode": "RGB",
-                        "quality": 100
+                        "color_mode": "RGB"
                     },
                     "display_options": {
                         "shading": {
