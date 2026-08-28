@@ -184,6 +184,13 @@ class ExtractPlayblastModel(BaseSettingsModel):
     active: bool = SettingsField(title="Active")
     presets: str = SettingsField("", title="Presets", widget="textarea")
     compress: bool = SettingsField(False, title="Compress")
+    image_planes: bool = SettingsField(
+        False, title="Image Planes",
+        description=(
+            "When enabled publishing the playblast will also include image planes in the capture."
+            " Only active for Blender 5.2 or newer."
+        )
+    )
 
     @validator("presets")
     def validate_json(cls, value):
@@ -460,7 +467,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             {
                 "model": {
                     "image_settings": {
-                        "file_format": "JPEG",
+                        "file_format": "PNG",
                         "color_mode": "RGB",
                         "quality": 100
                     },
@@ -481,7 +488,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 },
                 "rig": {
                     "image_settings": {
-                        "file_format": "JPEG",
+                        "file_format": "PNG",
                         "color_mode": "RGB",
                         "quality": 100
                     },
@@ -517,7 +524,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 }
             },
             indent=4,
-        )
+        ),
+        "image_planes": False,
     },
     "ExtractPlayblast": {
         "enabled": True,
@@ -544,7 +552,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 }
             },
             indent=4
-        )
+        ),
+        "image_planes": False
     },
     "ExtractUSD": {
         "convert_orientation": False,
