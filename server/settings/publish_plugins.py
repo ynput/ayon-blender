@@ -185,9 +185,9 @@ class ExtractPlayblastModel(BaseSettingsModel):
     presets: str = SettingsField("", title="Presets", widget="textarea")
     compress: bool = SettingsField(False, title="Compress")
     background_images: bool = SettingsField(
-        False, title="Image Planes",
+        False, title="Background Images",
         description=(
-            "When enabled, publishing the playblast will also include image planes in the capture. "
+            "When enabled, publishing the playblast will also include background images in the capture. "
             "Only active for Blender 5.2 or newer."
         )
     )
