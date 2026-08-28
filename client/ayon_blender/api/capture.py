@@ -23,7 +23,7 @@ def capture(
     overwrite=False,
     image_settings=None,
     display_options=None,
-    image_planes=False,
+    background_images=False,
     log=None,
 ) -> str:
     """Playblast in an independent windows
@@ -47,7 +47,7 @@ def capture(
         image_settings (dict, optional): Supplied image settings for render,
             using `ImageSettings`
         display_options (dict, optional): Supplied display options for render
-        image_planes (bool, optional): Whether to enable image planes during capture
+        background_images (bool, optional): Whether to enable background images during capture
         Returns:
             str: The path to the captured playblast file.
     """
@@ -98,12 +98,14 @@ def capture(
             camera,
             isolate,
             options=display_options,
-            image_planes=image_planes,
+            background_images=background_images,
             log=log,
         )
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(maintain_camera_settings(window, camera, image_planes=image_planes))
+            stack.enter_context(
+                maintain_camera_settings(window, camera, background_images=background_images)
+            )
             stack.enter_context(applied_frame_range(window, *frame_range))
             stack.enter_context(applied_render_options(window, render_options))
             stack.enter_context(applied_image_settings(window, image_settings))
@@ -176,7 +178,7 @@ def _apply_options(entity, options):
             setattr(entity, option, value)
 
 
-def applied_view(window, camera, isolate=None, options=None, image_planes=False, log=None):
+def applied_view(window, camera, isolate=None, options=None, background_images=False, log=None):
     """Apply view options to window."""
     area = window.screen.areas[0]
     area.ui_type = "VIEW_3D"
@@ -201,7 +203,7 @@ def applied_view(window, camera, isolate=None, options=None, image_planes=False,
         space.show_gizmo = False
         space.overlay.show_overlays = False
 
-    if image_planes:
+    if background_images:
         if log:
             log.warning("Overlay visibility must be enabled to display background images (image planes).")
         space.overlay.show_overlays = True
@@ -301,7 +303,7 @@ def applied_image_settings(window, options):
 
 
 @contextlib.contextmanager
-def maintain_camera_settings(window, camera, image_planes):
+def maintain_camera_settings(window, camera, background_images):
     """Context manager to override camera."""
     current_camera = window.scene.camera
     target_camera = window.scene.objects.get(camera)
@@ -310,7 +312,7 @@ def maintain_camera_settings(window, camera, image_planes):
         window.scene.camera = target_camera
         if hasattr(target_camera.data, "show_background_images"):
             current_image_plane = target_camera.data.show_background_images
-            target_camera.data.show_background_images = bool(image_planes)
+            target_camera.data.show_background_images = bool(background_images)
     try:
         yield
     finally:

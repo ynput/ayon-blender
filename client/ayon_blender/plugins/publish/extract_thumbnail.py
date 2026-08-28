@@ -22,7 +22,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
     families = ["review.playblast"]
     order = pyblish.api.ExtractorOrder + 0.01
     presets = "{}"
-    image_planes = False
+    background_images = False
 
     def process(self, instance):
         self.log.debug("Extracting capture..")
@@ -55,7 +55,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
             "filename": path,
             "overwrite": True,
             "isolate": isolate,
-            "image_planes": instance.data.get("image_planes", self.image_planes),
+            "background_images": instance.data.get("background_images", self.background_images),
             "log": self.log
         })
         preset.setdefault(

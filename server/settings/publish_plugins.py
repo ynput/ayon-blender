@@ -184,7 +184,7 @@ class ExtractPlayblastModel(BaseSettingsModel):
     active: bool = SettingsField(title="Active")
     presets: str = SettingsField("", title="Presets", widget="textarea")
     compress: bool = SettingsField(False, title="Compress")
-    image_planes: bool = SettingsField(
+    background_images: bool = SettingsField(
         False, title="Image Planes",
         description=(
             "When enabled, publishing the playblast will also include image planes in the capture. "
@@ -522,7 +522,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             },
             indent=4,
         ),
-        "image_planes": False,
+        "background_images": False,
     },
     "ExtractPlayblast": {
         "enabled": True,
@@ -550,7 +550,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             },
             indent=4
         ),
-        "image_planes": False
+        "background_images": False
     },
     "ExtractUSD": {
         "convert_orientation": False,
