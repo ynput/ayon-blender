@@ -1,5 +1,4 @@
 import os
-import json
 
 import clique
 import pyblish.api
