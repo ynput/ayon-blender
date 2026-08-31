@@ -1,23 +1,5 @@
-import json
-from pydantic import validator
-from ayon_server.exceptions import BadRequestException
 from ayon_server.settings import BaseSettingsModel, SettingsField
-
-
-def validate_json_dict(value):
-    if not value.strip():
-        return "{}"
-    try:
-        converted_value = json.loads(value)
-        success = isinstance(converted_value, dict)
-    except json.JSONDecodeError:
-        success = False
-
-    if not success:
-        raise BadRequestException(
-            "Environment's can't be parsed as json object"
-        )
-    return value
+from .publish_playblast import ExtractPlayblastModel, DEFAULT_PLAYBLAST_SETTING
 
 
 class ValidatePluginModel(BaseSettingsModel):
@@ -178,18 +160,6 @@ class ExtractBlendAnimationModel(BaseSettingsModel):
     compress: bool = SettingsField(False, title="Compress")
 
 
-class ExtractPlayblastModel(BaseSettingsModel):
-    enabled: bool = SettingsField(True)
-    optional: bool = SettingsField(title="Optional")
-    active: bool = SettingsField(title="Active")
-    presets: str = SettingsField("", title="Presets", widget="textarea")
-    compress: bool = SettingsField(False, title="Compress")
-
-    @validator("presets")
-    def validate_json(cls, value):
-        return validate_json_dict(value)
-
-
 class PublishPluginsModel(BaseSettingsModel):
     ValidateAbsoluteDataBlockPaths: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
@@ -304,8 +274,8 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ValidatePluginModel,
         title="Extract Layout (JSON)"
     )
-    ExtractThumbnail: ExtractPlayblastModel = SettingsField(
-        default_factory=ExtractPlayblastModel,
+    ExtractThumbnail: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
         title="Extract Thumbnail"
     )
     ExtractPlayblast: ExtractPlayblastModel = SettingsField(
@@ -456,96 +426,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "enabled": True,
         "optional": True,
         "active": True,
-        "presets": json.dumps(
-            {
-                "model": {
-                    "image_settings": {
-                        "file_format": "JPEG",
-                        "color_mode": "RGB",
-                        "quality": 100
-                    },
-                    "display_options": {
-                        "shading": {
-                            "light": "STUDIO",
-                            "studio_light": "Default",
-                            "type": "SOLID",
-                            "color_type": "OBJECT",
-                            "show_xray": False,
-                            "show_shadows": False,
-                            "show_cavity": True
-                        },
-                        "overlay": {
-                            "show_overlays": False
-                        }
-                    }
-                },
-                "rig": {
-                    "image_settings": {
-                        "file_format": "JPEG",
-                        "color_mode": "RGB",
-                        "quality": 100
-                    },
-                    "display_options": {
-                        "shading": {
-                            "light": "STUDIO",
-                            "studio_light": "Default",
-                            "type": "SOLID",
-                            "color_type": "OBJECT",
-                            "show_xray": True,
-                            "show_shadows": False,
-                            "show_cavity": False
-                        },
-                        "overlay": {
-                            "show_overlays": True,
-                            "show_ortho_grid": False,
-                            "show_floor": False,
-                            "show_axis_x": False,
-                            "show_axis_y": False,
-                            "show_axis_z": False,
-                            "show_text": False,
-                            "show_stats": False,
-                            "show_cursor": False,
-                            "show_annotation": False,
-                            "show_extras": False,
-                            "show_relationship_lines": False,
-                            "show_outline_selected": False,
-                            "show_motion_paths": False,
-                            "show_object_origins": False,
-                            "show_bones": True
-                        }
-                    }
-                }
-            },
-            indent=4,
-        )
     },
-    "ExtractPlayblast": {
-        "enabled": True,
-        "optional": True,
-        "active": True,
-        "presets": json.dumps(
-            {
-                "default": {
-                    "image_settings": {
-                        "file_format": "PNG",
-                        "color_mode": "RGB",
-                        "color_depth": "8",
-                        "compression": 15
-                    },
-                    "display_options": {
-                        "shading": {
-                            "type": "MATERIAL",
-                            "render_pass": "COMBINED"
-                        },
-                        "overlay": {
-                            "show_overlays": False
-                        }
-                    }
-                }
-            },
-            indent=4
-        )
-    },
+    "ExtractPlayblast": DEFAULT_PLAYBLAST_SETTING,
     "ExtractUSD": {
         "convert_orientation": False,
         "export_animation": False,
