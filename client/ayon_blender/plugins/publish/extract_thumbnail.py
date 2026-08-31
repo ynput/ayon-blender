@@ -73,10 +73,12 @@ class ExtractThumbnail(plugin.BlenderExtractor):
                 },
             )
         extension = preset["image_settings"].get("file_format", "PNG").lower()
+        extension = "jpeg" if extension == "jpeg" else extension
         with maintained_time():
             path = capture(**preset)
 
         thumbnail = os.path.basename(self._fix_output_path(path, extension))
+        extension = os.path.splitext(thumbnail)[1].lstrip(".").lower()
 
         self.log.debug(f"thumbnail: {thumbnail}")
 

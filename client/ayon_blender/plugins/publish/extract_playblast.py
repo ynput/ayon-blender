@@ -100,9 +100,13 @@ class ExtractPlayblast(
 
         collected_files = os.listdir(stagingdir)
         extension = preset["image_settings"].get("file_format", "PNG").lower()
+        extension_pattern = "jpeg" if extension == "jpeg" else extension
         collections, _remainder = clique.assemble(
             collected_files,
-            patterns=[f"{filename}\\.{clique.DIGITS_PATTERN}\\.{extension}$"],
+            patterns=[
+                f"{filename}\\.{clique.DIGITS_PATTERN}\\."
+                f"{extension_pattern}$"
+            ],
             minimum_items=1
         )
 
@@ -121,6 +125,7 @@ class ExtractPlayblast(
 
         # `instance.data["files"]` must be `str` if single frame
         files = list(frame_collection)
+        extension = os.path.splitext(files[0])[1].lstrip(".").lower()
         if len(files) == 1:
             files = files[0]
 
