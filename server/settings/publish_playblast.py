@@ -132,9 +132,9 @@ class PlayblastProfilesModel(BaseSettingsModel):
 
 
 class ExtractPlayblastModel(BaseSettingsModel):
-    enabled: bool = SettingsField(title="Enabled")
-    optional: bool = SettingsField(title="Optional")
-    active: bool = SettingsField(title="Active")
+    enabled: bool = SettingsField(True, title="Enabled")
+    optional: bool = SettingsField(True, title="Optional")
+    active: bool = SettingsField(True, title="Active")
     presets: str = SettingsField(
         "", title="DEPRECATED! Please use \"Profiles\" below. Presets",
         widget="textarea"
