@@ -23,11 +23,21 @@ def validate_json_dict(value):
         )
     return value
 
+
 def get_color_depth_enum():
     return [
         {"label": "8", "value": "8"},
         {"label": "16", "value": "16"},
         {"label": "32", "value": "32"},
+    ]
+
+
+def get_shading_type_enum():
+    return [
+        {"label": "Material", "value": "MATERIAL"},
+        {"label": "Solid", "value": "SOLID"},
+        {"label": "Wireframe", "value": "WIREFRAME"},
+        {"label": "Rendered", "value": "RENDERED"},
     ]
 
 class ImageSetting(BaseSettingsModel):
@@ -49,7 +59,11 @@ class OverlaySetting(BaseSettingsModel):
 
 class ShadingSetting(BaseSettingsModel):
     _layout = "expanded"
-    type: str = SettingsField("MATERIAL", title="Shading Type")
+    type: str = SettingsField(
+        "MATERIAL",
+        title="Shading Type",
+        enum_resolver=get_shading_type_enum
+    )
     render_pass: str = SettingsField("COMBINED", title="Render Pass")
 
 
