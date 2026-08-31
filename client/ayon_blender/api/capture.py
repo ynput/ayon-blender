@@ -217,8 +217,12 @@ def applied_view(
         space.show_gizmo = False
         space.overlay.show_overlays = False
 
+    camera_options = camera_options or {}
     if camera_options.get("background_images"):
-        log.warning("Overlay visibility must be enabled to display background images (image planes).")
+        if log:
+            log.warning(
+                "Overlay visibility must be enabled to display background images (image planes)."
+            )
         space.overlay.show_overlays = True
 
 
