@@ -39,7 +39,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
         camera = instance.data.get("review_camera", "AUTO")
         start = instance.data.get("frameStart", bpy.context.scene.frame_start)
-        isolate = instance.data("isolate", None)
+        isolate = instance.data.get("isolate", None)
 
         task_data = instance.data["anatomyData"].get("task", {})
         preset = get_capture_preset(
