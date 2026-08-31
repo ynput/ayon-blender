@@ -17,7 +17,7 @@ def capture(
     step_frame=None,
     sound=None,
     isolate=None,
-    maintain_aspect_ratio=True,
+    maintain_aspect_ratio=None,
     overwrite=False,
     image_settings=None,
     display_options=None,
@@ -36,8 +36,8 @@ def capture(
         sound (str, optional):  Specify the sound node to be used during
             playblast. When None (default) no sound will be used.
         isolate (list): List of nodes to isolate upon capturing
-        maintain_aspect_ratio (bool, optional): Modify height in order to
-            maintain aspect ratio.
+        maintain_aspect_ratio (bool, optional): Override whether to modify
+            height to maintain aspect ratio.
         overwrite (bool, optional): Whether or not to overwrite if file
             already exists. If disabled and file exists and error will be
             raised.
@@ -60,13 +60,15 @@ def capture(
         raise RuntimeError("Camera does not exist: {0}".format(camera))
 
     # Ensure resolution.
+    resolution = resolution or {}
     width = resolution.get("width", 0)
     if width == 0:
         width = scene.render.resolution_x
     height = resolution.get("height", 0)
     if height == 0:
         height = scene.render.resolution_y
-    maintain_aspect_ratio = resolution.get("maintain_aspect_ratio", True)
+    if maintain_aspect_ratio is None:
+        maintain_aspect_ratio = resolution.get("maintain_aspect_ratio", True)
     if maintain_aspect_ratio:
         ratio = scene.render.resolution_x / scene.render.resolution_y
         height = round(width / ratio)
@@ -322,6 +324,7 @@ def applied_image_settings(window, options):
 @contextlib.contextmanager
 def maintain_camera_settings(window, camera, camera_options=None):
     """Context manager to override camera."""
+    camera_options = camera_options or {}
     current_camera = window.scene.camera
     target_camera = window.scene.objects.get(camera)
     current_image_plane = None
@@ -330,7 +333,7 @@ def maintain_camera_settings(window, camera, camera_options=None):
         if hasattr(target_camera.data, "show_background_images"):
             current_image_plane = target_camera.data.show_background_images
             target_camera.data.show_background_images = camera_options.get(
-                "show_background_images", current_image_plane
+                "background_images", current_image_plane
             )
     try:
         yield
@@ -338,7 +341,6 @@ def maintain_camera_settings(window, camera, camera_options=None):
         window.scene.camera = current_camera
         if target_camera and current_image_plane is not None:
             target_camera.data.show_background_images = current_image_plane
-
 
 
 @contextlib.contextmanager
