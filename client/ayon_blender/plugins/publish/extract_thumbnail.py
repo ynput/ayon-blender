@@ -1,10 +1,9 @@
 import os
 import glob
-import json
 
 import pyblish.api
 from ayon_blender.api import capture, plugin
-from ayon_blender.api.lib import maintained_time
+from ayon_blender.api.lib import maintained_time, get_capture_preset
 
 import bpy
 
@@ -21,7 +20,6 @@ class ExtractThumbnail(plugin.BlenderExtractor):
     hosts = ["blender"]
     families = ["review.playblast"]
     order = pyblish.api.ExtractorOrder + 0.01
-    presets = "{}"
 
     def process(self, instance):
         self.log.debug("Extracting capture..")
@@ -41,12 +39,17 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
         camera = instance.data.get("review_camera", "AUTO")
         start = instance.data.get("frameStart", bpy.context.scene.frame_start)
-        product_base_type = instance.data["productBaseType"]
         isolate = instance.data("isolate", None)
 
-        presets = json.loads(self.presets)
-        preset = presets.get(product_base_type, {})
-
+        task_data = instance.data["anatomyData"].get("task", {})
+        preset = get_capture_preset(
+            task_data.get("name"),
+            task_data.get("type"),
+            instance.data["productName"],
+            instance.context.data["project_settings"],
+            log=self.log
+        )
+        # additional required parameters for playblast
         preset.update({
             "camera": camera,
             "start_frame": start,
@@ -54,20 +57,26 @@ class ExtractThumbnail(plugin.BlenderExtractor):
             "filename": path,
             "overwrite": True,
             "isolate": isolate,
+            "log": self.log,
         })
-        preset.setdefault(
-            "image_settings",
-            {
-                "file_format": "JPEG",
-                "color_mode": "RGB",
-                "quality": 100,
-            },
-        )
 
+        # This would be removed after the transition of
+        # the new capture preset system.
+        if not preset.get("image_settings"):
+            preset.setdefault(
+                "image_settings",
+                {
+                    "file_format": "PNG",
+                    "color_mode": "RGB",
+                    "color_depth": "8",
+                    "compression": 15,
+                },
+            )
+        extension = preset["image_settings"].get("file_format", "PNG").lower()
         with maintained_time():
             path = capture(**preset)
 
-        thumbnail = os.path.basename(self._fix_output_path(path))
+        thumbnail = os.path.basename(self._fix_output_path(path, extension))
 
         self.log.debug(f"thumbnail: {thumbnail}")
 
@@ -75,14 +84,14 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
         representation = {
             "name": "thumbnail",
-            "ext": "jpg",
+            "ext": extension,
             "files": thumbnail,
             "stagingDir": stagingdir,
             "thumbnail": True
         }
         instance.data["representations"].append(representation)
 
-    def _fix_output_path(self, filepath):
+    def _fix_output_path(self, filepath, extension):
         """Workaround to return correct filepath.
 
         To workaround this we just glob.glob() for any file extensions and
@@ -98,7 +107,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
             return None
 
         if not os.path.exists(filepath):
-            files = glob.glob(f"{filepath}.*.jpg")
+            files = glob.glob(f"{filepath}.*.{extension}")
 
             if not files:
                 raise RuntimeError(f"Couldn't find playblast from: {filepath}")
