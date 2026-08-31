@@ -19,7 +19,7 @@ def validate_json_dict(value):
 
     if not success:
         raise BadRequestException(
-            "Environment's can't be parsed as json object"
+            "Presets can't be parsed as a JSON object"
         )
     return value
 
