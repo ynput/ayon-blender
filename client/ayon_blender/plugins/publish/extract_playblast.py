@@ -47,10 +47,10 @@ class ExtractPlayblast(
         assert end >= start, "Invalid time range!"
 
         # get cameras
-        camera = instance.data("review_camera", None)
+        camera = instance.data.get("review_camera", None)
 
         # get isolate objects list
-        isolate = instance.data("isolate", None)
+        isolate = instance.data.get("isolate", None)
 
         # get output path
         stagingdir = self.staging_dir(instance)
