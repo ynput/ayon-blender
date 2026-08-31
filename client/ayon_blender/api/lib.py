@@ -1,6 +1,9 @@
 import contextlib
 import hashlib
 import importlib
+import json
+import logging
+import copy
 import os
 import traceback
 from typing import Dict, List, Union
@@ -10,6 +13,7 @@ import bpy
 from ayon_core.lib import Logger, NumberDef
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.create import CreateContext
+from ayon_core.lib.profiles_filtering import filter_profiles
 
 from . import pipeline
 from .constants import AYON_PROPERTY
@@ -1030,3 +1034,52 @@ def clean_filename(filename: str) -> str:
     """
     digest = hashlib.sha1(filename.encode("utf-8")).hexdigest()[:8]
     return f"{filename[:54]}_{digest}"
+
+
+def get_capture_preset(
+    task_name: str,
+    task_type: str,
+    product_name: str,
+    project_settings: dict,
+    log: "logging.Logger"
+) -> dict:
+    """Get capture preset for playblasting.
+
+    Logic for transitioning from old style capture preset to new capture preset
+    profiles.
+
+    Args:
+        task_name (str): Task name.
+        task_type (str): Task type.
+        product_name (str): Product name.
+        project_settings (dict): Project settings.
+        log (logging.Logger): Logging object.
+    Returns:
+        dict: The capture preset for playblasting.
+    """
+    capture_preset = None
+    filtering_criteria = {
+        "task_names": task_name,
+        "task_types": task_type,
+        "product_names": product_name
+    }
+
+    plugin_settings = project_settings["blender"]["publish"]["ExtractPlayblast"]
+    if plugin_settings["profiles"]:
+        profile = filter_profiles(
+            plugin_settings["profiles"],
+            filtering_criteria,
+            logger=log
+        ) or {}
+        presets = profile.get("presets")
+        capture_preset = copy.deepcopy(presets)
+        capture_preset["image_settings"]["file_format"] = (
+            capture_preset["image_settings"]["file_format"].upper()
+        )
+        log.warning("No profiles present for Extract Playblast")
+    if capture_preset is None:
+        log.warning("Fallback to backward compatible capture preset.")
+        serialized_preset = json.loads(plugin_settings.get("presets", "{}"))
+        capture_preset = serialized_preset.get("default")
+
+    return capture_preset or {}

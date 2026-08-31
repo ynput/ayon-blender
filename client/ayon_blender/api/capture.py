@@ -11,8 +11,6 @@ from .plugin import deselect_all, create_blender_context
 
 def capture(
     camera=None,
-    width=None,
-    height=None,
     filename=None,
     start_frame=None,
     end_frame=None,
@@ -22,13 +20,14 @@ def capture(
     maintain_aspect_ratio=True,
     overwrite=False,
     image_settings=None,
-    display_options=None
+    display_options=None,
+    camera_options=None,
+    resolution=None,
+    log=None,
 ):
     """Playblast in an independent windows
     Arguments:
         camera (str, optional): Name of camera, defaults to "Camera"
-        width (int, optional): Width of output in pixels
-        height (int, optional): Height of output in pixels
         filename (str, optional): Name of output file path. Defaults to current
             render output path.
         start_frame (int, optional): Defaults to current start frame.
@@ -45,6 +44,12 @@ def capture(
         image_settings (dict, optional): Supplied image settings for render,
             using `ImageSettings`
         display_options (dict, optional): Supplied display options for render
+            using `DisplayOptions`
+        camera_options (dict, optional): Supplied camera options for render
+            using `CameraOptions`
+        resolution (dict, optional): Supplied resolution settings for render,
+            using `ResolutionSetting`
+        log (logging.Logger, optional): Logger for capturing process.
     """
 
     scene = bpy.context.scene
@@ -55,10 +60,13 @@ def capture(
         raise RuntimeError("Camera does not exist: {0}".format(camera))
 
     # Ensure resolution.
-    if width and height:
-        maintain_aspect_ratio = False
-    width = width or scene.render.resolution_x
-    height = height or scene.render.resolution_y
+    width = resolution.get("width", 0)
+    if width == 0:
+        width = scene.render.resolution_x
+    height = resolution.get("height", 0)
+    if height == 0:
+        height = scene.render.resolution_y
+    maintain_aspect_ratio = resolution.get("maintain_aspect_ratio", True)
     if maintain_aspect_ratio:
         ratio = scene.render.resolution_x / scene.render.resolution_y
         height = round(width / ratio)
@@ -88,10 +96,19 @@ def capture(
 
     with _independent_window() as window:
 
-        applied_view(window, camera, isolate, options=display_options)
+        applied_view(
+            window,
+            camera,
+            isolate,
+            display_options=display_options,
+            camera_options=camera_options,
+            log=log
+        )
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(maintain_camera(window, camera))
+            stack.enter_context(
+                maintain_camera_settings(window, camera, camera_options=camera_options)
+            )
             stack.enter_context(applied_frame_range(window, *frame_range))
             stack.enter_context(applied_render_options(window, render_options))
             stack.enter_context(applied_image_settings(window, image_settings))
@@ -140,13 +157,14 @@ def isolate_objects(window, objects):
 
     deselect_all()
 
+
 def restore_global_view(window):
     """Exit local view if active.
 
     Blender currently does not exit localview when closing windows.
     """
 
-    types = {"MESH", "GPENCIL"}
+    types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
     context = create_blender_context(selected=objects, window=window)
@@ -155,7 +173,8 @@ def restore_global_view(window):
         # Only toggle back if in local view
         if bpy.context.space_data.local_view:
             bpy.ops.view3d.localview()
-    
+
+
 def _apply_options(entity, options):
     for option, value in options.items():
         if isinstance(value, dict):
@@ -164,13 +183,20 @@ def _apply_options(entity, options):
             setattr(entity, option, value)
 
 
-def applied_view(window, camera, isolate=None, options=None):
+def applied_view(
+        window,
+        camera,
+        isolate=None,
+        display_options=None,
+        camera_options=None,
+        log=None
+    ):
     """Apply view options to window."""
     area = window.screen.areas[0]
     area.ui_type = "VIEW_3D"
     space = area.spaces[0]
 
-    types = {"MESH", "GPENCIL"}
+    types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
     if camera == "AUTO":
@@ -181,13 +207,19 @@ def applied_view(window, camera, isolate=None, options=None):
         space.camera = window.scene.objects.get(camera)
         space.region_3d.view_perspective = "CAMERA"
 
-    if isinstance(options, dict):
-        _apply_options(space, options)
+    if isinstance(display_options, dict):
+        _apply_options(space, display_options)
+    # This would be removed after the transition
+    # of the new capture preset
     else:
         space.shading.type = "SOLID"
         space.shading.color_type = "MATERIAL"
         space.show_gizmo = False
         space.overlay.show_overlays = False
+
+    if camera_options.get("background_images"):
+        log.warning("Overlay visibility must be enabled to display background images (image planes).")
+        space.overlay.show_overlays = True
 
 
 @contextlib.contextmanager
@@ -284,15 +316,25 @@ def applied_image_settings(window, options):
 
 
 @contextlib.contextmanager
-def maintain_camera(window, camera):
+def maintain_camera_settings(window, camera, camera_options=None):
     """Context manager to override camera."""
     current_camera = window.scene.camera
-    if camera in window.scene.objects:
-        window.scene.camera = window.scene.objects.get(camera)
+    target_camera = window.scene.objects.get(camera)
+    current_image_plane = None
+    if target_camera:
+        window.scene.camera = target_camera
+        if hasattr(target_camera.data, "show_background_images"):
+            current_image_plane = target_camera.data.show_background_images
+            target_camera.data.show_background_images = camera_options.get(
+                "show_background_images", current_image_plane
+            )
     try:
         yield
     finally:
         window.scene.camera = current_camera
+        if target_camera and current_image_plane is not None:
+            target_camera.data.show_background_images = current_image_plane
+
 
 
 @contextlib.contextmanager
