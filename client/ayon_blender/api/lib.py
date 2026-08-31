@@ -1065,21 +1065,32 @@ def get_capture_preset(
     }
 
     plugin_settings = project_settings["blender"]["publish"]["ExtractPlayblast"]
-    if plugin_settings["profiles"]:
+
+    profiles = plugin_settings.get("profiles") or []
+    if profiles:
         profile = filter_profiles(
-            plugin_settings["profiles"],
-            filtering_criteria,
+            profiles,
+            key_values=filtering_criteria,
             logger=log
         ) or {}
-        presets = profile.get("presets")
-        capture_preset = copy.deepcopy(presets)
-        capture_preset["image_settings"]["file_format"] = (
-            capture_preset["image_settings"]["file_format"].upper()
+        presets = profile.get("presets") or {}
+        if presets:
+            capture_preset = copy.deepcopy(presets)
+            image_settings = capture_preset.get("image_settings") or {}
+            if image_settings.get("file_format"):
+                image_settings["file_format"] = image_settings["file_format"].upper()
+            capture_preset["image_settings"] = image_settings
+        else:
+            log.warning(
+                "No matching playblast profile found; falling back to deprecated presets."
+            )
+    else:
+        log.warning(
+            "No profiles present for Extract Playblast; falling back to deprecated presets."
         )
-        log.warning("No profiles present for Extract Playblast")
+
     if capture_preset is None:
         log.warning("Fallback to backward compatible capture preset.")
         serialized_preset = json.loads(plugin_settings.get("presets", "{}"))
         capture_preset = serialized_preset.get("default")
-
     return capture_preset or {}
