@@ -24,7 +24,7 @@ def capture(
     camera_options=None,
     resolution=None,
     log=None,
-):
+)-> str:
     """Playblast in an independent windows
     Arguments:
         camera (str, optional): Name of camera, defaults to "Camera"
@@ -199,7 +199,6 @@ def applied_view(
     space = area.spaces[0]
     space.shading.render_pass = "COMBINED"
 
-    types = {"MESH", "GPENCIL", "CAMERA"}
     types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
