@@ -197,6 +197,7 @@ def applied_view(
     area = window.screen.areas[0]
     area.ui_type = "VIEW_3D"
     space = area.spaces[0]
+    space.shading.render_pass = "COMBINED"
 
     types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]

@@ -64,7 +64,6 @@ class ShadingSetting(BaseSettingsModel):
         title="Shading Type",
         enum_resolver=get_shading_type_enum
     )
-    render_pass: str = SettingsField("COMBINED", title="Render Pass")
 
 
 class DisplayOptionsSetting(BaseSettingsModel):
