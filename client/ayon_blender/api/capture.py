@@ -200,6 +200,7 @@ def applied_view(
     space.shading.render_pass = "COMBINED"
 
     types = {"MESH", "GPENCIL", "CAMERA"}
+    types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
     if camera == "AUTO":
@@ -357,5 +358,5 @@ def _independent_window():
         try:
             yield window
         finally:
-            restore_global_view(window) 
+            restore_global_view(window)
             bpy.ops.wm.window_close()
