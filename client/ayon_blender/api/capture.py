@@ -22,8 +22,10 @@ def capture(
     maintain_aspect_ratio=True,
     overwrite=False,
     image_settings=None,
-    display_options=None
-):
+    display_options=None,
+    background_images=False,
+    log=None,
+) -> str:
     """Playblast in an independent windows
     Arguments:
         camera (str, optional): Name of camera, defaults to "Camera"
@@ -45,6 +47,9 @@ def capture(
         image_settings (dict, optional): Supplied image settings for render,
             using `ImageSettings`
         display_options (dict, optional): Supplied display options for render
+        background_images (bool, optional): Whether to enable background images during capture
+        Returns:
+            str: The path to the captured playblast file.
     """
 
     scene = bpy.context.scene
@@ -88,10 +93,19 @@ def capture(
 
     with _independent_window() as window:
 
-        applied_view(window, camera, isolate, options=display_options)
+        applied_view(
+            window,
+            camera,
+            isolate,
+            options=display_options,
+            background_images=background_images,
+            log=log,
+        )
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(maintain_camera(window, camera))
+            stack.enter_context(
+                maintain_camera_settings(window, camera, background_images=background_images)
+            )
             stack.enter_context(applied_frame_range(window, *frame_range))
             stack.enter_context(applied_render_options(window, render_options))
             stack.enter_context(applied_image_settings(window, image_settings))
@@ -155,7 +169,7 @@ def restore_global_view(window):
         # Only toggle back if in local view
         if bpy.context.space_data.local_view:
             bpy.ops.view3d.localview()
-    
+
 def _apply_options(entity, options):
     for option, value in options.items():
         if isinstance(value, dict):
@@ -164,13 +178,13 @@ def _apply_options(entity, options):
             setattr(entity, option, value)
 
 
-def applied_view(window, camera, isolate=None, options=None):
+def applied_view(window, camera, isolate=None, options=None, background_images=False, log=None):
     """Apply view options to window."""
     area = window.screen.areas[0]
     area.ui_type = "VIEW_3D"
     space = area.spaces[0]
 
-    types = {"MESH", "GPENCIL"}
+    types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
     if camera == "AUTO":
@@ -188,6 +202,11 @@ def applied_view(window, camera, isolate=None, options=None):
         space.shading.color_type = "MATERIAL"
         space.show_gizmo = False
         space.overlay.show_overlays = False
+
+    if background_images:
+        if log:
+            log.warning("Overlay visibility must be enabled to display background images (image planes).")
+        space.overlay.show_overlays = True
 
 
 @contextlib.contextmanager
@@ -284,15 +303,22 @@ def applied_image_settings(window, options):
 
 
 @contextlib.contextmanager
-def maintain_camera(window, camera):
+def maintain_camera_settings(window, camera, background_images):
     """Context manager to override camera."""
     current_camera = window.scene.camera
-    if camera in window.scene.objects:
-        window.scene.camera = window.scene.objects.get(camera)
+    target_camera = window.scene.objects.get(camera)
+    current_image_plane = None
+    if target_camera:
+        window.scene.camera = target_camera
+        if hasattr(target_camera.data, "show_background_images"):
+            current_image_plane = target_camera.data.show_background_images
+            target_camera.data.show_background_images = bool(background_images)
     try:
         yield
     finally:
         window.scene.camera = current_camera
+        if target_camera and current_image_plane is not None:
+            target_camera.data.show_background_images = current_image_plane
 
 
 @contextlib.contextmanager
@@ -308,5 +334,5 @@ def _independent_window():
         try:
             yield window
         finally:
-            restore_global_view(window) 
+            restore_global_view(window)
             bpy.ops.wm.window_close()
