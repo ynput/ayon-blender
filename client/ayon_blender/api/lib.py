@@ -1040,11 +1040,13 @@ def get_capture_preset(
     task_name: str,
     task_type: str,
     product_name: str,
+    product_base_type: str,
     project_settings: dict,
-    log: "logging.Logger"
+    class_name: str,
+    log: "logging.Logger",
 ) -> dict:
     """Get capture preset for playblasting.
-
+    If `product_base_type` is provided, it will be used as an additional filtering criterion.
     Logic for transitioning from old style capture preset to new capture preset
     profiles.
 
@@ -1052,6 +1054,7 @@ def get_capture_preset(
         task_name (str): Task name.
         task_type (str): Task type.
         product_name (str): Product name.
+        product_base_type (str): Product base type.
         project_settings (dict): Project settings.
         log (logging.Logger): Logging object.
     Returns:
@@ -1061,11 +1064,12 @@ def get_capture_preset(
     filtering_criteria = {
         "task_names": task_name,
         "task_types": task_type,
-        "product_names": product_name
+        "product_names": product_name,
+        "product_base_types": product_base_type
     }
 
-    plugin_settings = project_settings["blender"]["publish"]["ExtractPlayblast"]
-
+    plugin_settings = project_settings["blender"]["publish"][class_name]
+    # Get profiles from plugin settings
     profiles = plugin_settings.get("profiles") or []
     if profiles:
         profile = filter_profiles(
@@ -1080,6 +1084,8 @@ def get_capture_preset(
             if image_settings.get("file_format"):
                 image_settings["file_format"] = image_settings["file_format"].upper()
             capture_preset["image_settings"] = image_settings
+            capture_preset = add_additional_presets(capture_preset)
+
         else:
             log.warning(
                 "No matching playblast profile found; falling back to deprecated presets."
@@ -1089,8 +1095,70 @@ def get_capture_preset(
             "No profiles present for Extract Playblast; falling back to deprecated presets."
         )
 
+    # backward compatible fallback for capture preset
     if capture_preset is None:
         log.warning("Fallback to backward compatible capture preset.")
         serialized_preset = json.loads(plugin_settings.get("presets", "{}"))
-        capture_preset = serialized_preset.get("default")
+        if class_name == "ExtractPlayblast":
+            capture_preset = serialized_preset.get("default")
+        elif class_name == "ExtractThumbnail":
+            capture_preset = serialized_preset.get(product_base_type)
+        else:
+            raise RuntimeError(f"Unsupported class_name: {class_name}")
+
     return capture_preset or {}
+
+
+def add_additional_presets(capture_preset: dict) -> dict:
+    """Update additonal presets as settings in Playblast if there is any.
+    e.g.
+        capture_preset = {
+            "display_options":  {
+                "shading": {
+                    "light": "STUDIO",
+                    "studio_light": "Default",
+                    "type": "SOLID",
+                    "color_type": "OBJECT",
+                    "show_xray": True,
+                    "show_shadows": False,
+                    "show_cavity": False
+                },
+              "overlay": {
+              ....
+              }
+            }
+            ....
+            "additional_presets": {
+                "display_options": {
+                    "shading": {
+                        "show_xray_wireframe": True
+                    }
+                }
+            }
+        }
+        updated_preset = add_additional_presets(capture_preset)
+        # updated_preset will now include the "compression" setting from additional_presets
+
+    Args:
+        capture_preset (dict): capture preset dictionary containing playblast settings.
+
+    Returns:
+        dict: Updated capture preset with additional presets applied.
+    """
+    additonal_presets = capture_preset.get("additional_presets", "{}")
+    if additonal_presets:
+        presets = json.loads(additonal_presets)
+        if not presets:
+            return capture_preset
+
+        for key, value in presets.items():
+            if (
+                key in capture_preset
+                and isinstance(capture_preset[key], dict)
+                and isinstance(value, dict)
+            ):
+                capture_preset[key].update(value)
+            else:
+                capture_preset[key] = value
+
+    return capture_preset

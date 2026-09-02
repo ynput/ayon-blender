@@ -43,10 +43,12 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
         task_data = instance.data["anatomyData"].get("task", {})
         preset = get_capture_preset(
-            task_data.get("name"),
-            task_data.get("type"),
-            instance.data["productName"],
-            instance.context.data["project_settings"],
+            task_name=task_data.get("name"),
+            task_type=task_data.get("type"),
+            product_name=instance.data["productName"],
+            product_base_type=instance.data["productBaseType"],
+            project_settings=instance.context.data["project_settings"],
+            class_name=self.__name__,
             log=self.log
         )
         # additional required parameters for playblast
