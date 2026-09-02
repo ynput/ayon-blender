@@ -40,6 +40,26 @@ def get_shading_type_enum():
         {"label": "Rendered", "value": "RENDERED"},
     ]
 
+
+def get_shading_light_enum():
+    return [
+        {"label": "Studio", "value": "STUDIO"},
+        {"label": "Flat", "value": "FLAT"},
+        {"label": "Matcap", "value": "MATCAP"},
+    ]
+
+
+def get_color_type_enum():
+    return [
+        {"label": "Material", "value": "MATERIAL"},
+        {"label": "Object", "value": "OBJECT"},
+        {"label": "Random", "value": "RANDOM"},
+        {"label": "Vertex", "value": "VERTEX"},
+        {"label": "Texture", "value": "TEXTURE"},
+        {"label": "Single", "value": "SINGLE"},
+    ]
+
+
 class ImageSetting(BaseSettingsModel):
     _layout = "expanded"
     file_format: str = SettingsField("png", title="File Format")
@@ -55,15 +75,43 @@ class ImageSetting(BaseSettingsModel):
 class OverlaySetting(BaseSettingsModel):
     _layout = "expanded"
     show_overlays: bool = SettingsField(False, title="Show Overlays")
+    show_ortho_grid: bool = SettingsField(False, title="Show Ortho Grid")
+    show_floor: bool = SettingsField(False, title="Show Floor")
+    show_axis_x: bool = SettingsField(False, title="Show X Axis")
+    show_axis_y: bool = SettingsField(False, title="Show Y Axis")
+    show_axis_z: bool = SettingsField(False, title="Show Z Axis")
+    show_text: bool = SettingsField(False, title="Show Overlay Text")
+    show_stats: bool = SettingsField(False, title="Show Scene Stats")
+    show_cursor: bool = SettingsField(False, title="Show 3D Cursor")
+    show_annotation: bool = SettingsField(True, title="Show Annotations")
+    show_extras: bool = SettingsField(True, title="Show Extras Object details")
+    show_relationship_lines: bool = SettingsField(False, title="Show Relationship Lines")
+    show_outline_selected: bool = SettingsField(False, title="Show Outline Selected ")
+    show_motion_paths: bool = SettingsField(False, title="Show Motion Paths")
+    show_object_origins: bool = SettingsField(False, title="Show Object Origins")
+    show_bones: bool = SettingsField(False, title="Show Bones")
 
 
 class ShadingSetting(BaseSettingsModel):
     _layout = "expanded"
+    light: str = SettingsField(
+        "STUDIO",
+        title="Light",
+        enum_resolver=get_shading_light_enum
+    )
     type: str = SettingsField(
         "MATERIAL",
         title="Shading Type",
         enum_resolver=get_shading_type_enum
     )
+    color_type: str = SettingsField(
+        "MATERIAL",
+        title="Color Type",
+        enum_resolver=get_color_type_enum
+    )
+    show_xray: bool = SettingsField(False, title="Show X-Ray")
+    show_shadows: bool = SettingsField(False, title="Show Shadows")
+    show_cavity: bool = SettingsField(False, title="Show Cavity")
 
 
 class DisplayOptionsSetting(BaseSettingsModel):
@@ -109,6 +157,26 @@ class CapturePresetSetting(BaseSettingsModel):
         title="Camera Options",
         section="Camera Options"
     )
+    additional_presets: str = SettingsField(
+        "{}", title="Additional Presets",
+        widget="textarea"
+    )
+
+    @validator("additional_presets")
+    def validate_json(cls, value):
+        if not value.strip():
+            return "{}"
+        try:
+            converted_value = json.loads(value)
+            success = isinstance(converted_value, dict)
+        except json.JSONDecodeError:
+            success = False
+
+        if not success:
+            raise BadRequestException(
+                "The attibutes can't be parsed as json object"
+            )
+        return value
 
 
 class PlayblastProfilesModel(BaseSettingsModel):
@@ -123,6 +191,9 @@ class PlayblastProfilesModel(BaseSettingsModel):
     )
     product_names: list[str] = SettingsField(
         default_factory=list, title="Products names"
+    )
+    product_base_types: list[str] = SettingsField(
+        default_factory=list, title="Product Base Types"
     )
     presets: CapturePresetSetting = SettingsField(
         default_factory=CapturePresetSetting,
@@ -147,6 +218,8 @@ class ExtractPlayblastModel(BaseSettingsModel):
     def validate_json(cls, value):
         return validate_json_dict(value)
 
+
+
 DEFAULT_PLAYBLAST_SETTING = {
     "enabled": True,
     "optional": False,
@@ -157,8 +230,7 @@ DEFAULT_PLAYBLAST_SETTING = {
                 "image_settings": {
                     "file_format": "PNG",
                     "color_mode": "RGB",
-                    "color_depth": "8",
-                    "compression": 15
+
                 },
                 "display_options": {
                     "shading": {
@@ -174,4 +246,171 @@ DEFAULT_PLAYBLAST_SETTING = {
         indent=4
         ),
     "profiles": []
+}
+
+
+DEFAULT_THUMBNAIL_SETTING = {
+    "enabled": True,
+    "optional": True,
+    "active": True,
+    "presets": json.dumps(
+        {
+            "model": {
+                "image_settings": {
+                    "file_format": "PNG",
+                    "color_mode": "RGB"
+                },
+                "display_options": {
+                    "shading": {
+                        "light": "STUDIO",
+                        "studio_light": "Default",
+                        "type": "SOLID",
+                        "color_type": "OBJECT",
+                        "show_xray": False,
+                        "show_shadows": False,
+                        "show_cavity": True
+                    },
+                    "overlay": {
+                        "show_overlays": False
+                    }
+                }
+            },
+            "rig": {
+                "image_settings": {
+                    "file_format": "PNG",
+                    "color_mode": "RGB"
+                },
+                "display_options": {
+                    "shading": {
+                        "light": "STUDIO",
+                        "studio_light": "Default",
+                        "type": "SOLID",
+                        "color_type": "OBJECT",
+                        "show_xray": True,
+                        "show_shadows": False,
+                        "show_cavity": False
+                    },
+                    "overlay": {
+                        "show_overlays": True,
+                        "show_ortho_grid": False,
+                        "show_floor": False,
+                        "show_axis_x": False,
+                        "show_axis_y": False,
+                        "show_axis_z": False,
+                        "show_text": False,
+                        "show_stats": False,
+                        "show_cursor": False,
+                        "show_annotation": False,
+                        "show_extras": False,
+                        "show_relationship_lines": False,
+                        "show_outline_selected": False,
+                        "show_motion_paths": False,
+                        "show_object_origins": False,
+                        "show_bones": True
+                    }
+                }
+            }
+        },
+        indent=4,
+    ),
+    "profiles": [
+        {
+            "task_types": [],
+            "task_names": [],
+            "product_names": [],
+            "product_base_types": ["model"],
+            "presets": {
+                "image_settings": {
+                    "file_format": "PNG",
+                    "color_mode": "RGB",
+                    "color_depth": "8",
+                    "compression": 15
+                },
+                "resolution": {
+                    "width": 1920,
+                    "height": 1080,
+                    "maintain_aspect_ratio": True
+                },
+                "display_options": {
+                    "shading": {
+                        "light": "STUDIO",
+                        "studio_light": "Default",
+                        "type": "SOLID",
+                        "color_type": "OBJECT",
+                        "show_xray": False,
+                        "show_shadows": False,
+                        "show_cavity": True
+                    },
+                    "overlay": {
+                        "show_overlays": False,
+                        "show_ortho_grid": False,
+                        "show_floor": False,
+                        "show_axis_x": False,
+                        "show_axis_y": False,
+                        "show_axis_z": False,
+                        "show_text": False,
+                        "show_stats": False,
+                        "show_cursor": False,
+                        "show_annotation": False,
+                        "show_extras": False,
+                        "show_relationship_lines": False,
+                        "show_outline_selected": False,
+                        "show_motion_paths": False,
+                        "show_object_origins": False,
+                        "show_bones": False
+                    }
+                },
+                "additional_presets": "{}",
+            },
+        },
+        {
+            "task_types": [],
+            "task_names": [],
+            "product_names": [],
+            "product_base_types": ["rig"],
+            "presets": {
+                "image_settings": {
+                    "file_format": "PNG",
+                    "color_mode": "RGB",
+                    "color_depth": "8",
+                    "compression": 15
+                },
+                "resolution": {
+                    "width": 1920,
+                    "height": 1080,
+                    "maintain_aspect_ratio": True
+                },
+                "display_options": {
+                    "shading": {
+                        "light": "STUDIO",
+                        "studio_light": "Default",
+                        "type": "SOLID",
+                        "color_type": "OBJECT",
+                        "show_xray": True,
+                        "show_shadows": False,
+                        "show_cavity": True
+                    },
+                    "overlay": {
+                        "show_overlays": True,
+                        "show_ortho_grid": False,
+                        "show_floor": False,
+                        "show_axis_x": False,
+                        "show_axis_y": False,
+                        "show_axis_z": False,
+                        "show_text": False,
+                        "show_stats": False,
+                        "show_cursor": False,
+                        "show_annotation": False,
+                        "show_extras": False,
+                        "show_relationship_lines": False,
+                        "show_outline_selected": False,
+                        "show_motion_paths": False,
+                        "show_object_origins": False,
+                        "show_bones": True
+                    }
+                },
+                "additional_presets": "{}",
+            },
+        }
+    ]
 }

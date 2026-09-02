@@ -1,5 +1,9 @@
 from ayon_server.settings import BaseSettingsModel, SettingsField
-from .publish_playblast import ExtractPlayblastModel, DEFAULT_PLAYBLAST_SETTING
+from .publish_playblast import (
+    ExtractPlayblastModel,
+    DEFAULT_PLAYBLAST_SETTING,
+    DEFAULT_THUMBNAIL_SETTING
+)
 
 
 class ValidatePluginModel(BaseSettingsModel):
@@ -274,8 +278,8 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ValidatePluginModel,
         title="Extract Layout (JSON)"
     )
-    ExtractThumbnail: ValidatePluginModel = SettingsField(
-        default_factory=ValidatePluginModel,
+    ExtractThumbnail: ExtractPlayblastModel = SettingsField(
+        default_factory=ExtractPlayblastModel,
         title="Extract Thumbnail"
     )
     ExtractPlayblast: ExtractPlayblastModel = SettingsField(
@@ -422,11 +426,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "optional": True,
         "active": False
     },
-    "ExtractThumbnail": {
-        "enabled": True,
-        "optional": True,
-        "active": True,
-    },
+    "ExtractThumbnail": DEFAULT_THUMBNAIL_SETTING,
     "ExtractPlayblast": DEFAULT_PLAYBLAST_SETTING,
     "ExtractUSD": {
         "convert_orientation": False,
