@@ -68,7 +68,7 @@ class ExtractPlayblast(
             product_name=instance.data["productName"],
             product_base_type=instance.data["productBaseType"],
             project_settings=instance.context.data["project_settings"],
-            class_name=self.__name__,
+            class_name=self.__class__.__name__,
             log=self.log
         )
         # additional required parameters for playblast
