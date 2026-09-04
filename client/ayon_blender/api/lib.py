@@ -1145,7 +1145,7 @@ def add_additional_presets(capture_preset: dict) -> dict:
     Returns:
         dict: Updated capture preset with additional presets applied.
     """
-    additonal_presets = capture_preset.get("additional_presets", "{}")
+    additonal_presets = capture_preset.pop("additional_presets", None)
     if additonal_presets:
         presets = json.loads(additonal_presets)
         if not presets:
