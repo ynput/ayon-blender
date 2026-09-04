@@ -35,8 +35,12 @@ from ayon_core.lib import (
     filter_profiles
 )
 from ayon_core.settings import get_project_settings
+from ayon_core.tools.ipc_utils import IPCHostTools
+
 from ayon_blender import BLENDER_ADDON_ROOT
 
+from .execution import execute_in_main_thread
+from .workio import OpenFileCacher
 from . import lib
 from . import ops
 
@@ -88,6 +92,21 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
         """Override install method from HostBase.
         Install Blender host functionality."""
         install()
+        IPCHostTools.init(host=self)
+
+    def execute_in_main_thread(self, func: Callable, *args, **kwargs):
+        """Execute function in main thread.
+
+        Used by IPC backend.
+
+        Args:
+            func (Callable): Function to be executed.
+            *args: Arguments to be passed to the function.
+            **kwargs: Keyword arguments to be passed to the function.
+        """
+        item = execute_in_main_thread(func, *args, **kwargs)
+        item.wait()
+        return item.result
 
     def get_containers(self) -> Iterator:
         """List containers from active Blender scene."""
@@ -227,27 +246,8 @@ def uninstall():
 
 
 def show_message(title, message):
-    from ayon_core.tools.utils import show_message_dialog
-    from .ops import BlenderApplication
-
-    BlenderApplication.get_app()
-
-    show_message_dialog(
-        title=title,
-        message=message,
-        level="warning")
-
-
-def message_window(title, message):
-    from .ops import (
-        MainThreadItem,
-        execute_in_main_thread,
-        _process_app_events
-    )
-
-    mti = MainThreadItem(show_message, title, message)
-    execute_in_main_thread(mti)
-    _process_app_events()
+    # TODO implement
+    print("Function 'show_message' is not implemneted")
 
 
 def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
@@ -484,9 +484,10 @@ def on_open():
         if unit_scale != prev_unit_scale:
             bpy.context.scene.unit_settings.scale_length = unit_scale
 
-            message_window(
+            show_message(
                 "Base file unit scale changed",
-                "Base file unit scale changed to match the project settings.")
+                "Base file unit scale changed to match the project settings."
+            )
 
 
 def on_before_save(event):
@@ -542,7 +543,7 @@ def _on_load_post(*args):
         if not _is_opening_workfile_template:
             emit_event("new")
 
-    ops.OpenFileCacher.post_load()
+    OpenFileCacher.post_load()
 
 
 def _register_callbacks():
