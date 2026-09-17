@@ -245,21 +245,6 @@ class ValidateCompositorNodeFileOutputPaths(
                     f"{workfile_filename_no_ext}.\n\n"
                     "Use Repair action to fix the render base filepath."
                 )
-            if lib.get_blender_version() < (5, 0, 0):
-                directory = os.path.dirname(first_file)
-                if not os.path.isdir(directory):
-                    return (
-                        "Render output directory does not exist: "
-                        f"{directory}.\n\n"
-                        "Use Repair action to fix the render base filepath."
-                    )
-                filename = os.path.basename(first_file)
-                if instance.data["variant"] not in filename:
-                    return (
-                        "Render output filename does not include the variant: "
-                        f"{instance.data['variant']}.\n\n"
-                        "Use Repair action to fix the render base filepath."
-                    )
 
             # Requirements below are only valid for Blender 4 and below
             # because Blender 5+ does not have a decent place to put the
