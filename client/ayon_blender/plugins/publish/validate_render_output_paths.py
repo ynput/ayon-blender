@@ -247,7 +247,7 @@ class ValidateCompositorNodeFileOutputPaths(
 
         if blender_version >= (5, 0, 0):
             expected_dir, expected_file_name = os.path.split(base_path)
-            if Path(output_node.directory) != Path(expected_dir):
+            if Path(bpy.path.abspath(output_node.directory)) != Path(expected_dir):
                 return (
                     "Render output directory does not match the expected base path: "
                     f"{expected_dir}.\n\n"
@@ -268,7 +268,7 @@ class ValidateCompositorNodeFileOutputPaths(
                 )
 
         else:
-            if Path(output_node.base_path) != Path(base_path):
+            if Path(bpy.path.abspath(output_node.base_path)) != Path(base_path):
                 return (
                     "Render output base path does not match the expected base path: "
                     f"{base_path}.\n\n"
