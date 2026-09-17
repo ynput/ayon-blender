@@ -305,7 +305,7 @@ class ValidateCompositorNodeFileOutputPaths(
         output_node_dir = os.path.dirname(orig_output_path)
         if not output_node_dir:
             blend_directory: str = os.path.dirname(workfile_filepath)
-            render_folder = lib.get_default_render_folder(project_settings)
+            render_folder = render_lib.get_default_render_folder(project_settings)
             output_node_dir = os.path.join(blend_directory, render_folder)
         new_output_dir = os.path.join(output_node_dir, blend_filename)
         output_node.directory = new_output_dir
