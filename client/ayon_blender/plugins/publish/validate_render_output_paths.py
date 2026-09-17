@@ -245,6 +245,13 @@ class ValidateCompositorNodeFileOutputPaths(
                     f"{workfile_filename_no_ext}.\n\n"
                     "Use Repair action to fix the render base filepath."
                 )
+            directory = os.path.dirname(first_file)
+            if not os.path.isdir(directory):
+                return (
+                    "Render output directory does not exist: "
+                    f"{directory}.\n\n"
+                    "Use Repair action to fix the render base filepath."
+                )
 
             # Requirements below are only valid for Blender 4 and below
             # because Blender 5+ does not have a decent place to put the
