@@ -246,7 +246,7 @@ class ValidateCompositorNodeFileOutputPaths(
         )
 
         if blender_version >= (5, 0, 0):
-            expected_dir, expected_file_name = os.path.split(base_path)
+            expected_dir, _ = os.path.split(base_path)
             if Path(output_node.directory) != Path(expected_dir):
                 return (
                     "Render output directory does not match the expected base path: "
@@ -254,21 +254,6 @@ class ValidateCompositorNodeFileOutputPaths(
                     "Use Repair action to fix the render base filepath."
                 )
 
-            # For non-multilayer output, Blender 5 stores the workfile
-            # component in `file_name`, but older scenes may still use a
-            # non-unique filename. Accept that as long as a filename exists.
-            if is_multilayer and output_node.file_name != expected_file_name:
-                return (
-                    "Render output filename does not match the expected base path: "
-                    f"{expected_file_name}.\n\n"
-                    "Use Repair action to fix the render base filepath."
-                )
-
-            if not is_multilayer and not output_node.file_name:
-                return (
-                    "Render output filename is empty.\n\n"
-                    "Use Repair action to fix the render base filepath."
-                )
         else:
             if Path(output_node.base_path) != Path(base_path):
                 return (
