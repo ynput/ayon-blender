@@ -286,21 +286,28 @@ class ValidateCompositorNodeFileOutputPaths(
         )
         # See: https://developer.blender.org/docs/release_notes/5.0/python_api/#nodes  # noqa
         if lib.get_blender_version() >= (5, 0, 0):
-            cls._repair_blender_5(output_node)
+            project_settings = instance.context.data["project_settings"]
+            cls._repair_blender_5(output_node, project_settings)
         else:
             cls._repair_blender_4(output_node)
 
     @classmethod
     def _repair_blender_5(
         cls,
-        output_node: "bpy.types.CompositorNodeOutputFile"
+        output_node: "bpy.types.CompositorNodeOutputFile",
+        project_settings: dict,
     ):
         # Ensure a directory is included that matches the current filename
-        blend_file: str = os.path.basename(bpy.data.filepath)
-        blend_file = os.path.splitext(blend_file)[0]
+        workfile_filepath = bpy.data.filepath
+        blend_filename: str = os.path.basename(workfile_filepath)
+        blend_filename = os.path.splitext(blend_filename)[0]
         orig_output_path = output_node.directory
         output_node_dir = os.path.dirname(orig_output_path)
-        new_output_dir = os.path.join(output_node_dir, blend_file)
+        if not output_node_dir:
+            blend_directory: str = os.path.dirname(workfile_filepath)
+            render_folder = lib.get_default_render_folder(project_settings)
+            output_node_dir = os.path.join(blend_directory, render_folder)
+        new_output_dir = os.path.join(output_node_dir, blend_filename)
         output_node.directory = new_output_dir
 
     @classmethod
