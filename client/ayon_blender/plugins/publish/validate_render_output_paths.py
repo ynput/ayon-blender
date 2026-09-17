@@ -245,6 +245,13 @@ class ValidateCompositorNodeFileOutputPaths(
                     f"{workfile_filename_no_ext}.\n\n"
                     "Use Repair action to fix the render base filepath."
                 )
+            directory = os.path.dirname(first_file)
+            if not os.path.isdir(directory):
+                return (
+                    "Render output directory does not exist: "
+                    f"{directory}.\n\n"
+                    "Use Repair action to fix the render base filepath."
+                )
 
             # Requirements below are only valid for Blender 4 and below
             # because Blender 5+ does not have a decent place to put the
@@ -286,39 +293,30 @@ class ValidateCompositorNodeFileOutputPaths(
         )
         # See: https://developer.blender.org/docs/release_notes/5.0/python_api/#nodes  # noqa
         project_settings = instance.context.data["project_settings"]
-        variant = instance.data["variant"]
         if lib.get_blender_version() >= (5, 0, 0):
-            cls._repair_blender_5(output_node, variant, project_settings)
+            cls._repair_blender_5(output_node, project_settings)
         else:
+            variant = instance.data["variant"]
             cls._repair_blender_4(output_node, variant, project_settings)
 
     @classmethod
     def _repair_blender_5(
         cls,
         output_node: "bpy.types.CompositorNodeOutputFile",
-        variant: str,
         project_settings: dict,
     ):
         # Ensure a directory is included that matches the current filename
-        file_format: str = output_node.format.file_format
-        is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
         workfile_filepath = bpy.data.filepath
+        blend_filename: str = os.path.basename(workfile_filepath)
+        blend_filename = os.path.splitext(blend_filename)[0]
         orig_output_path = output_node.directory
-        base_path = render_lib.get_base_render_output_path(
-            variant, is_multilayer, project_settings)
         output_node_dir = os.path.dirname(orig_output_path)
-        base_path_dir, base_path_filename = os.path.split(base_path)
         if not output_node_dir:
-            new_output_dir = base_path_dir
-        else:
-            blend_filename: str = os.path.basename(workfile_filepath)
-            blend_filename = os.path.splitext(blend_filename)[0]
-            new_output_dir = os.path.join(output_node_dir, blend_filename)
+            blend_directory: str = os.path.dirname(workfile_filepath)
+            render_folder = render_lib.get_default_render_folder(project_settings)
+            output_node_dir = os.path.join(blend_directory, render_folder)
+        new_output_dir = os.path.join(output_node_dir, blend_filename)
         output_node.directory = new_output_dir
-        aov_sep = render_lib.get_aov_separator(project_settings)
-        if not is_multilayer:
-            base_path_filename += aov_sep
-        output_node.file_name = base_path_filename
 
     @classmethod
     def _repair_blender_4(
@@ -398,4 +396,3 @@ class ValidateCompositorNodeFileOutputPaths(
             """)
 
         return doc
-
