@@ -285,11 +285,12 @@ class ValidateCompositorNodeFileOutputPaths(
             instance.data["transientData"]["instance_node"]
         )
         # See: https://developer.blender.org/docs/release_notes/5.0/python_api/#nodes  # noqa
+        project_settings = instance.context.data["project_settings"]
         if lib.get_blender_version() >= (5, 0, 0):
-            project_settings = instance.context.data["project_settings"]
             cls._repair_blender_5(output_node, project_settings)
         else:
-            cls._repair_blender_4(output_node)
+            variant = instance.data["variant"]
+            cls._repair_blender_4(output_node, variant, project_settings)
 
     @classmethod
     def _repair_blender_5(
@@ -313,15 +314,24 @@ class ValidateCompositorNodeFileOutputPaths(
     @classmethod
     def _repair_blender_4(
         cls,
-        output_node: "bpy.types.CompositorNodeOutputFile"
+        output_node: "bpy.types.CompositorNodeOutputFile",
+        variant: str,
+        project_settings: dict
     ):
         # Check whether CompositorNodeOutputFile is rendering to multilayer EXR
         file_format: str = output_node.format.file_format
         is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
 
-        filename = os.path.basename(bpy.data.filepath)
+        workfile_filepath = bpy.data.filepath
+        filename = os.path.basename(workfile_filepath)
         filename, ext = os.path.splitext(filename)
         orig_output_path = output_node.base_path
+        if not orig_output_path:
+            orig_output_path = (
+                render_lib.get_base_render_output_path(
+                    variant, is_multilayer, project_settings
+                )
+            )
         if is_multilayer:
             # If the output node is a multilayer EXR then the base path
             # includes the render filename like `Main_beauty.####.exr`
