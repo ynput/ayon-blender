@@ -356,31 +356,13 @@ class ValidateCompositorNodeFileOutputPaths(
         file_format: str = output_node.format.file_format
         is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
 
-        workfile_filepath = bpy.data.filepath
-        filename = os.path.basename(workfile_filepath)
-        filename, ext = os.path.splitext(filename)
-        orig_output_path = output_node.base_path
-        if not orig_output_path:
-            orig_output_path = (
-                render_lib.get_base_render_output_path(
-                    variant, is_multilayer, project_settings
-                )
-            )
-        if is_multilayer:
-            # If the output node is a multilayer EXR then the base path
-            # includes the render filename like `Main_beauty.####.exr`
-            # So we split that off, and assume that the parent folder to
-            # the filename is the workfile filename named folder.
-            render_folder, render_filename = os.path.split(orig_output_path)
-            output_node_dir = os.path.dirname(render_folder)
-            new_output_dir = os.path.join(output_node_dir,
-                                          filename,
-                                          render_filename)
-        else:
-            output_node_dir = os.path.dirname(orig_output_path)
-            new_output_dir = os.path.join(output_node_dir, filename)
+        base_path = render_lib.get_base_render_output_path(
+            variant,
+            multi_exr=is_multilayer,
+            project_settings=project_settings,
+        )
 
-        output_node.base_path = new_output_dir
+        output_node.base_path = base_path
 
         # Repair all output filenames to ensure they end with `.{frame}.{ext}`
         base_path: str = output_node.base_path
