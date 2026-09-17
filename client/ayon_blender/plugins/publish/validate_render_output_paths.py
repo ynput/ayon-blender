@@ -253,7 +253,10 @@ class ValidateCompositorNodeFileOutputPaths(
                     "Use Repair action to fix the render base filepath."
                 )
             filename = os.path.basename(first_file)
-            if instance.data["variant"] not in filename:
+            if (
+                lib.get_blender_version() < (5, 0, 0)
+                and instance.data["variant"] not in filename
+            ):
                 return (
                     "Render output filename does not include the variant: "
                     f"{instance.data['variant']}.\n\n"
