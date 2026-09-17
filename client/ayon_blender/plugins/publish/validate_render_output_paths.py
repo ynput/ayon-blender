@@ -240,17 +240,30 @@ class ValidateCompositorNodeFileOutputPaths(
         # For each AOV output check the output filenames as they must end with
         # `.{frame}.{ext}` where the frame is a number and ext is the extension
         base_path = render_lib.get_base_render_output_path(
-            instance.data["variant"],
+            output_node.name,
             multi_exr=is_multilayer,
             project_settings=instance.context.data["project_settings"]
         )
 
         if blender_version >= (5, 0, 0):
-            expected_dir, _ = os.path.split(base_path)
+            expected_dir, expected_file_name = os.path.split(base_path)
             if Path(output_node.directory) != Path(expected_dir):
                 return (
                     "Render output directory does not match the expected base path: "
                     f"{expected_dir}.\n\n"
+                    "Use Repair action to fix the render base filepath."
+                )
+
+            if is_multilayer and output_node.file_name != expected_file_name:
+                return (
+                    "Render output filename does not match the expected base path: "
+                    f"{expected_file_name}.\n\n"
+                    "Use Repair action to fix the render base filepath."
+                )
+
+            if not is_multilayer and not output_node.file_name:
+                return (
+                    "Render output filename is empty.\n\n"
                     "Use Repair action to fix the render base filepath."
                 )
 
@@ -305,11 +318,10 @@ class ValidateCompositorNodeFileOutputPaths(
         )
         # See: https://developer.blender.org/docs/release_notes/5.0/python_api/#nodes  # noqa
         project_settings = instance.context.data["project_settings"]
-        variant = instance.data["variant"]
         if lib.get_blender_version() >= (5, 0, 0):
-            cls._repair_blender_5(output_node, variant, project_settings)
+            cls._repair_blender_5(output_node, output_node.name, project_settings)
         else:
-            cls._repair_blender_4(output_node, variant, project_settings)
+            cls._repair_blender_4(output_node, output_node.name, project_settings)
 
     @classmethod
     def _repair_blender_5(
