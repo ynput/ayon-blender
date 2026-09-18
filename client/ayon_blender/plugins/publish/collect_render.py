@@ -9,6 +9,7 @@ import clique
 import bpy
 
 from ayon_blender.api import colorspace, plugin, lib, render_lib
+from ayon_core.pipeline.publish import PublishError
 
 
 def files_as_sequence(files) -> list[str]:
@@ -363,7 +364,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
         # in the filename Blender uses the last one for the frame number.
         match = re.search(r"(#+)[^#]+$", filename)
         if not match:
-            raise ValueError(
+            raise PublishError(
+                "There are no valid output filepaths detected, please configure it first."
                 f"Path '{path_with_frame_token}' does not contain a frame "
                 "token '#'."
             )
