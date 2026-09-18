@@ -85,6 +85,38 @@ class BlenderApplication:
     def get_window(cls, identifier):
         return cls.blender_windows.get(identifier)
 
+    @classmethod
+    def shutdown(cls):
+        """Delete stored Qt windows before Blender tears down Qt."""
+        windows = list(cls.blender_windows.values())
+        cls.blender_windows.clear()
+
+        unique_windows = []
+        seen_ids = set()
+        for window in windows:
+            if not isinstance(window, QtWidgets.QWidget):
+                continue
+            window_id = id(window)
+            if window_id in seen_ids:
+                continue
+            seen_ids.add(window_id)
+            unique_windows.append(window)
+
+        for window in unique_windows:
+            window.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+            window.close()
+            window.deleteLater()
+
+        application = cls._instance or QtWidgets.QApplication.instance()
+        if application is not None:
+            application.sendPostedEvents(
+                None,
+                QtCore.QEvent.DeferredDelete,
+            )
+            application.processEvents()
+
+        cls._instance = None
+
 
 class MainThreadItem:
     """Structure to store information about callback in main thread.
@@ -651,6 +683,14 @@ def register():
 
 def unregister():
     """Unregister the operators and menu."""
+
+    from ayon_core.ui.components.task_queue import shutdown_task_queue
+
+    if bpy.app.timers.is_registered(_process_app_events):
+        bpy.app.timers.unregister(_process_app_events)
+    shutdown_task_queue()
+    BlenderApplication.shutdown()
+    GlobalClass.app = None
 
     pcoll = PREVIEW_COLLECTIONS.pop("ayon")
     bpy.utils.previews.remove(pcoll)
