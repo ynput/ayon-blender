@@ -284,7 +284,7 @@ class CreateRender(plugin.BlenderCreator):
 def convert_variant_name(self, instance: CreatedInstance) -> None:
     node = instance.transient_data["instance_node"]
     variant = clean_name(instance.data["variant"])
-    old_variant = node.name
+    old_variant = node.label
 
     if old_variant == variant:
         return
