@@ -261,11 +261,16 @@ class ValidateCompositorNodeFileOutputPaths(
                     "Use Repair action to fix the render base filepath."
                 )
 
-            if not is_multilayer and not output_node.file_name:
-                return (
-                    "Render output filename is empty.\n\n"
-                    "Use Repair action to fix the render base filepath."
+            if not is_multilayer:
+                expected_file_name += render_lib.get_aov_separator(
+                    instance.context.data["project_settings"]
                 )
+                if output_node.file_name != expected_file_name:
+                    return (
+                        "Render output filename does not match the expected "
+                        f"base path: {expected_file_name}.\n\n"
+                        "Use Repair action to fix the render base filepath."
+                    )
 
         else:
             if Path(bpy.path.abspath(output_node.base_path)) != Path(base_path):
