@@ -1,4 +1,5 @@
 """Create render."""
+import os
 import re
 
 import bpy
@@ -149,6 +150,11 @@ class CreateRender(plugin.BlenderCreator):
 
             # Check if node type is the old object type
             node = instance.transient_data["instance_node"]
+            _, frame_token = os.path.splitext(node.file_name)
+            variant = instance.data["variant"]
+            node.file_name = f"{variant}{frame_token}"
+            node.label = variant
+            node.name = variant
 
             if not isinstance(node, bpy.types.Collection):
                 # Already new-style node
