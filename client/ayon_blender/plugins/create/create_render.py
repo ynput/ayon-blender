@@ -152,6 +152,7 @@ class CreateRender(plugin.BlenderCreator):
 
             if not isinstance(node, bpy.types.Collection):
                 # Already new-style node
+                self.convert_variant_name(instance)
                 continue
 
             self.log.info(f"Converting legacy render instance: {node}")
@@ -167,7 +168,8 @@ class CreateRender(plugin.BlenderCreator):
 
             # Delete the original object
             bpy.data.collections.remove(node)
-
+            # convert the variant name
+            self.convert_variant_name(instance)
         # Collect all remaining compositor output nodes
         unregistered_output_nodes = [
             node for node in node_tree.nodes
@@ -277,3 +279,21 @@ class CreateRender(plugin.BlenderCreator):
             data["active"] = not node.mute
 
         return data
+
+    def convert_variant_name(self, instance: CreatedInstance) -> None:
+        node = instance.transient_data["instance_node"]
+        variant = clean_name(instance.data["variant"])
+        old_variant = node.label
+
+        if old_variant == variant:
+            return
+
+        if lib.get_blender_version() >= (5, 0, 0):
+            suffix = ""
+            if node.file_name.startswith(old_variant):
+                suffix = node.file_name[len(old_variant):]
+            node.file_name = f"{variant}{suffix}"
+
+        node.name = variant
+        node.label = variant
+        instance.data["variant"] = variant
