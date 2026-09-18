@@ -1,4 +1,5 @@
 """Create render."""
+import os
 import re
 
 import bpy
@@ -150,8 +151,9 @@ class CreateRender(plugin.BlenderCreator):
             # Check if node type is the old object type
             node = instance.transient_data["instance_node"]
 
-            if not isinstance(node, bpy.types.Collection):
+            if isinstance(node, bpy.types.Collection):
                 # Already new-style node
+                self.convert_variant_name(instance)
                 continue
 
             self.log.info(f"Converting legacy render instance: {node}")
@@ -167,20 +169,8 @@ class CreateRender(plugin.BlenderCreator):
 
             # Delete the original object
             bpy.data.collections.remove(node)
-
-            node = instance.transient_data["instance_node"]
-            variant = clean_name(instance.data["variant"])
-            old_variant = node.name
-
-            if node.file_name.startswith(old_variant):
-                suffix = node.file_name[len(old_variant):]
-            else:
-                suffix = ""
-            node.file_name = f"{variant}{suffix}"
-            node.label = variant
-            node.name = variant
-            instance.data["variant"] = variant
-
+            # convert the variant name
+            self.convert_variant_name(instance)
         # Collect all remaining compositor output nodes
         unregistered_output_nodes = [
             node for node in node_tree.nodes
@@ -290,3 +280,19 @@ class CreateRender(plugin.BlenderCreator):
             data["active"] = not node.mute
 
         return data
+
+    def convert_variant_name(self, instance: CreatedInstance) -> None:
+        """Convert variant name according to the update of the variant
+
+        Args:
+            instance (CreatedInstance): instance
+        """
+        node_to_be_converted = instance.transient_data["instance_node"]
+        variant = clean_name(instance.data["variant"])
+        variant_name, suffix = os.path.splitext(node_to_be_converted.name)
+        if variant_name == variant:
+            return
+        node_to_be_converted.file_name = f"{variant}{suffix}"
+        node_to_be_converted.label = variant
+        node_to_be_converted.name = variant
+        instance.data["variant"] = variant
