@@ -151,7 +151,7 @@ class CreateRender(plugin.BlenderCreator):
             # Check if node type is the old object type
             node = instance.transient_data["instance_node"]
 
-            if isinstance(node, bpy.types.Collection):
+            if not isinstance(node, bpy.types.Collection):
                 # Already new-style node
                 self.convert_variant_name(instance)
                 continue
