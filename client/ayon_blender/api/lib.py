@@ -1,6 +1,9 @@
 import contextlib
 import hashlib
 import importlib
+import json
+import logging
+import copy
 import os
 import traceback
 from typing import Dict, List, Union
@@ -10,6 +13,7 @@ import bpy
 from ayon_core.lib import Logger, NumberDef
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.create import CreateContext
+from ayon_core.lib.profiles_filtering import filter_profiles
 
 from . import pipeline
 from .constants import AYON_PROPERTY
@@ -1030,3 +1034,131 @@ def clean_filename(filename: str) -> str:
     """
     digest = hashlib.sha1(filename.encode("utf-8")).hexdigest()[:8]
     return f"{filename[:54]}_{digest}"
+
+
+def get_capture_preset(
+    task_name: str,
+    task_type: str,
+    product_name: str,
+    product_base_type: str,
+    project_settings: dict,
+    class_name: str,
+    log: "logging.Logger",
+) -> dict:
+    """Get capture preset for playblasting.
+    If `product_base_type` is provided, it will be used as an additional filtering criterion.
+    Logic for transitioning from old style capture preset to new capture preset
+    profiles.
+
+    Args:
+        task_name (str): Task name.
+        task_type (str): Task type.
+        product_name (str): Product name.
+        product_base_type (str): Product base type.
+        project_settings (dict): Project settings.
+        log (logging.Logger): Logging object.
+    Returns:
+        dict: The capture preset for playblasting.
+    """
+    capture_preset = None
+    filtering_criteria = {
+        "task_names": task_name,
+        "task_types": task_type,
+        "product_names": product_name,
+        "product_base_types": product_base_type
+    }
+
+    plugin_settings = project_settings["blender"]["publish"][class_name]
+    # Get profiles from plugin settings
+    profiles = plugin_settings.get("profiles") or []
+    if profiles:
+        profile = filter_profiles(
+            profiles,
+            key_values=filtering_criteria,
+            logger=log
+        ) or {}
+        presets = profile.get("presets") or {}
+        if presets:
+            capture_preset = copy.deepcopy(presets)
+            image_settings = capture_preset.get("image_settings") or {}
+            if image_settings.get("file_format"):
+                image_settings["file_format"] = image_settings["file_format"].upper()
+            capture_preset["image_settings"] = image_settings
+            capture_preset = add_additional_presets(capture_preset)
+
+        else:
+            log.warning(
+                "No matching playblast profile found; falling back to deprecated presets."
+            )
+    else:
+        log.warning(
+            "No profiles present for Extract Playblast; falling back to deprecated presets."
+        )
+
+    # backward compatible fallback for capture preset
+    if capture_preset is None:
+        log.warning("Fallback to backward compatible capture preset.")
+        serialized_preset = json.loads(plugin_settings.get("presets", "{}"))
+        if class_name == "ExtractPlayblast":
+            capture_preset = serialized_preset.get("default")
+        elif class_name == "ExtractThumbnail":
+            capture_preset = serialized_preset.get(product_base_type)
+        else:
+            raise RuntimeError(f"Unsupported class_name: {class_name}")
+
+    return capture_preset or {}
+
+
+def add_additional_presets(capture_preset: dict) -> dict:
+    """Update additonal presets as settings in Playblast if there is any.
+    e.g.
+        capture_preset = {
+            "display_options":  {
+                "shading": {
+                    "light": "STUDIO",
+                    "studio_light": "Default",
+                    "type": "SOLID",
+                    "color_type": "OBJECT",
+                    "show_xray": True,
+                    "show_shadows": False,
+                    "show_cavity": False
+                },
+              "overlay": {
+              ....
+              }
+            }
+            ....
+            "additional_presets": {
+                "display_options": {
+                    "shading": {
+                        "show_xray_wireframe": True
+                    }
+                }
+            }
+        }
+        updated_preset = add_additional_presets(capture_preset)
+        # updated_preset will now include the "compression" setting from additional_presets
+
+    Args:
+        capture_preset (dict): capture preset dictionary containing playblast settings.
+
+    Returns:
+        dict: Updated capture preset with additional presets applied.
+    """
+    additonal_presets = capture_preset.pop("additional_presets", None)
+    if additonal_presets:
+        presets = json.loads(additonal_presets)
+        if not presets:
+            return capture_preset
+
+        for key, value in presets.items():
+            if (
+                key in capture_preset
+                and isinstance(capture_preset[key], dict)
+                and isinstance(value, dict)
+            ):
+                capture_preset[key].update(value)
+            else:
+                capture_preset[key] = value
+
+    return capture_preset
