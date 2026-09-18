@@ -281,18 +281,21 @@ class CreateRender(plugin.BlenderCreator):
 
         return data
 
-    def convert_variant_name(self, instance: CreatedInstance) -> None:
-        """Convert variant name according to the update of the variant
 
-        Args:
-            instance (CreatedInstance): instance
-        """
-        node_to_be_converted = instance.transient_data["instance_node"]
-        variant = clean_name(instance.data["variant"])
-        variant_name, suffix = os.path.splitext(node_to_be_converted.name)
-        if variant_name == variant:
-            return
-        node_to_be_converted.file_name = f"{variant}{suffix}"
-        node_to_be_converted.label = variant
-        node_to_be_converted.name = variant
-        instance.data["variant"] = variant
+def convert_variant_name(self, instance: CreatedInstance) -> None:
+    node = instance.transient_data["instance_node"]
+    variant = clean_name(instance.data["variant"])
+    old_variant = node.name
+
+    if old_variant == variant:
+        return
+
+    if lib.get_blender_version() >= (5, 0, 0):
+        suffix = ""
+        if node.file_name.startswith(old_variant):
+            suffix = node.file_name[len(old_variant):]
+        node.file_name = f"{variant}{suffix}"
+
+    node.name = variant
+    node.label = variant
+    instance.data["variant"] = variant
