@@ -355,21 +355,30 @@ class ValidateCompositorNodeFileOutputPaths(
         # Check whether CompositorNodeOutputFile is rendering to multilayer EXR
         file_format: str = output_node.format.file_format
         is_multilayer: bool = file_format == "OPEN_EXR_MULTILAYER"
-
-        base_path = render_lib.get_base_render_output_path(
+        output_node.base_path = render_lib.get_base_render_output_path(
             variant,
             multi_exr=is_multilayer,
             project_settings=project_settings,
         )
 
-        output_node.base_path = base_path
-
         # Repair all output filenames to ensure they end with `.{frame}.{ext}`
         base_path: str = output_node.base_path
 
-        if not is_multilayer:
+        if is_multilayer:
+            file_format = output_node.format.file_format
+            ext = render_lib.get_file_format_extension(file_format)
+            ext = f".{ext}"
+            output_node.base_path = fix_filename(base_path, extension=ext)
+        else:
             for file_slot in output_node.file_slots:
-                file_slot.path = fix_filename(file_slot.path)
+                if file_slot.use_node_format:
+                    file_format = output_node.format.file_format
+                else:
+                    file_format = file_slot.format.file_format
+
+                ext = render_lib.get_file_format_extension(file_format)
+                ext = f".{ext}"
+                file_slot.path = fix_filename(file_slot.path, extension=ext)
 
     @staticmethod
     def get_description():
