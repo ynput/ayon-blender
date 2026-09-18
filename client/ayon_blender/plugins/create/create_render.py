@@ -150,11 +150,6 @@ class CreateRender(plugin.BlenderCreator):
 
             # Check if node type is the old object type
             node = instance.transient_data["instance_node"]
-            _, frame_token = os.path.splitext(node.file_name)
-            variant = instance.data["variant"]
-            node.file_name = f"{variant}{frame_token}"
-            node.label = variant
-            node.name = variant
 
             if not isinstance(node, bpy.types.Collection):
                 # Already new-style node
@@ -173,6 +168,19 @@ class CreateRender(plugin.BlenderCreator):
 
             # Delete the original object
             bpy.data.collections.remove(node)
+
+            node = instance.transient_data["instance_node"]
+            variant = clean_name(instance.data["variant"])
+            old_variant = node.name
+
+            if node.file_name.startswith(old_variant):
+                suffix = node.file_name[len(old_variant):]
+            else:
+                suffix = ""
+            node.file_name = f"{variant}{suffix}"
+            node.label = variant
+            node.name = variant
+            instance.data["variant"] = variant
 
         # Collect all remaining compositor output nodes
         unregistered_output_nodes = [
