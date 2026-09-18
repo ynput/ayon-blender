@@ -280,7 +280,6 @@ class CreateRender(plugin.BlenderCreator):
 
         return data
 
-
     def convert_variant_name(self, instance: CreatedInstance) -> None:
         node = instance.transient_data["instance_node"]
         variant = clean_name(instance.data["variant"])
