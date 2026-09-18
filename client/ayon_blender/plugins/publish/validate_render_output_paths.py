@@ -367,6 +367,9 @@ class ValidateCompositorNodeFileOutputPaths(
         # Repair all output filenames to ensure they end with `.{frame}.{ext}`
         base_path: str = output_node.base_path
 
+        if not is_multilayer:
+            for file_slot in output_node.file_slots:
+                file_slot.path = base_path
 
     @staticmethod
     def get_description():
