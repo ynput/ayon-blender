@@ -327,7 +327,8 @@ def get_base_render_output_path(
     workfile_dir = workfile_filepath.parent
     workfile_filename = Path(workfile_filepath.name).stem
     base_folder = Path.joinpath(workfile_dir, render_folder, workfile_filename)
-    if not multi_exr:
+    blender_version = lib.get_blender_version()
+    if blender_version < (5, 0, 0) and not multi_exr:
         # If not multi-exr, we only supply the root folder to render to.
         return str(base_folder)
 
