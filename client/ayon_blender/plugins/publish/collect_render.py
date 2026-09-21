@@ -79,8 +79,8 @@ class CollectBlenderRender(plugin.BlenderInstancePlugin):
 
         comp_output_node: "bpy.types.CompositorNodeOutputFile" = (
             instance.data["transientData"]["instance_node"])
-        frame_start: int = instance.data["frameStartHandle"]
-        frame_end: int = instance.data["frameEndHandle"]
+        frame_start: int = int(instance.data["frameStartHandle"])
+        frame_end: int = int(instance.data["frameEndHandle"])
         creator_attributes: dict = instance.data["creator_attributes"]
         frame_step: int = creator_attributes.get("step", 1)
         review: bool = creator_attributes.get("review", False)
