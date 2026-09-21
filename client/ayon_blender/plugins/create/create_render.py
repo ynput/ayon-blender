@@ -1,4 +1,5 @@
 """Create render."""
+import os
 import re
 
 import bpy
@@ -293,6 +294,14 @@ class CreateRender(plugin.BlenderCreator):
             if node.file_name.startswith(old_variant):
                 suffix = node.file_name[len(old_variant):]
             node.file_name = f"{variant}{suffix}"
+        else:
+            node_dir = os.path.dirname(node.base_path)
+            filename = os.path.basename(node.base_path)
+            if filename.startswith(old_variant):
+                suffix = filename[len(old_variant):]
+            else:
+                suffix = ""
+            node.base_path = os.path.join(node_dir, f"{variant}{suffix}")
 
         node.name = variant
         node.label = variant
