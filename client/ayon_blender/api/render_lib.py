@@ -313,8 +313,9 @@ def get_base_render_output_path(
     The output path is based on the AYON project settings and the current
     Blender scene workfile path.
 
-    If the render settings are not set to multi-EXR then only the base path
-    is returned, otherwise the full path to the render output file is returned.
+    For Blender versions prior to 5.0.0, if the render settings are not set
+    to multi-EXR then only the base path is returned, otherwise the full path
+    to the render output file is returned.
 
     """
     workfile_filepath = Path(bpy.data.filepath)
