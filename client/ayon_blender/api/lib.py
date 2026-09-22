@@ -1151,14 +1151,19 @@ def add_additional_presets(capture_preset: dict) -> dict:
         if not presets:
             return capture_preset
 
-        for key, value in presets.items():
-            if (
-                key in capture_preset
-                and isinstance(capture_preset[key], dict)
-                and isinstance(value, dict)
-            ):
-                capture_preset[key].update(value)
-            else:
-                capture_preset[key] = value
+        def deep_update(original: dict, updates: dict) -> dict:
+            """Recursively merge updates into original dict."""
+            for key, value in updates.items():
+                if (
+                    key in original
+                    and isinstance(original[key], dict)
+                    and isinstance(value, dict)
+                ):
+                    deep_update(original[key], value)
+                else:
+                    original[key] = value
+            return original
+
+        capture_preset = deep_update(capture_preset, presets)
 
     return capture_preset

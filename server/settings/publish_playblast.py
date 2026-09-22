@@ -99,6 +99,7 @@ class ShadingSetting(BaseSettingsModel):
         title="Light",
         enum_resolver=get_shading_light_enum
     )
+    studio_light: str = SettingsField("Default", title="Studio Light")
     type: str = SettingsField(
         "MATERIAL",
         title="Shading Type",
