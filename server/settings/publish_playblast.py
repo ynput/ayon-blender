@@ -222,7 +222,7 @@ class ExtractPlayblastModel(BaseSettingsModel):
 
 DEFAULT_PLAYBLAST_SETTING = {
     "enabled": True,
-    "optional": False,
+    "optional": True
     "active": True,
     "presets": json.dumps(
         {
