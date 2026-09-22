@@ -35,6 +35,8 @@ def capture(
     """Playblast in an independent windows
     Arguments:
         camera (str, optional): Name of camera, defaults to "Camera"
+        width (int, optional): Deprecated. Use `resolution` dictionary instead.
+        height (int, optional): Deprecated. Use `resolution` dictionary instead.
         filename (str, optional): Name of output file path. Defaults to current
             render output path.
         start_frame (int, optional): Defaults to current start frame.
@@ -54,12 +56,10 @@ def capture(
             using `DisplayOptions`
         camera_options (dict, optional): Supplied camera options for render
             using `CameraOptions`
+        background_images (list, optional): Deprecated. Use `camera_options` instead.
+        log (logging.Logger, optional): Logger for capturing process.
         resolution (dict, optional): Supplied resolution settings for render,
             using `ResolutionSetting`
-        log (logging.Logger, optional): Logger for capturing process.
-        width (int, optional): Deprecated. Use `resolution` dictionary instead.
-        height (int, optional): Deprecated. Use `resolution` dictionary instead.
-        background_images (list, optional): Deprecated. Use `display_options` instead.
     """
 
     scene = bpy.context.scene
