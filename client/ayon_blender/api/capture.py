@@ -72,6 +72,7 @@ def capture(
     if background_images is not None:
         camera_options = camera_options or {}
         camera_options["background_images"] = background_images
+    legacy_dimensions_provided = bool(width and height)
     if width is not None:
         resolution["width"] = width
     if height is not None:
@@ -84,7 +85,9 @@ def capture(
     if height == 0:
         height = scene.render.resolution_y
     if maintain_aspect_ratio is None:
-        maintain_aspect_ratio = resolution.get("maintain_aspect_ratio", True)
+        maintain_aspect_ratio = resolution.get(
+            "maintain_aspect_ratio", not legacy_dimensions_provided
+        )
     if maintain_aspect_ratio:
         ratio = scene.render.resolution_x / scene.render.resolution_y
         height = round(width / ratio)
