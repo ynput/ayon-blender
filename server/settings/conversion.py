@@ -49,8 +49,13 @@ def _convert_thumbnail_settings_model_1_1_8(
                 "product_base_types": [product_base_type],
                 "presets": {
                     **(parsed_presets.get(product_base_type) or {}),
+                    "camera_options": {
+                        "background_images": extract_thumbnail_settings.get(
+                            "background_images", False
+                        )
+                    },
                     "additional_presets": "{}",
-                },
+                }
             }
         )
 
