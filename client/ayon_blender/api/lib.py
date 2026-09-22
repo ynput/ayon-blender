@@ -1081,8 +1081,15 @@ def get_capture_preset(
         if presets:
             capture_preset = copy.deepcopy(presets)
             image_settings = capture_preset.get("image_settings") or {}
-            if image_settings.get("file_format"):
-                image_settings["file_format"] = image_settings["file_format"].upper()
+            file_format = image_settings.get("file_format")
+            if file_format:
+                image_settings["file_format"] = {
+                    "exr": "OPEN_EXR",
+                    "rgb": "IRIS",
+                    "jpg": "JPEG",
+                    "jp2": "JPEG2000",
+                    "tif": "TIFF",
+                }.get(file_format.lower(), file_format.upper())
             capture_preset["image_settings"] = image_settings
             capture_preset = add_additional_presets(capture_preset)
 
