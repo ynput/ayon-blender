@@ -1043,7 +1043,7 @@ def get_capture_preset(
     product_base_type: str,
     project_settings: dict,
     class_name: str,
-    log: "logging.Logger",
+    log: "logging.Logger" = None,
 ) -> dict:
     """Get capture preset for playblasting.
     If `product_base_type` is provided, it will be used as an additional filtering criterion.
@@ -1055,8 +1055,9 @@ def get_capture_preset(
         task_type (str): Task type.
         product_name (str): Product name.
         product_base_type (str): Product base type.
+        class_name (str): Class name for the plugin settings.
         project_settings (dict): Project settings.
-        log (logging.Logger): Logging object.
+        log (logging.Logger, optional): Logging object.
     Returns:
         dict: The capture preset for playblasting.
     """
@@ -1109,6 +1110,10 @@ def get_capture_preset(
         if class_name == "ExtractPlayblast":
             capture_preset = serialized_preset.get("default")
         elif class_name == "ExtractThumbnail":
+            product_base_type = next(
+                (base_type for base_type in profile.get("product_base_types", [])),
+                "model",
+            )
             capture_preset = serialized_preset.get(product_base_type)
         else:
             raise RuntimeError(f"Unsupported class_name: {class_name}")
