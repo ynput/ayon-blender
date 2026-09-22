@@ -11,6 +11,10 @@ from .plugin import deselect_all, create_blender_context
 
 def capture(
     camera=None,
+    # deprecated legacy arguments
+    width=None,
+    # deprecated legacy arguments
+    height=None,
     filename=None,
     start_frame=None,
     end_frame=None,
@@ -21,13 +25,12 @@ def capture(
     overwrite=False,
     image_settings=None,
     display_options=None,
+    # deprecated legacy arguments
+    background_images=None,
+    log=None,
+    *,
     camera_options=None,
     resolution=None,
-    log=None,
-    # deprecated legacy aliases (kept for backward compatibility)
-    width=None,
-    height=None,
-    background_images=None,
 )-> str:
     """Playblast in an independent windows
     Arguments:
