@@ -80,13 +80,20 @@ def _convert_playblast_settings_model_1_1_8(
     if extract_playblast_settings.get("profiles"):
         return
 
+    default_presets = parsed_presets.get("default", {})
+    camera_options = dict(default_presets.get("camera_options") or {})
+    camera_options.setdefault(
+        "background_images",
+        extract_playblast_settings.get("background_images", False)
+    )
     extract_playblast_settings["profiles"] = [{
         "task_types": [],
         "task_names": [],
         "product_names": [],
         "product_base_types": [],
         "presets": {
-            **(parsed_presets.get("default") or {}),
+            **default_presets,
+            "camera_options": camera_options,
             "additional_presets": "{}",
         },
     }]
