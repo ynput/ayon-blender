@@ -24,6 +24,10 @@ def capture(
     camera_options=None,
     resolution=None,
     log=None,
+    # deprecated legacy aliases (kept for backward compatibility)
+    width=None,
+    height=None,
+    background_images=None,
 )-> str:
     """Playblast in an independent windows
     Arguments:
@@ -50,6 +54,9 @@ def capture(
         resolution (dict, optional): Supplied resolution settings for render,
             using `ResolutionSetting`
         log (logging.Logger, optional): Logger for capturing process.
+        width (int, optional): Deprecated. Use `resolution` dictionary instead.
+        height (int, optional): Deprecated. Use `resolution` dictionary instead.
+        background_images (list, optional): Deprecated. Use `display_options` instead.
     """
 
     scene = bpy.context.scene
@@ -61,6 +68,15 @@ def capture(
 
     # Ensure resolution.
     resolution = resolution or {}
+    # Translate legacy args into the new options if the caller passed them.
+    if background_images is not None:
+        camera_options = camera_options or {}
+        camera_options["background_images"] = background_images
+    if width is not None:
+        resolution["width"] = width
+    if height is not None:
+        resolution["height"] = height
+
     width = resolution.get("width", 0)
     if width == 0:
         width = scene.render.resolution_x
