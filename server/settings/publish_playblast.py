@@ -60,14 +60,63 @@ def get_color_type_enum():
     ]
 
 
+def get_color_mode_enum():
+    return [
+        {"label": "RGB", "value": "RGB"},
+        {"label": "RGBA", "value": "RGBA"},
+        {"label": "BW", "value": "BW"},
+    ]
+
+
+def get_file_format_enum():
+    return [
+        {"label": "png", "value": "png"},
+        {"label": "jpeg", "value": "jpeg"},
+        {"label": "tiff", "value": "tiff"},
+        {"label": "exr", "value": "exr"},
+    ]
+
+
+def get_color_bit_depth_enum():
+    return [
+        {"label": "8", "value": "8"},
+        {"label": "16", "value": "16"},
+        {"label": "32", "value": "32"},
+    ]
+
+
+def get_shading_render_pass_enum():
+    return [
+        {"label": "Combined", "value": "COMBINED"},
+        {"label": "Emission", "value": "EMISSION"},
+        {"label": "Environment", "value": "ENVIRONMENT"},
+        {"label": "Shadow", "value": "SHADOW"},
+        {"label": "Ambient Occlusion", "value": "AO"},
+        {"label": "Normal", "value": "NORMAL"},
+        {"label": "Mist", "value": "MIST"},
+        {"label": "Diffuse Light", "value": "DIFFUSE_LIGHT"},
+        {"label": "Diffuse Color", "value": "DIFFUSE_COLOR"},
+        {"label": "Specular Light", "value": "SPECULAR_LIGHT"},
+        {"label": "Specular Color", "value": "SPECULAR_COLOR"},
+    ]
+
+
 class ImageSetting(BaseSettingsModel):
     _layout = "expanded"
-    file_format: str = SettingsField("png", title="File Format")
-    color_mode: str = SettingsField("RGB", title="Color Mode")
+    file_format: str = SettingsField(
+        "png",
+        title="File Format",
+        enum_resolver=get_file_format_enum
+    )
+    color_mode: str = SettingsField(
+        "RGB",
+        title="Color Mode",
+        enum_resolver=get_color_mode_enum
+    )
     color_depth: str = SettingsField(
         "8",
         title="Color Depth",
-        enum_resolver=get_color_depth_enum
+        enum_resolver=get_color_bit_depth_enum
     )
     compression: int = SettingsField(15, title="Compression")
 
@@ -109,6 +158,11 @@ class ShadingSetting(BaseSettingsModel):
         "MATERIAL",
         title="Color Type",
         enum_resolver=get_color_type_enum
+    )
+    render_pass: str = SettingsField(
+        "COMBINED",
+        title="Render Pass",
+        enum_resolver=get_shading_render_pass_enum
     )
     show_xray: bool = SettingsField(False, title="Show X-Ray")
     show_shadows: bool = SettingsField(False, title="Show Shadows")
