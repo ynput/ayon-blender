@@ -174,7 +174,7 @@ class CapturePresetSetting(BaseSettingsModel):
 
         if not success:
             raise BadRequestException(
-                "The attibutes can't be parsed as json object"
+                "The attributes can't be parsed as JSON object"
             )
         return value
 
