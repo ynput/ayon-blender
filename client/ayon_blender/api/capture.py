@@ -161,6 +161,8 @@ ImageSettings = {
         "use_max_b_frames": False,
     },
 }
+LIGHT_TYPES = ("studio", "flat", "matcap")
+
 
 def isolate_objects(window, objects):
     """Isolate selection"""
@@ -180,6 +182,26 @@ def isolate_objects(window, objects):
         bpy.ops.view3d.localview()
 
     deselect_all()
+
+
+def _normalized_shading_options(shading_options):
+    """Normalize shading options to ensure consistent keys and values."""
+    shading = dict(shading_options)
+
+    light = shading.get("light")
+
+    studio_light = shading.get("studio_light")
+    for light_type in LIGHT_TYPES:
+        sub = shading.pop(light_type, None)
+        if light_type == light and isinstance(sub, dict):
+            studio_light = sub.get("studio_light", studio_light)
+
+    if light:
+        shading["light"] = str(light.upper())
+
+    if studio_light is not None:
+        shading.setdefault("studio_light", studio_light)
+    return shading
 
 
 def restore_global_view(window):
@@ -233,6 +255,11 @@ def applied_view(
         space.region_3d.view_perspective = "CAMERA"
 
     if isinstance(display_options, dict):
+        display_options = dict(display_options)
+        if isinstance(display_options.get("shading"), dict):
+            display_options["shading"] = _normalized_shading_options(
+                display_options["shading"]
+            )
         _apply_options(space, display_options)
     # This would be removed after the transition
     # of the new capture preset

@@ -43,9 +43,59 @@ def get_shading_type_enum():
 
 def get_shading_light_enum():
     return [
-        {"label": "Studio", "value": "STUDIO"},
-        {"label": "Flat", "value": "FLAT"},
-        {"label": "Matcap", "value": "MATCAP"},
+        {"label": "Studio", "value": "studio"},
+        {"label": "Flat", "value": "flat"},
+        {"label": "Matcap", "value": "matcap"},
+    ]
+
+
+def get_studio_light_enum():
+    return [
+        {"label": "Default", "value": "default"},
+        {"label": "Basic", "value": "basic.sl"},
+        {"label": "Outdoor", "value": "outdoor.sl"},
+        {"label": "Paint", "value": "paint.sl"},
+        {"label": "Rim", "value": "rim.sl"},
+        {"label": "Studio", "value": "studio.sl"}
+    ]
+
+
+def get_matcap_light_enum():
+    return [
+        {"label": "Bright", "value": "basic_bright.exr"},
+        {"label": "Dark", "value": "basic_dark.exr"},
+        {"label": "Grey", "value": "basic_grey.exr"},
+        {"label": "Side", "value": "basic_side.exr"},
+        {"label": "Brush Thumbnail Preview",
+         "value": "brush_thumbnail_preview.exr"},
+        {"label": "Ceramic Black", "value": "ceramic_black.exr"},
+        {"label": "Ceramic LightBulb", "value": "ceramic_lightbulb.exr"},
+        {"label": "Check Gradient", "value": "check_gradient.exr"},
+        {"label": "Check Normal", "value": "check_normal+y.exr"},
+        {"label": "Check Reflection Horizontal", "value": "check_reflection_horizontal.exr"},
+        {"label": "Check Reflection Vertical", "value": "check_reflection_vertical.exr"},
+        {"label": "Check Rim Dark", "value": "check_rim_dark.exr"},
+        {"label": "Check Rim Light", "value": "check_rim_light.exr"},
+        {"label": "Clay Brown", "value": "clay_brown.exr"},
+        {"label": "Clay Green", "value": "clay_green.exr"},
+        {"label": "Clay Studio", "value": "clay_studio.exr"},
+        {"label": "Clay Warm", "value": "clay_warm.exr"},
+        {"label": "Fullmetal", "value": "fullmetal.exr"},
+        {"label": "Hard Surface Grey", "value": "hard_surface_grey.exr"},
+        {"label": "Hard Surface Red", "value": "hard_surface_red.exr"},
+        {"label": "Metal Bronze", "value": "metal_bronze.exr"},
+        {"label": "Metal Carpaint", "value": "metal_carpaint.exr"},
+        {"label": "Pearl", "value": "pearl.exr"},
+        {"label": "Red Wax", "value": "red_wax.exr"},
+        {"label": "Resin", "value": "resin.exr"},
+        {"label": "Toon Dark", "value": "toon_dark.exr"},
+        {"label": "Toon Light", "value": "toon_light.exr"},
+    ]
+
+
+def get_flat_enum():
+    return [
+        {"label": "Default", "value": "DEFAULT"},
     ]
 
 
@@ -143,14 +193,48 @@ class OverlaySetting(BaseSettingsModel):
     show_bones: bool = SettingsField(False, title="Show Bones")
 
 
+class StudioLightModel(BaseSettingsModel):
+    _layout = "expanded"
+    studio_light: str = SettingsField(
+        "default",
+        title="Studio Light",
+        enum_resolver=get_studio_light_enum
+    )
+
+class FlatLightModel(BaseSettingsModel):
+    _layout = "expanded"
+    studio_light: str = SettingsField(
+        "DEFAULT",
+        title="Flat Light",
+        enum_resolver=get_flat_enum
+    )
+
+class MatcapModel(BaseSettingsModel):
+    _layout = "expanded"
+    studio_light: str = SettingsField(
+        "basic_bright.exr",
+        title="Matcap Light",
+        enum_resolver=get_matcap_light_enum
+    )
+
+
 class ShadingSetting(BaseSettingsModel):
     _layout = "expanded"
     light: str = SettingsField(
-        "STUDIO",
+        "studio",
         title="Light",
-        enum_resolver=get_shading_light_enum
+        enum_resolver=get_shading_light_enum,
+        conditional_enum=True
     )
-    studio_light: str = SettingsField("Default", title="Studio Light")
+    studio: StudioLightModel = SettingsField(
+        default_factory=StudioLightModel, title="Studio"
+    )
+    flat: FlatLightModel = SettingsField(
+        default_factory=FlatLightModel, title="Flat"
+    )
+    matcap: MatcapModel = SettingsField(
+        default_factory=MatcapModel, title="Matcap"
+    )
     type: str = SettingsField(
         "MATERIAL",
         title="Shading Type",
