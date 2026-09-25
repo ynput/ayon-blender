@@ -28,6 +28,6 @@ class ValidateReviewRendererIsEevee(plugin.BlenderContextPlugin):
                 "Review renderer must be set to Eevee.",
                 title="Invalid Review Renderer"
             )
-
-    def repair(self, context):
+    @classmethod
+    def repair(cls, context):
         bpy.context.scene.render.engine = "BLENDER_EEVEE"
