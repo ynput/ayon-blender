@@ -129,6 +129,8 @@ class OverlaySetting(BaseSettingsModel):
     show_axis_x: bool = SettingsField(False, title="Show X Axis")
     show_axis_y: bool = SettingsField(False, title="Show Y Axis")
     show_axis_z: bool = SettingsField(False, title="Show Z Axis")
+    show_wireframe: bool = SettingsField(False, title="Show Wireframe")
+    wireframe_opacity: float = SettingsField(1.0, title="Wireframe Opacity")
     show_text: bool = SettingsField(False, title="Show Overlay Text")
     show_stats: bool = SettingsField(False, title="Show Scene Stats")
     show_cursor: bool = SettingsField(False, title="Show 3D Cursor")
@@ -164,6 +166,8 @@ class ShadingSetting(BaseSettingsModel):
         title="Render Pass",
         enum_resolver=get_shading_render_pass_enum
     )
+    use_scene_lights_render: bool = SettingsField(True, title="Scene Lights")
+    use_scene_world_render: bool = SettingsField(True, title="Scene World")
     show_xray: bool = SettingsField(False, title="Show X-Ray")
     show_shadows: bool = SettingsField(False, title="Show Shadows")
     show_cavity: bool = SettingsField(False, title="Show Cavity")
