@@ -11,7 +11,9 @@ from .plugin import deselect_all, create_blender_context
 
 def capture(
     camera=None,
+    # deprecated legacy arguments
     width=None,
+    # deprecated legacy arguments
     height=None,
     filename=None,
     start_frame=None,
@@ -19,18 +21,22 @@ def capture(
     step_frame=None,
     sound=None,
     isolate=None,
-    maintain_aspect_ratio=True,
+    maintain_aspect_ratio=None,
     overwrite=False,
     image_settings=None,
     display_options=None,
-    background_images=False,
+    # deprecated legacy arguments
+    background_images=None,
     log=None,
-) -> str:
+    *,
+    camera_options=None,
+    resolution=None,
+)-> str:
     """Playblast in an independent windows
     Arguments:
         camera (str, optional): Name of camera, defaults to "Camera"
-        width (int, optional): Width of output in pixels
-        height (int, optional): Height of output in pixels
+        width (int, optional): Deprecated. Use `resolution` dictionary instead.
+        height (int, optional): Deprecated. Use `resolution` dictionary instead.
         filename (str, optional): Name of output file path. Defaults to current
             render output path.
         start_frame (int, optional): Defaults to current start frame.
@@ -39,17 +45,21 @@ def capture(
         sound (str, optional):  Specify the sound node to be used during
             playblast. When None (default) no sound will be used.
         isolate (list): List of nodes to isolate upon capturing
-        maintain_aspect_ratio (bool, optional): Modify height in order to
-            maintain aspect ratio.
+        maintain_aspect_ratio (bool, optional): Override whether to modify
+            height to maintain aspect ratio.
         overwrite (bool, optional): Whether or not to overwrite if file
             already exists. If disabled and file exists and error will be
             raised.
         image_settings (dict, optional): Supplied image settings for render,
             using `ImageSettings`
         display_options (dict, optional): Supplied display options for render
-        background_images (bool, optional): Whether to enable background images during capture
-        Returns:
-            str: The path to the captured playblast file.
+            using `DisplayOptions`
+        camera_options (dict, optional): Supplied camera options for render
+            using `CameraOptions`
+        background_images (list, optional): Deprecated. Use `camera_options` instead.
+        log (logging.Logger, optional): Logger for capturing process.
+        resolution (dict, optional): Supplied resolution settings for render,
+            using `ResolutionSetting`
     """
 
     scene = bpy.context.scene
@@ -60,10 +70,27 @@ def capture(
         raise RuntimeError("Camera does not exist: {0}".format(camera))
 
     # Ensure resolution.
-    if width and height:
-        maintain_aspect_ratio = False
-    width = width or scene.render.resolution_x
-    height = height or scene.render.resolution_y
+    resolution = resolution or {}
+    # Translate legacy args into the new options if the caller passed them.
+    if background_images is not None:
+        camera_options = camera_options or {}
+        camera_options["background_images"] = background_images
+    legacy_dimensions_provided = bool(width and height)
+    if width is not None:
+        resolution["width"] = width
+    if height is not None:
+        resolution["height"] = height
+
+    width = resolution.get("width", 0)
+    if width == 0:
+        width = scene.render.resolution_x
+    height = resolution.get("height", 0)
+    if height == 0:
+        height = scene.render.resolution_y
+    if maintain_aspect_ratio is None:
+        maintain_aspect_ratio = resolution.get(
+            "maintain_aspect_ratio", not legacy_dimensions_provided
+        )
     if maintain_aspect_ratio:
         ratio = scene.render.resolution_x / scene.render.resolution_y
         height = round(width / ratio)
@@ -97,14 +124,14 @@ def capture(
             window,
             camera,
             isolate,
-            options=display_options,
-            background_images=background_images,
-            log=log,
+            display_options=display_options,
+            camera_options=camera_options,
+            log=log
         )
 
         with contextlib.ExitStack() as stack:
             stack.enter_context(
-                maintain_camera_settings(window, camera, background_images=background_images)
+                maintain_camera_settings(window, camera, camera_options=camera_options)
             )
             stack.enter_context(applied_frame_range(window, *frame_range))
             stack.enter_context(applied_render_options(window, render_options))
@@ -134,6 +161,8 @@ ImageSettings = {
         "use_max_b_frames": False,
     },
 }
+LIGHT_TYPES = ("studio", "flat", "matcap")
+
 
 def isolate_objects(window, objects):
     """Isolate selection"""
@@ -154,13 +183,34 @@ def isolate_objects(window, objects):
 
     deselect_all()
 
+
+def _normalized_shading_options(shading_options):
+    """Normalize shading options to ensure consistent keys and values."""
+    shading = dict(shading_options)
+
+    light = shading.get("light")
+
+    studio_light = shading.get("studio_light")
+    for light_type in LIGHT_TYPES:
+        sub = shading.pop(light_type, None)
+        if light_type == light and isinstance(sub, dict):
+            studio_light = sub.get("studio_light", studio_light)
+
+    if light:
+        shading["light"] = str(light.upper())
+
+    if studio_light is not None:
+        shading.setdefault("studio_light", studio_light)
+    return shading
+
+
 def restore_global_view(window):
     """Exit local view if active.
 
     Blender currently does not exit localview when closing windows.
     """
 
-    types = {"MESH", "GPENCIL"}
+    types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
     context = create_blender_context(selected=objects, window=window)
@@ -170,6 +220,7 @@ def restore_global_view(window):
         if bpy.context.space_data.local_view:
             bpy.ops.view3d.localview()
 
+
 def _apply_options(entity, options):
     for option, value in options.items():
         if isinstance(value, dict):
@@ -178,11 +229,19 @@ def _apply_options(entity, options):
             setattr(entity, option, value)
 
 
-def applied_view(window, camera, isolate=None, options=None, background_images=False, log=None):
+def applied_view(
+        window,
+        camera,
+        isolate=None,
+        display_options=None,
+        camera_options=None,
+        log=None
+    ):
     """Apply view options to window."""
     area = window.screen.areas[0]
     area.ui_type = "VIEW_3D"
     space = area.spaces[0]
+    space.shading.render_pass = "COMBINED"
 
     types = {"MESH", "GPENCIL", "CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
@@ -195,17 +254,27 @@ def applied_view(window, camera, isolate=None, options=None, background_images=F
         space.camera = window.scene.objects.get(camera)
         space.region_3d.view_perspective = "CAMERA"
 
-    if isinstance(options, dict):
-        _apply_options(space, options)
+    if isinstance(display_options, dict):
+        display_options = dict(display_options)
+        if isinstance(display_options.get("shading"), dict):
+            display_options["shading"] = _normalized_shading_options(
+                display_options["shading"]
+            )
+        _apply_options(space, display_options)
+    # This would be removed after the transition
+    # of the new capture preset
     else:
         space.shading.type = "SOLID"
         space.shading.color_type = "MATERIAL"
         space.show_gizmo = False
         space.overlay.show_overlays = False
 
-    if background_images:
+    camera_options = camera_options or {}
+    if camera_options.get("background_images"):
         if log:
-            log.warning("Overlay visibility must be enabled to display background images (image planes).")
+            log.warning(
+                "Overlay visibility must be enabled to display background images (image planes)."
+            )
         space.overlay.show_overlays = True
 
 
@@ -303,8 +372,9 @@ def applied_image_settings(window, options):
 
 
 @contextlib.contextmanager
-def maintain_camera_settings(window, camera, background_images):
+def maintain_camera_settings(window, camera, camera_options=None):
     """Context manager to override camera."""
+    camera_options = camera_options or {}
     current_camera = window.scene.camera
     target_camera = window.scene.objects.get(camera)
     current_image_plane = None
@@ -312,7 +382,9 @@ def maintain_camera_settings(window, camera, background_images):
         window.scene.camera = target_camera
         if hasattr(target_camera.data, "show_background_images"):
             current_image_plane = target_camera.data.show_background_images
-            target_camera.data.show_background_images = bool(background_images)
+            target_camera.data.show_background_images = camera_options.get(
+                "background_images", current_image_plane
+            )
     try:
         yield
     finally:

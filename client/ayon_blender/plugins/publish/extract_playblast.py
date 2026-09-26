@@ -1,5 +1,4 @@
 import os
-import json
 
 import clique
 import pyblish.api
@@ -8,7 +7,7 @@ import bpy
 
 from ayon_core.pipeline import publish
 from ayon_blender.api import capture, plugin
-from ayon_blender.api.lib import maintained_time
+from ayon_blender.api.lib import maintained_time, get_capture_preset
 
 
 class ExtractPlayblast(
@@ -26,9 +25,6 @@ class ExtractPlayblast(
     families = ["review.playblast"]
     optional = True
     order = pyblish.api.ExtractorOrder + 0.01
-
-    presets = "{}"
-    background_images = False
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -51,10 +47,10 @@ class ExtractPlayblast(
         assert end >= start, "Invalid time range!"
 
         # get cameras
-        camera = instance.data("review_camera", None)
+        camera = instance.data.get("review_camera", None)
 
         # get isolate objects list
-        isolate = instance.data("isolate", None)
+        isolate = instance.data.get("isolate", None)
 
         # get output path
         stagingdir = self.staging_dir(instance)
@@ -65,12 +61,17 @@ class ExtractPlayblast(
         path = os.path.join(stagingdir, filename)
 
         self.log.debug(f"Outputting images to {path}")
-
-        if self.background_images:
-            instance.data["background_images"] = self.background_images
-
-        presets = json.loads(self.presets)
-        preset = presets.get("default")
+        task_data = instance.data["anatomyData"].get("task", {})
+        preset = get_capture_preset(
+            task_name=task_data.get("name"),
+            task_type=task_data.get("type"),
+            product_name=instance.data["productName"],
+            product_base_type=instance.data["productBaseType"],
+            project_settings=instance.context.data["project_settings"],
+            class_name=self.__class__.__name__,
+            log=self.log
+        )
+        # additional required parameters for playblast
         preset.update({
             "camera": camera,
             "start_frame": start,
@@ -78,19 +79,20 @@ class ExtractPlayblast(
             "filename": path,
             "overwrite": True,
             "isolate": isolate,
-            "background_images": self.background_images,
-            "log": self.log,
+            "log": self.log
         })
-        self.log.debug(f"Using preset: {preset}")
-        preset.setdefault(
-            "image_settings",
-            {
-                "file_format": "PNG",
-                "color_mode": "RGB",
-                "color_depth": "8",
-                "compression": 15,
-            },
-        )
+        # This would be removed after the transition of
+        # the new capture preset system.
+        if not preset.get("image_settings"):
+            preset.setdefault(
+                "image_settings",
+                {
+                    "file_format": "PNG",
+                    "color_mode": "RGB",
+                    "color_depth": "8",
+                    "compression": 15,
+                },
+            )
 
         with maintained_time():
             path = capture(**preset)
@@ -99,9 +101,14 @@ class ExtractPlayblast(
         self._maintain_publisher_focus()
 
         collected_files = os.listdir(stagingdir)
-        collections, remainder = clique.assemble(
+        extension = preset["image_settings"].get("file_format", "PNG").lower()
+        extension_pattern = "jpeg" if extension == "jpeg" else extension
+        collections, _remainder = clique.assemble(
             collected_files,
-            patterns=[f"{filename}\\.{clique.DIGITS_PATTERN}\\.png$"],
+            patterns=[
+                f"{filename}\\.{clique.DIGITS_PATTERN}\\."
+                f"{extension_pattern}$"
+            ],
             minimum_items=1
         )
 
@@ -120,6 +127,7 @@ class ExtractPlayblast(
 
         # `instance.data["files"]` must be `str` if single frame
         files = list(frame_collection)
+        extension = os.path.splitext(files[0])[1].lstrip(".").lower()
         if len(files) == 1:
             files = files[0]
 
@@ -128,8 +136,8 @@ class ExtractPlayblast(
             tags.append("delete")
 
         representation = {
-            "name": "png",
-            "ext": "png",
+            "name": extension,
+            "ext": extension,
             "files": files,
             "stagingDir": stagingdir,
             "frameStart": start,
