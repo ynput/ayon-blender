@@ -1,4 +1,5 @@
 import contextlib
+from pathlib import Path
 
 import bpy
 import pyblish.api
@@ -53,6 +54,14 @@ class ExtractLocalRender(
                 "Instance render target is not local, skipping local render."
             )
             return
+
+        if instance.data.get("creator_attributes", {}).get(
+            "clean_local_render"):
+            to_delete = Path(bpy.context.scene.render.filepath).as_posix().replace("/tmp/tmp", "")
+            instance.context.data["cleanupFullPaths"].append(
+                to_delete
+            )
+            self.log.debug("Adding %s to cleanup" % to_delete)
 
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
