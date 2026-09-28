@@ -223,23 +223,23 @@ def _normalized_shading_options(shading_options):
     """
     shading = dict(shading_options)
     shading_type = shading.get("type")
+    shading_type_key = str(shading_type).lower() if shading_type else None
     if shading_type:
         shading["type"] = str(shading_type).upper()
 
     # The docstring nests per-type and per-light options under
     # the selected shading type's name (e.g. shading["material"]).
-    type_options = shading.get(shading_type, {})
-    if not isinstance(type_options, dict):
-        return shading
-
-    light = type_options.get("light")
-    if light:
-        shading["light"] = str(light).upper()
-        light_options = type_options.get(light, {})
-        if isinstance(light_options, dict):
-            studio_light = light_options.get("studio_light")
-            if studio_light:
-                shading["studio_light"] = studio_light
+    type_options = shading.get(shading_type_key, {})
+    if isinstance(type_options, dict):
+        light = type_options.get("light")
+        if light:
+            light_key = str(light).lower()
+            shading["light"] = light_key.upper()
+            light_options = type_options.get(light_key, {})
+            if isinstance(light_options, dict):
+                studio_light = light_options.get("studio_light")
+                if studio_light:
+                    shading["studio_light"] = studio_light
 
     # Drop the nested per-type entries so the result matches "after"
     for key in SHADING_TYPES:
