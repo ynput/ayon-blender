@@ -162,6 +162,8 @@ ImageSettings = {
     },
 }
 LIGHT_TYPES = ("studio", "flat", "matcap")
+SHADING_TYPES = ("solid", "wireframe", "material", "rendered")
+
 
 
 def isolate_objects(window, objects):
@@ -185,22 +187,64 @@ def isolate_objects(window, objects):
 
 
 def _normalized_shading_options(shading_options):
-    """Normalize shading options to ensure consistent keys and values."""
+    """Normalize shading options to ensure consistent keys and values.
+
+    Before normalization:
+
+        "shading": {
+            "type": "material",
+            "material": {
+                "light": "studio",
+                "studio": {
+                    "studio_light": "Default"
+                },
+                "flat": {
+                    "studio_light": "DEFAULT"
+                },
+                "matcap": {
+                    "studio_light": "basic_bright.exr"
+                }
+            }
+        }
+
+    After normalization:
+
+        "shading": {
+            "type": "MATERIAL",
+            "light": "STUDIO",
+            "studio_light": "Default"
+        }
+
+    Args:
+        shading_options (dict): The shading options to normalize.
+
+    Returns:
+        dict: The normalized shading options.
+    """
     shading = dict(shading_options)
+    shading_type = shading.get("type")
+    if shading_type:
+        shading["type"] = str(shading_type).upper()
 
-    light = shading.get("light")
+    # The docstring nests per-type and per-light options under
+    # the selected shading type's name (e.g. shading["material"]).
+    type_options = shading.get(shading_type, {})
+    if not isinstance(type_options, dict):
+        return shading
 
-    studio_light = shading.get("studio_light")
-    for light_type in LIGHT_TYPES:
-        sub = shading.pop(light_type, None)
-        if light_type == light and isinstance(sub, dict):
-            studio_light = sub.get("studio_light", studio_light)
-
+    light = type_options.get("light")
     if light:
-        shading["light"] = str(light.upper())
+        shading["light"] = str(light).upper()
+        light_options = type_options.get(light, {})
+        if isinstance(light_options, dict):
+            studio_light = light_options.get("studio_light")
+            if studio_light:
+                shading["studio_light"] = studio_light
 
-    if studio_light is not None:
-        shading.setdefault("studio_light", studio_light)
+    # Drop the nested per-type entries so the result matches "after"
+    for key in SHADING_TYPES:
+        shading.pop(key, None)
+
     return shading
 
 
