@@ -1,3 +1,4 @@
+import copy
 import json
 from typing import Any
 from semver import VersionInfo
@@ -41,6 +42,20 @@ def _convert_thumbnail_settings_model_1_1_8(
 
     extract_thumbnail_settings["profiles"] = []
     for product_base_type in parsed_presets.keys():
+        preset = copy.deepcopy(parsed_presets.get(product_base_type) or {})
+        shading = preset.get("display_options", {}).get("shading", {})
+        shading_type = shading.get("type", "").lower()
+        if shading_type in {"solid", "material"}:
+            light = shading.pop("light", None)
+            studio_light = shading.pop("studio_light", None)
+            if light or studio_light:
+                light_type = (light or "studio").lower()
+                mode_settings = shading.setdefault(shading_type, {})
+                mode_settings["light"] = light_type
+                if studio_light:
+                    mode_settings.setdefault(light_type, {})["studio_light"] = (
+                        studio_light
+                    )
         extract_thumbnail_settings["profiles"].append(
             {
                 "task_types": [],
@@ -48,7 +63,7 @@ def _convert_thumbnail_settings_model_1_1_8(
                 "product_names": [],
                 "product_base_types": [product_base_type],
                 "presets": {
-                    **(parsed_presets.get(product_base_type) or {}),
+                    **preset,
                     "camera_options": {
                         "background_images": extract_thumbnail_settings.get(
                             "background_images", False
