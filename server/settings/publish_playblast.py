@@ -51,7 +51,7 @@ def get_shading_light_enum():
 
 def get_studio_light_enum():
     return [
-        {"label": "Default", "value": "default"},
+        {"label": "Default", "value": "Default"},
         {"label": "Basic", "value": "basic.sl"},
         {"label": "Outdoor", "value": "outdoor.sl"},
         {"label": "Paint", "value": "paint.sl"},
@@ -95,7 +95,7 @@ def get_matcap_light_enum():
 
 def get_flat_enum():
     return [
-        {"label": "Default", "value": "DEFAULT"},
+        {"label": "Default", "value": "Default"},
     ]
 
 
@@ -196,7 +196,7 @@ class OverlaySetting(BaseSettingsModel):
 class StudioLightModel(BaseSettingsModel):
     _layout = "expanded"
     studio_light: str = SettingsField(
-        "default",
+        "Default",
         title="Studio Light",
         enum_resolver=get_studio_light_enum
     )
