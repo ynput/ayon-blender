@@ -81,7 +81,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
                 f"Thumbnail image format must be PNG or JPEG, got {file_format}"
             )
 
-        extensions = ("png") if file_format == "PNG" else ("jpg", "jpeg")
+        extensions = ("png",) if file_format == "PNG" else ("jpg", "jpeg")
         with maintained_time():
             path = capture(**preset)
 
