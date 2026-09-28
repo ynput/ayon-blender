@@ -6,6 +6,7 @@ import pyblish.api
 import bpy
 
 from ayon_core.pipeline import publish
+from ayon_core.pipeline.publish import PublishError
 from ayon_blender.api import capture, plugin
 from ayon_blender.api.lib import maintained_time, get_capture_preset
 
@@ -94,6 +95,12 @@ class ExtractPlayblast(
                 },
             )
 
+        file_format = preset["image_settings"].get("file_format", "PNG").upper()
+        if file_format not in {"PNG", "JPEG"}:
+            raise PublishError(
+                f"Playblast image format must be PNG or JPEG, got {file_format}"
+            )
+
         with maintained_time():
             path = capture(**preset)
 
@@ -101,8 +108,7 @@ class ExtractPlayblast(
         self._maintain_publisher_focus()
 
         collected_files = os.listdir(stagingdir)
-        extension = preset["image_settings"].get("file_format", "PNG").lower()
-        extension_pattern = "jpeg" if extension == "jpeg" else extension
+        extension_pattern = "png" if file_format == "PNG" else "(?:jpg|jpeg)"
         collections, _remainder = clique.assemble(
             collected_files,
             patterns=[

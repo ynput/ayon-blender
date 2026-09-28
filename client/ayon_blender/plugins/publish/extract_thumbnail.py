@@ -2,6 +2,7 @@ import os
 import glob
 
 import pyblish.api
+from ayon_core.pipeline.publish import PublishError
 from ayon_blender.api import capture, plugin
 from ayon_blender.api.lib import maintained_time, get_capture_preset
 
@@ -74,12 +75,17 @@ class ExtractThumbnail(plugin.BlenderExtractor):
                     "compression": 15,
                 },
             )
-        extension = preset["image_settings"].get("file_format", "PNG").lower()
-        extension = "jpeg" if extension == "jpeg" else extension
+        file_format = preset["image_settings"].get("file_format", "PNG").upper()
+        if file_format not in {"PNG", "JPEG"}:
+            raise PublishError(
+                f"Thumbnail image format must be PNG or JPEG, got {file_format}"
+            )
+
+        extensions = ("png") if file_format == "PNG" else ("jpg", "jpeg")
         with maintained_time():
             path = capture(**preset)
 
-        thumbnail = os.path.basename(self._fix_output_path(path, extension))
+        thumbnail = os.path.basename(self._fix_output_path(path, extensions))
         extension = os.path.splitext(thumbnail)[1].lstrip(".").lower()
 
         self.log.debug(f"thumbnail: {thumbnail}")
@@ -95,7 +101,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
         }
         instance.data["representations"].append(representation)
 
-    def _fix_output_path(self, filepath, extension):
+    def _fix_output_path(self, filepath, extensions):
         """Workaround to return correct filepath.
 
         To workaround this we just glob.glob() for any file extensions and
@@ -111,7 +117,11 @@ class ExtractThumbnail(plugin.BlenderExtractor):
             return None
 
         if not os.path.exists(filepath):
-            files = glob.glob(f"{filepath}.*.{extension}")
+            files = [
+                filename
+                for extension in extensions
+                for filename in glob.glob(f"{filepath}.*.{extension}")
+            ]
 
             if not files:
                 raise RuntimeError(f"Couldn't find playblast from: {filepath}")

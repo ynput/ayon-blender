@@ -1046,7 +1046,7 @@ def get_capture_preset(
     log: "logging.Logger" = None,
 ) -> dict:
     """Get capture preset for playblasting.
-    If `product_base_type` is provided, it will be used as an additional filtering criterion.
+    If `product_base_type` is provided, it will be used as an additional filtering criterion
     Logic for transitioning from old style capture preset to new capture preset
     profiles.
 
@@ -1066,12 +1066,13 @@ def get_capture_preset(
         "task_names": task_name,
         "task_types": task_type,
         "product_names": product_name,
-        "product_base_types": product_base_type
+        "product_base_types": product_base_type,
     }
 
     plugin_settings = project_settings["blender"]["publish"][class_name]
     # Get profiles from plugin settings
     profiles = plugin_settings.get("profiles") or []
+    profile = {}
     if profiles:
         profile = filter_profiles(
             profiles,
@@ -1085,11 +1086,8 @@ def get_capture_preset(
             file_format = image_settings.get("file_format")
             if file_format:
                 image_settings["file_format"] = {
-                    "exr": "OPEN_EXR",
-                    "rgb": "IRIS",
                     "jpg": "JPEG",
-                    "jp2": "JPEG2000",
-                    "tif": "TIFF",
+                    "png": "PNG",
                 }.get(file_format.lower(), file_format.upper())
             capture_preset["image_settings"] = image_settings
             capture_preset = add_additional_presets(capture_preset)
@@ -1110,11 +1108,11 @@ def get_capture_preset(
         if class_name == "ExtractPlayblast":
             capture_preset = serialized_preset.get("default")
         elif class_name == "ExtractThumbnail":
-            product_base_type = next(
-                (base_type for base_type in profile.get("product_base_types", [])),
-                "model",
+            fallback_base_type = next(
+                iter(profile.get("product_base_types") or []),
+                product_base_type if product_base_type != "review" else "model",
             )
-            capture_preset = serialized_preset.get(product_base_type)
+            capture_preset = serialized_preset.get(fallback_base_type)
         else:
             raise RuntimeError(f"Unsupported class_name: {class_name}")
 
