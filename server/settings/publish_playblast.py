@@ -34,10 +34,10 @@ def get_color_depth_enum():
 
 def get_shading_type_enum():
     return [
-        {"label": "Material", "value": "MATERIAL"},
-        {"label": "Solid", "value": "SOLID"},
-        {"label": "Wireframe", "value": "WIREFRAME"},
-        {"label": "Rendered", "value": "RENDERED"},
+        {"label": "Material", "value": "material"},
+        {"label": "Solid", "value": "solid"},
+        {"label": "Wireframe", "value": "wireframe"},
+        {"label": "Rendered", "value": "rendered"},
     ]
 
 
@@ -46,6 +46,19 @@ def get_shading_light_enum():
         {"label": "Studio", "value": "studio"},
         {"label": "Flat", "value": "flat"},
         {"label": "Matcap", "value": "matcap"},
+    ]
+
+
+def get_hdri_studio_light_enum():
+    return [
+        {"label": "City", "value": "city.exr"},
+        {"label": "Courtyard", "value": "courtyard.exr"},
+        {"label": "Forest", "value": "forest.exr"},
+        {"label": "Interior", "value": "interior.exr"},
+        {"label": "Night", "value": "night.exr"},
+        {"label": "Studio", "value": "studio.exr"},
+        {"label": "Sunrise", "value": "sunrise.exr"},
+        {"label": "Sunset", "value": "sunset.exr"},
     ]
 
 
@@ -193,6 +206,15 @@ class OverlaySetting(BaseSettingsModel):
     show_bones: bool = SettingsField(False, title="Show Bones")
 
 
+class HDRIStudioLightModel(BaseSettingsModel):
+    _layout = "expanded"
+    studio_light: str = SettingsField(
+        "forest.exr",
+        title="HDRI Studio Light",
+        enum_resolver=get_hdri_studio_light_enum
+    )
+
+
 class StudioLightModel(BaseSettingsModel):
     _layout = "expanded"
     studio_light: str = SettingsField(
@@ -218,7 +240,19 @@ class MatcapModel(BaseSettingsModel):
     )
 
 
-class ShadingSetting(BaseSettingsModel):
+class MaterialModeSettings(BaseSettingsModel):
+    _layout = "expanded"
+    light: str = SettingsField(
+        "studio",
+        title="Light",
+        enum_resolver=get_shading_light_enum,
+        conditional_enum=True
+    )
+    studio: StudioLightModel = SettingsField(
+        default_factory=StudioLightModel, title="Studio"
+    )
+
+class SolidModeSettings(BaseSettingsModel):
     _layout = "expanded"
     light: str = SettingsField(
         "studio",
@@ -235,10 +269,23 @@ class ShadingSetting(BaseSettingsModel):
     matcap: MatcapModel = SettingsField(
         default_factory=MatcapModel, title="Matcap"
     )
+
+
+class ShadingSetting(BaseSettingsModel):
+    _layout = "expanded"
     type: str = SettingsField(
-        "MATERIAL",
+        "rendered",
         title="Shading Type",
-        enum_resolver=get_shading_type_enum
+        enum_resolver=get_shading_type_enum,
+        conditional_enum=True,
+    )
+    solid: SolidModeSettings = SettingsField(
+        default_factory=SolidModeSettings,
+        title="Solid",
+    )
+    material: MaterialModeSettings = SettingsField(
+        default_factory=MaterialModeSettings,
+        title="Material"
     )
     color_type: str = SettingsField(
         "MATERIAL",
