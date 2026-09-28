@@ -23,7 +23,7 @@ class ValidateReviewRendererIsEevee(plugin.BlenderContextPlugin):
     actions = [RepairContextAction]
 
     def process(self, context):
-        if bpy.context.scene.render.engine == "CYCLES":
+        if bpy.context.scene.render.engine not in {"BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"}:
             raise PublishValidationError(
                 "Review renderer must be set to Eevee.",
                 title="Invalid Review Renderer"
