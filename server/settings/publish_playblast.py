@@ -297,8 +297,8 @@ class ShadingSetting(BaseSettingsModel):
         title="Render Pass",
         enum_resolver=get_shading_render_pass_enum
     )
-    use_scene_lights_render: bool = SettingsField(True, title="Scene Lights")
-    use_scene_world_render: bool = SettingsField(True, title="Scene World")
+    use_scene_lights: bool = SettingsField(True, title="Scene Lights")
+    use_scene_world: bool = SettingsField(True, title="Scene World")
     show_xray: bool = SettingsField(False, title="Show X-Ray")
     show_shadows: bool = SettingsField(False, title="Show Shadows")
     show_cavity: bool = SettingsField(False, title="Show Cavity")
