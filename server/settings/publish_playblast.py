@@ -192,7 +192,7 @@ class OverlaySetting(BaseSettingsModel):
     show_axis_x: bool = SettingsField(False, title="Show X Axis")
     show_axis_y: bool = SettingsField(False, title="Show Y Axis")
     show_axis_z: bool = SettingsField(False, title="Show Z Axis")
-    show_wireframe: bool = SettingsField(False, title="Show Wireframe")
+    show_wireframes: bool = SettingsField(False, title="Show Wireframes")
     wireframe_opacity: float = SettingsField(1.0, title="Wireframe Opacity")
     show_text: bool = SettingsField(False, title="Show Overlay Text")
     show_stats: bool = SettingsField(False, title="Show Scene Stats")
