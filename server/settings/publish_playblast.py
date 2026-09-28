@@ -135,8 +135,6 @@ def get_file_format_enum():
     return [
         {"label": "png", "value": "png"},
         {"label": "jpeg", "value": "jpeg"},
-        {"label": "tiff", "value": "tiff"},
-        {"label": "exr", "value": "exr"},
     ]
 
 
