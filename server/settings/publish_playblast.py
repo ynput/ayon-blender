@@ -508,7 +508,7 @@ DEFAULT_THUMBNAIL_SETTING = {
             "task_types": [],
             "task_names": [],
             "product_names": [],
-            "product_base_types": ["model"],
+            "product_base_types": ["model", "review"],
             "presets": {
                 "image_settings": {
                     "file_format": "PNG",
@@ -557,7 +557,7 @@ DEFAULT_THUMBNAIL_SETTING = {
             "task_types": [],
             "task_names": [],
             "product_names": [],
-            "product_base_types": ["rig"],
+            "product_base_types": ["rig", "review"],
             "presets": {
                 "image_settings": {
                     "file_format": "PNG",
