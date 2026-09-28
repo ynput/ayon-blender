@@ -555,7 +555,7 @@ DEFAULT_THUMBNAIL_SETTING = {
             "task_types": [],
             "task_names": [],
             "product_names": [],
-            "product_base_types": ["rig", "review"],
+            "product_base_types": ["rig"],
             "presets": {
                 "image_settings": {
                     "file_format": "PNG",
