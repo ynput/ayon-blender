@@ -1043,7 +1043,7 @@ def get_capture_preset(
     product_base_type: str,
     project_settings: dict,
     class_name: str,
-    log: "logging.Logger" = None,
+    log: "logging.Logger",
 ) -> dict:
     """Get capture preset for playblasting.
     If `product_base_type` is provided, it will be used as an additional filtering criterion
