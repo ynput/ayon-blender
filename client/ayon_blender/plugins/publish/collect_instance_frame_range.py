@@ -27,5 +27,5 @@ class CollectFrameRangeFromCreator(plugin.BlenderInstancePlugin):
                 instance.data["frameStart"] - instance.data["handleStart"]
             )
             instance.data["frameEndHandle"] = (
-                instance.data["frameEnd"] - instance.data["handleEnd"]
+                instance.data["frameEnd"] + instance.data["handleEnd"]
             )
