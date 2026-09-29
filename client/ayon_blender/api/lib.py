@@ -3,7 +3,7 @@ import hashlib
 import importlib
 import os
 import traceback
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import addon_utils
 import bpy
@@ -1030,3 +1030,22 @@ def clean_filename(filename: str) -> str:
     """
     digest = hashlib.sha1(filename.encode("utf-8")).hexdigest()[:8]
     return f"{filename[:54]}_{digest}"
+
+
+def get_library_by_filepath(filepath: str) -> Optional[bpy.types.Library]:
+    """Return the library datablock that was loaded from `filepath`.
+
+    Args:
+        filepath (str): The filepath of the library .blend file.
+
+    Returns:
+        Optional[bpy.types.Library]: The library, if found.
+    """
+    def _normalize(path: str) -> str:
+        return os.path.normcase(os.path.normpath(bpy.path.abspath(path)))
+
+    filepath = _normalize(filepath)
+    for library in bpy.data.libraries:
+        if _normalize(library.filepath) == filepath:
+            return library
+    return None
