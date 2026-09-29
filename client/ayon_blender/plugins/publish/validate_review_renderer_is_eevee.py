@@ -7,7 +7,7 @@ from ayon_core.pipeline.publish import (
     PublishValidationError
 )
 
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 
 
 class ValidateReviewRendererIsEevee(plugin.BlenderContextPlugin):
@@ -30,4 +30,7 @@ class ValidateReviewRendererIsEevee(plugin.BlenderContextPlugin):
             )
     @classmethod
     def repair(cls, context):
-        bpy.context.scene.render.engine = "BLENDER_EEVEE"
+        if lib.get_blender_version() < (5, 2, 0):
+            bpy.context.scene.render.engine = "BLENDER_EEVEE_NEXT"
+        else:
+            bpy.context.scene.render.engine = "BLENDER_EEVEE"
