@@ -73,7 +73,7 @@ def set_render_format(ext: str, multilayer: bool):
         image_settings.file_format = "IRIS"
     elif ext == "png":
         image_settings.file_format = "PNG"
-    elif ext == "jpeg":
+    elif ext in {"jpg", "jpeg"}:
         image_settings.file_format = "JPEG"
     elif ext == "jp2":
         image_settings.file_format = "JPEG2000"
@@ -97,7 +97,7 @@ def get_file_format_extension(file_format: str) -> str:
     elif file_format == "PNG":
         return "png"
     elif file_format == "JPEG":
-        return "jpeg"
+        return "jpg"
     elif file_format == "JPEG2000":
         return "jp2"
     elif file_format == "TARGA" or file_format == "TARGA_RAW":
@@ -239,7 +239,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
             "sample_count": "pass_debug_sample_count",
             "diffuse_indirect": "use_pass_diffuse_indirect",
             "specular_indirect": "use_pass_glossy_indirect",
-            "transmission_direct": "use_pass_transmission_direct",
+            "transmission_light": "use_pass_transmission_direct",
             "transmission_indirect": "use_pass_transmission_indirect",
             "transmission_color": "use_pass_transmission_color",
             "volume_light": "use_pass_volume_direct",
