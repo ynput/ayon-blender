@@ -828,7 +828,7 @@ def packed_images(datablocks, logger=None):
 
     finally:
         for image in unpacked_node_images:
-            image.unpack()
+            image.unpack(method="REMOVE")
 
 
 def search_replace_render_paths(src: str, dest: str) -> bool:
