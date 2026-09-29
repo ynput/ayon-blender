@@ -8,38 +8,7 @@ import bpy_extras.anim_utils
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
 from ayon_blender.api.pipeline import AYON_PROPERTY
-from ayon_blender.api.lib import get_blender_version
-
-
-def get_all_parents(obj):
-    """Get all recursive parents of object"""
-    result = []
-    while True:
-        obj = obj.parent
-        if not obj:
-            break
-        result.append(obj)
-    return result
-
-
-def get_highest_root(objects):
-    # Get the highest object that is also in the collection
-    included_objects = {obj.name_full for obj in objects}
-    num_parents_to_obj = {}
-    for obj in objects:
-        if isinstance(obj, bpy.types.Object):
-            parents = get_all_parents(obj)
-            # included parents
-            parents = [parent for parent in parents if
-                       parent.name_full in included_objects]
-            if not parents:
-                # A node without parents must be a highest root
-                return obj
-
-            num_parents_to_obj.setdefault(len(parents), obj)
-
-    minimum_parent = min(num_parents_to_obj)
-    return num_parents_to_obj[minimum_parent]
+from ayon_blender.api.lib import get_blender_version, get_highest_root
 
 
 class ExtractAnimationFBX(
@@ -48,7 +17,7 @@ class ExtractAnimationFBX(
 ):
     """Extract as animation."""
 
-    label = "Extract FBX"
+    label = "Extract Animation FBX"
     hosts = ["blender"]
     families = ["animation"]
     optional = True
