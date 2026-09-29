@@ -180,6 +180,7 @@ class BlendLoader(plugin.BlenderLoader):
                 create_animation_instance(container)
 
         add_to_ayon_container(container)
+        self._apply_layout_options(container, options or {})
 
         data = {
             "schema": "ayon:container-3.0",
@@ -204,6 +205,40 @@ class BlendLoader(plugin.BlenderLoader):
 
         self[:] = objects
         return objects
+
+    @staticmethod
+    def _apply_layout_options(container: bpy.types.Object, options: dict):
+        """Apply the parent, transform and action passed by a layout loader.
+
+        The transform is expected in the format written by Extract Layout,
+        with `translation`, `rotation` (euler, radians) and `scale` entries.
+        """
+        transform = options.get("transform")
+        if transform:
+            for attr, key in (
+                ("location", "translation"),
+                ("rotation_euler", "rotation"),
+                ("scale", "scale"),
+            ):
+                values = transform.get(key)
+                if values:
+                    setattr(
+                        container, attr,
+                        (values["x"], values["y"], values["z"])
+                    )
+
+        parent = options.get("parent")
+        if parent:
+            container.parent = parent
+
+        action = options.get("action")
+        if action:
+            for obj in container.children_recursive:
+                if obj.type != "ARMATURE":
+                    continue
+                if not obj.animation_data:
+                    obj.animation_data_create()
+                obj.animation_data.action = action
 
     def exec_update(self, container: dict, context: dict):
         """
