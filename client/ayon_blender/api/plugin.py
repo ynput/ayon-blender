@@ -89,6 +89,17 @@ def prepare_data(data, container_name=None):
     return local_data
 
 
+def add_namespace(datablock: bpy.types.ID, namespace: str):
+    """Prefix the datablock name with `namespace:` if not prefixed yet.
+
+    Datablocks like mesh data and materials can be shared by multiple
+    objects, so this avoids prefixing them more than once.
+    """
+    prefix = f"{namespace}:"
+    if not datablock.name.startswith(prefix):
+        datablock.name = f"{prefix}{datablock.name}"
+
+
 def create_blender_context(active: Optional[bpy.types.Object] = None,
                            selected: Optional[bpy.types.Object] = None,
                            window: Optional[bpy.types.Window] = None):
@@ -371,7 +382,7 @@ class BlenderCreator(Creator):
                     f"Unable to update instance {created_instance} "
                     f"without instance node."
                 )
-                return
+                continue
 
             # Rename the instance node in the scene if product
             #   or folder changed.
@@ -395,13 +406,13 @@ class BlenderCreator(Creator):
 
             # Remove collection node and its children
             if isinstance(node, bpy.types.Collection):
-                # Remove recursively linked child collections and objects
-                for child in node.children_recursive:
-                     if isinstance(child, bpy.types.Object):
-                        if len(child.users_collection) == 1:
-                            if child.name not in bpy.context.scene.collection:
-                                bpy.context.scene.collection.objects.link(child)
-                # Remove directly linked objects
+                # Keep child collections in the scene if only used by the
+                # instance collection
+                scene_collection = bpy.context.scene.collection
+                for child in node.children:
+                    if child.users - int(child.use_fake_user) == 1:
+                        scene_collection.children.link(child)
+                # Keep directly linked objects in the scene
                 for obj in node.objects:
                     if len(obj.users_collection) == 1:
                         if obj.name not in bpy.context.scene.collection.objects:

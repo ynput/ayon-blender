@@ -249,18 +249,15 @@ class CacheModelLoader(plugin.BlenderLoader):
             collections = obj.users_collection
             for collection in collections:
                 collection.objects.unlink(obj)
-            name = obj.name
-
             if options.get("add_namespace", self.add_namespace):
-                obj.name = f"{group_name}:{name}"
-                if obj.type != 'EMPTY':
-                    name_data = obj.data.name
-                    obj.data.name = f"{group_name}:{name_data}"
+                plugin.add_namespace(obj, group_name)
+                if obj.data is not None:
+                    plugin.add_namespace(obj.data, group_name)
 
-                    for material_slot in obj.material_slots:
-                        name_mat = material_slot.material.name
-                        material_slot.material.name = (
-                            f"{group_name}:{name_mat}"
+                for material_slot in obj.material_slots:
+                    if material_slot.material:
+                        plugin.add_namespace(
+                            material_slot.material, group_name
                         )
 
             if not obj.get(AYON_PROPERTY):
