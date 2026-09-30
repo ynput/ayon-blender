@@ -3,7 +3,7 @@ import hashlib
 import importlib
 import os
 import traceback
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import addon_utils
 import bpy
@@ -751,7 +751,7 @@ def strip_namespace(containers):
     nodes = [
         container["node"] for container in containers
     ]
-    original_namespaces = {}
+    original_names = {}
     for node in nodes:
         if isinstance(node, bpy.types.Collection):
             children = node.children_recursive
@@ -766,15 +766,14 @@ def strip_namespace(containers):
             original_name = child.name
             if ":" not in original_name:
                 continue
-            namespace, name = original_name.rsplit(':', 1)
-            child.name = name
-            original_namespaces[child] = namespace
+            original_names[child] = original_name
+            child.name = original_name.rsplit(":", 1)[-1]
 
     try:
         yield
     finally:
-        for node, original_namespace in original_namespaces.items():
-            node.name = f"{original_namespace}:{name}"
+        for node, original_name in original_names.items():
+            node.name = original_name
 
 
 @contextlib.contextmanager
@@ -828,7 +827,7 @@ def packed_images(datablocks, logger=None):
 
     finally:
         for image in unpacked_node_images:
-            image.unpack()
+            image.unpack(method="REMOVE")
 
 
 def search_replace_render_paths(src: str, dest: str) -> bool:
@@ -1030,3 +1029,22 @@ def clean_filename(filename: str) -> str:
     """
     digest = hashlib.sha1(filename.encode("utf-8")).hexdigest()[:8]
     return f"{filename[:54]}_{digest}"
+
+
+def get_library_by_filepath(filepath: str) -> Optional[bpy.types.Library]:
+    """Return the library datablock that was loaded from `filepath`.
+
+    Args:
+        filepath (str): The filepath of the library .blend file.
+
+    Returns:
+        Optional[bpy.types.Library]: The library, if found.
+    """
+    def _normalize(path: str) -> str:
+        return os.path.normcase(os.path.normpath(bpy.path.abspath(path)))
+
+    filepath = _normalize(filepath)
+    for library in bpy.data.libraries:
+        if _normalize(library.filepath) == filepath:
+            return library
+    return None
