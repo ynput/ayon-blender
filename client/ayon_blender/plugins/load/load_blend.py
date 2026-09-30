@@ -9,7 +9,6 @@ from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,
     create_animation_instance,
-    iter_bpy_prop_collection_idprop,
     get_library_by_filepath,
 )
 from ayon_blender.api.pipeline import (
@@ -289,7 +288,7 @@ class BlendLoader(plugin.BlenderLoader):
         group_name = container["objectName"]
         asset_group = bpy.data.objects.get(group_name)
 
-        members = asset_group.get(AYON_PROPERTY).get("members", [])
+        members = set(asset_group.get(AYON_PROPERTY).get("members", []))
 
         # We need to update all the parent container members
         parent_containers = self.get_all_container_parents(asset_group)
@@ -299,12 +298,9 @@ class BlendLoader(plugin.BlenderLoader):
                 lambda i: i not in members,
                 parent.get(AYON_PROPERTY).get("members", [])))
 
+        members.discard(None)
+        members.discard(asset_group)
         if members:
-            for _, attr in iter_bpy_prop_collection_idprop():
-                # make a list copy because we remove members as we iterate
-                for data in list(attr):
-                    if data not in members or data == asset_group:
-                        continue
-                    attr.remove(data)
+            bpy.data.batch_remove(members)
 
         bpy.data.objects.remove(asset_group)
