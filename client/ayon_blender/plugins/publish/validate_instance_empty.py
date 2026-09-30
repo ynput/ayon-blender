@@ -8,7 +8,7 @@ class ValidateInstanceEmpty(plugin.BlenderInstancePlugin):
 
     order = pyblish.api.ValidatorOrder - 0.01
     hosts = ["blender"]
-    families = ["model", "pointcache", "rig", "camera" "layout", "blendScene"]
+    families = ["model", "pointcache", "rig", "camera", "layout", "blendScene"]
     label = "Validate Instance is not Empty"
     optional = False
 
