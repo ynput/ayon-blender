@@ -56,7 +56,7 @@ class ExtractLocalRender(
 
         frame_start: int = instance.data["frameStartHandle"]
         frame_end: int = instance.data["frameEndHandle"]
-        step: int = int(instance.data.get("step", 1))
+        step: int = int(instance.data.get("byFrameStep", 1))
 
         # Ensure overwrite to avoid stopping on existing files
         bpy.context.scene.render.use_overwrite = True
