@@ -90,6 +90,17 @@ def prepare_data(data, container_name=None):
     return local_data
 
 
+def add_namespace(datablock: bpy.types.ID, namespace: str):
+    """Prefix the datablock name with `namespace:` if not prefixed yet.
+
+    Datablocks like mesh data and materials can be shared by multiple
+    objects, so this avoids prefixing them more than once.
+    """
+    prefix = f"{namespace}:"
+    if not datablock.name.startswith(prefix):
+        datablock.name = f"{prefix}{datablock.name}"
+
+
 def create_blender_context(active: Optional[bpy.types.Object] = None,
                            selected: Optional[bpy.types.Object] = None,
                            window: Optional[bpy.types.Window] = None):
@@ -434,7 +445,7 @@ class BlenderCreator(Creator):
                     f"Unable to update instance {created_instance} "
                     f"without instance node."
                 )
-                return
+                continue
 
             # Rename the instance node in the scene if product
             #   or folder changed.
