@@ -368,6 +368,8 @@ def set_resolution(entity: dict):
 
 
 def set_unit_scale_from_settings(blender_settings=None, scene_units=False):
+    if blender_settings is None:
+        blender_settings = get_blender_settings()
     unit_scale_settings = blender_settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
     if unit_scale_enabled or scene_units:
