@@ -371,7 +371,7 @@ class BlenderCreator(Creator):
                     f"Unable to update instance {created_instance} "
                     f"without instance node."
                 )
-                return
+                continue
 
             # Rename the instance node in the scene if product
             #   or folder changed.
