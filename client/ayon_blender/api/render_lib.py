@@ -183,8 +183,8 @@ def _is_legacy_eevee_renderer(renderer):
 
     Note:
       In Blender <4.2 'BLENDER_EEVEE' represents Eevee renderer.
-      In Blender 4.2-5.1 'BLENDER_EEVEE_NEXT' represents Eevee renderer.
-      In Blender >5.2 'BLENDER_EEVEE' represents Eevee renderer.
+      In Blender 4.2-4.5 'BLENDER_EEVEE_NEXT' represents Eevee renderer.
+      In Blender 5.0+ 'BLENDER_EEVEE' represents Eevee renderer.
 
     Args:
         renderer (str): Renderer name.
@@ -564,9 +564,9 @@ def prepare_rendering(
     renderer = get_renderer(project_settings)
     ver_major, ver_minor, _ = lib.get_blender_version()
 
-    # Between Blender 4.2 and 5.1, the Eevee renderer is BLENDER_EEVEE_NEXT
+    # Between Blender 4.2 and 4.5, the Eevee renderer is BLENDER_EEVEE_NEXT
     if renderer == "BLENDER_EEVEE" and (
-        (4, 2) <= (ver_major, ver_minor) <= (5, 1)
+        (4, 2) <= (ver_major, ver_minor) < (5, 0)
     ):
         renderer = "BLENDER_EEVEE_NEXT"
 
