@@ -96,23 +96,22 @@ class FbxModelLoader(plugin.BlenderLoader):
                 parent.objects.link(obj)
 
         for obj in objects:
-            name = obj.name
-            obj.name = f"{group_name}:{name}"
-            if obj.type != 'EMPTY':
-                name_data = obj.data.name
-                obj.data.name = f"{group_name}:{name_data}"
+            plugin.add_namespace(obj, group_name)
+            if obj.data is not None:
+                plugin.add_namespace(obj.data, group_name)
 
             if obj.type == 'MESH':
                 for material_slot in obj.material_slots:
-                    name_mat = material_slot.material.name
-                    material_slot.material.name = f"{group_name}:{name_mat}"
+                    if material_slot.material:
+                        plugin.add_namespace(
+                            material_slot.material, group_name
+                        )
             elif obj.type == 'ARMATURE':
                 anim_data = obj.animation_data
                 if action is not None:
                     anim_data.action = action
                 elif anim_data and anim_data.action:
-                    name_action = anim_data.action.name
-                    anim_data.action.name = f"{group_name}:{name_action}"
+                    plugin.add_namespace(anim_data.action, group_name)
 
             if not obj.get(AYON_PROPERTY):
                 obj[AYON_PROPERTY] = dict()
