@@ -553,6 +553,29 @@ def get_highest_root(objects):
     return num_parents_to_obj[minimum_parent]
 
 
+def parent_to_asset_group(
+    objects: List[bpy.types.Object],
+    asset_group: bpy.types.Object
+):
+    """Parent the top-most of the objects to the asset group.
+
+    Objects whose parent (or any ancestor) is also in `objects` keep their
+    parent so the hierarchy is preserved. The world transform of each
+    re-parented object is preserved.
+
+    Arguments:
+        objects (List[bpy.types.Object]): Objects to parent.
+        asset_group (bpy.types.Object): The object to parent to.
+    """
+    objects = set(objects)
+    for obj in objects:
+        if any(parent in objects for parent in get_all_parents(obj)):
+            continue
+        matrix_world = obj.matrix_world.copy()
+        obj.parent = asset_group
+        obj.matrix_world = matrix_world
+
+
 @contextlib.contextmanager
 def attribute_overrides(
         obj,
