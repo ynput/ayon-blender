@@ -1,5 +1,6 @@
 """Shared functionality for pipeline plugins for Blender."""
 
+import contextlib
 import itertools
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -193,6 +194,64 @@ def deselect_all():
             bpy.ops.object.mode_set(mode=p[1])
 
     bpy.context.view_layer.objects.active = active
+
+
+@contextlib.contextmanager
+def objects_in_object_mode():
+    """Context manager that switches objects to Object Mode temporarily.
+
+    Blender's FBX exporter (`io_scene_fbx`) stores the mode of the view
+    layer's *active* object before exporting and restores it afterwards with
+    `bpy.ops.object.mode_set(mode=stored_mode)`.
+
+    Because exporters are called from AYON with a context override whose
+    active object is e.g. the asset group Empty, the operator validates that
+    stored mode against the overridden active object, which does not support
+    it, resulting in e.g.:
+
+        TypeError: Converting py args to operator properties:
+            enum "POSE" not found in ('OBJECT',)
+
+    Making sure every object starts in Object Mode, so there is no mode to
+    restore, avoids the error entirely. Original modes are restored when
+    leaving the context.
+    """
+    original_modes = [
+        (obj.name, obj.mode)
+        for obj in bpy.context.view_layer.objects
+        if obj.mode != "OBJECT"
+    ]
+    if not original_modes:
+        # Nothing to switch, avoid touching the context at all
+        yield
+        return
+
+    active_name = bpy.context.view_layer.objects.active.name if (
+        bpy.context.view_layer.objects.active) else None
+    try:
+        for name, _mode in original_modes:
+            obj = bpy.data.objects[name]
+            bpy.context.view_layer.objects.active = obj
+            context_override = create_blender_context(active=obj)
+            with bpy.context.temp_override(**context_override):
+                bpy.ops.object.mode_set(mode="OBJECT")
+        yield
+    finally:
+        for name, mode in original_modes:
+            obj = bpy.data.objects.get(name)
+            if obj is None:
+                # Object was removed in the meantime
+                continue
+            bpy.context.view_layer.objects.active = obj
+            context_override = create_blender_context(active=obj)
+            # Note: the override must have `obj` as active object, otherwise
+            # `mode_set` validates `mode` against the wrong object.
+            with bpy.context.temp_override(**context_override):
+                bpy.ops.object.mode_set(mode=mode)
+
+        active = bpy.data.objects.get(active_name) if active_name else None
+        if active is not None:
+            bpy.context.view_layer.objects.active = active
 
 
 class BlenderInstancePlugin(pyblish.api.InstancePlugin):

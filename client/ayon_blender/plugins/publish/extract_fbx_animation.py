@@ -146,18 +146,21 @@ class ExtractAnimationFBX(
         override = plugin.create_blender_context(
             active=root, selected=[root, armature])
 
-        with bpy.context.temp_override(**override):
-            # We export the fbx
-            bpy.ops.export_scene.fbx(
-                filepath=filepath,
-                use_active_collection=False,
-                use_selection=True,
-                bake_anim_use_nla_strips=False,
-                bake_anim_use_all_actions=False,
-                add_leaf_bones=False,
-                armature_nodetype='ROOT',
-                object_types={'EMPTY', 'ARMATURE'}
-            )
+        # Ensure objects are in Object Mode, otherwise the FBX exporter fails
+        # to restore e.g. Pose Mode after exporting (Blender 5.x).
+        with plugin.objects_in_object_mode():
+            with bpy.context.temp_override(**override):
+                # We export the fbx
+                bpy.ops.export_scene.fbx(
+                    filepath=filepath,
+                    use_active_collection=False,
+                    use_selection=True,
+                    bake_anim_use_nla_strips=False,
+                    bake_anim_use_all_actions=False,
+                    add_leaf_bones=False,
+                    armature_nodetype='ROOT',
+                    object_types={'EMPTY', 'ARMATURE'}
+                )
 
         armature.name = armature_name
         asset_group.name = asset_group_name
