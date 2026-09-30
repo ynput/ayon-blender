@@ -216,18 +216,22 @@ def objects_in_object_mode():
     restore, avoids the error entirely. Original modes are restored when
     leaving the context.
     """
+    active = bpy.context.view_layer.objects.active
+    if active is None or active.mode == "OBJECT":
+        # Fast path: the exporter only stores and restores the mode of the
+        # view layer's active object, so with it in Object Mode there is
+        # nothing to switch and we can skip iterating all view layer objects.
+        yield
+        return
+
     original_modes = [
         (obj.name, obj.mode)
         for obj in bpy.context.view_layer.objects
         if obj.mode != "OBJECT"
     ]
-    if not original_modes:
-        # Nothing to switch, avoid touching the context at all
-        yield
-        return
-
-    active_name = bpy.context.view_layer.objects.active.name if (
-        bpy.context.view_layer.objects.active) else None
+    # The active object is part of the view layer, so it is included in
+    # original_modes and the mode to restore is never the current one.
+    active_name = active.name
     try:
         for name, _mode in original_modes:
             obj = bpy.data.objects[name]
@@ -249,9 +253,9 @@ def objects_in_object_mode():
             with bpy.context.temp_override(**context_override):
                 bpy.ops.object.mode_set(mode=mode)
 
-        active = bpy.data.objects.get(active_name) if active_name else None
-        if active is not None:
-            bpy.context.view_layer.objects.active = active
+        restored_active = bpy.data.objects.get(active_name)
+        if restored_active is not None:
+            bpy.context.view_layer.objects.active = restored_active
 
 
 class BlenderInstancePlugin(pyblish.api.InstancePlugin):
