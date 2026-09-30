@@ -48,15 +48,22 @@ class ExtractAnimationABC(
         selected = []
         asset_group = instance.data["transientData"]["instance_node"]
 
-        objects = []
+        children_by_parent = {}
+        for obj in bpy.data.objects:
+            if obj.parent is not None:
+                children_by_parent.setdefault(obj.parent, []).append(obj)
+
+        objects = set()
         for obj in instance:
-            if isinstance(obj, bpy.types.Collection):
-                for child in obj.all_objects:
-                    objects.append(child)
-        for obj in objects:
-            children = [o for o in bpy.data.objects if o.parent == obj]
-            for child in children:
-                objects.append(child)
+            if not isinstance(obj, bpy.types.Collection):
+                continue
+            stack = list(obj.all_objects)
+            while stack:
+                child = stack.pop()
+                if child in objects:
+                    continue
+                objects.add(child)
+                stack.extend(children_by_parent.get(child, []))
 
         for obj in objects:
             obj.select_set(True)
