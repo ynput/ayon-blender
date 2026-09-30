@@ -751,7 +751,7 @@ def strip_namespace(containers):
     nodes = [
         container["node"] for container in containers
     ]
-    original_namespaces = {}
+    original_names = {}
     for node in nodes:
         if isinstance(node, bpy.types.Collection):
             children = node.children_recursive
@@ -766,15 +766,14 @@ def strip_namespace(containers):
             original_name = child.name
             if ":" not in original_name:
                 continue
-            namespace, name = original_name.rsplit(':', 1)
-            child.name = name
-            original_namespaces[child] = namespace
+            original_names[child] = original_name
+            child.name = original_name.rsplit(":", 1)[-1]
 
     try:
         yield
     finally:
-        for node, original_namespace in original_namespaces.items():
-            node.name = f"{original_namespace}:{name}"
+        for node, original_name in original_names.items():
+            node.name = original_name
 
 
 @contextlib.contextmanager
