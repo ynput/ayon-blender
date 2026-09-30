@@ -99,8 +99,8 @@ class ExtractAnimationFBX(
         original_actions.append(curr_action)
 
         # We compute the starting and ending frames
-        max_frame = min(starting_frames)
-        min_frame = max(ending_frames)
+        frame_start = min(starting_frames)
+        frame_end = max(ending_frames)
 
         blender_version = get_blender_version()
         if blender_version >= (4, 1, 0):
@@ -121,13 +121,13 @@ class ExtractAnimationFBX(
             )
             bpy_extras.anim_utils.bake_action_objects(
                 object_action_pairs,
-                frames=range(int(min_frame), int(max_frame)),
+                frames=range(int(frame_start), int(frame_end) + 1),
                 bake_options=bake_options
             )
         else:
             bpy_extras.anim_utils.bake_action_objects(
                 object_action_pairs,
-                frames=range(int(min_frame), int(max_frame)),
+                frames=range(int(frame_start), int(frame_end) + 1),
                 do_object=False,
                 do_clean=False
             )
