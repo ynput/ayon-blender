@@ -123,6 +123,7 @@ class BlendActionLoader(plugin.BlenderLoader):
         if action.library:
             action.library.name = os.path.basename(libpath)
             action.library.filepath = libpath
+            action.library.reload()
 
         metadata_update(
             collection, {"representation": str(repre_entity["id"])}
