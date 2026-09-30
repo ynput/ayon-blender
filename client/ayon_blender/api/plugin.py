@@ -259,7 +259,7 @@ class BlenderCreator(Creator):
                     continue
 
                 creator_id = ayon_prop.get("creator_identifier")
-                if "openpype" in creator_id:
+                if creator_id and "openpype" in creator_id:
                     creator_id = creator_id.replace("openpype", "ayon")
                     ayon_prop["creator_identifier"] = creator_id
 
@@ -395,13 +395,13 @@ class BlenderCreator(Creator):
 
             # Remove collection node and its children
             if isinstance(node, bpy.types.Collection):
-                # Remove recursively linked child collections and objects
-                for child in node.children_recursive:
-                     if isinstance(child, bpy.types.Object):
-                        if len(child.users_collection) == 1:
-                            if child.name not in bpy.context.scene.collection:
-                                bpy.context.scene.collection.objects.link(child)
-                # Remove directly linked objects
+                # Keep child collections in the scene if only used by the
+                # instance collection
+                scene_collection = bpy.context.scene.collection
+                for child in node.children:
+                    if child.users - int(child.use_fake_user) == 1:
+                        scene_collection.children.link(child)
+                # Keep directly linked objects in the scene
                 for obj in node.objects:
                     if len(obj.users_collection) == 1:
                         if obj.name not in bpy.context.scene.collection.objects:
