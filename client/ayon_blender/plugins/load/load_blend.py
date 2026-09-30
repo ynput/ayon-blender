@@ -299,8 +299,5 @@ class BlendLoader(plugin.BlenderLoader):
                 parent.get(AYON_PROPERTY).get("members", [])))
 
         members.discard(None)
-        members.discard(asset_group)
-        if members:
-            bpy.data.batch_remove(members)
-
-        bpy.data.objects.remove(asset_group)
+        members.add(asset_group)
+        bpy.data.batch_remove(members)
