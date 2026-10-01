@@ -913,16 +913,12 @@ def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
     """
     if cache.users == 0:
         return False
+    if cache.use_fake_user:
+        return True
     # But there's an edge cases where
     # Blender still reports users but they
     # aren't actually there
-    def get_users(datablock):
-        return bpy.data.user_map(subset={datablock})[datablock]
-
-    if not cache.use_fake_user:
-        if not get_users(cache):
-            return False
-        return True
+    return bool(bpy.data.user_map(subset={cache})[cache])
 
 
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
