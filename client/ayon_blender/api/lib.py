@@ -259,13 +259,8 @@ def lsattrs(attrs: Dict) -> List:
 
     # For now return all objects, not filtered by scene/collection/view_layer.
     matches = set()
-    for coll in dir(bpy.data):
-        if not isinstance(
-                getattr(bpy.data, coll),
-                bpy.types.bpy_prop_collection,
-        ):
-            continue
-        for node in getattr(bpy.data, coll):
+    for _attr, datablocks in iter_bpy_prop_collection_idprop():
+        for node in datablocks:
             ayon_prop = pipeline.get_ayon_property(node)
             if not ayon_prop:
                 continue
