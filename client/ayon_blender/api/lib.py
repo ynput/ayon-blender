@@ -3,7 +3,7 @@ import hashlib
 import importlib
 import os
 import traceback
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import addon_utils
 import bpy
@@ -506,6 +506,41 @@ def get_all_parents(obj):
             break
         result.append(obj)
     return result
+
+
+def get_objects_with_descendants(
+    objects: Iterable[bpy.types.Object]
+) -> set[bpy.types.Object]:
+    """Return the objects including all their descendant objects.
+
+    Blender only stores the parent on the child object, so this iterates
+    `bpy.data.objects` once and walks up each object's parent chain to check
+    whether it descends from any of the input objects. This is a single pass
+    instead of a full scan per object as `Object.children` and
+    `Object.children_recursive` would do.
+
+    Arguments:
+        objects (Iterable[bpy.types.Object]): Objects to get the
+            descendants for.
+
+    Returns:
+        set[bpy.types.Object]: The input objects and all their descendants.
+    """
+    roots: set[bpy.types.Object] = set(objects)
+
+    def _has_ancestor_in_roots(obj: bpy.types.Object) -> bool:
+        parent = obj.parent
+        while parent is not None:
+            if parent in roots:
+                return True
+            parent = parent.parent
+        return False
+
+    descendants = {
+        obj for obj in bpy.data.objects
+        if obj not in roots and _has_ancestor_in_roots(obj)
+    }
+    return roots | descendants
 
 
 def get_highest_root(objects):
