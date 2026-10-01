@@ -5,6 +5,7 @@ Playblasting with independent viewport, camera and display options
 import contextlib
 import bpy
 
+from .constants import CAPTURE_OBJECT_TYPES
 from .lib import maintained_time, get_blender_version
 from .plugin import deselect_all, create_blender_context
 
@@ -87,9 +88,11 @@ def capture(
         "use_overwrite": overwrite,
     }
 
+    image_settings = dict(image_settings or ImageSettings)
     if get_blender_version() >= (5, 0, 0):
-        # Enforce `media_type` is set to IMAGE
-        image_settings["media_type"] = "IMAGE"
+        # Enforce `media_type` to match the file format
+        is_video = image_settings.get("file_format") == "FFMPEG"
+        image_settings["media_type"] = "VIDEO" if is_video else "IMAGE"
 
     with _independent_window() as window:
 
@@ -160,8 +163,10 @@ def restore_global_view(window):
     Blender currently does not exit localview when closing windows.
     """
 
-    types = {"MESH", "GPENCIL"}
-    objects = [obj for obj in window.scene.objects if obj.type in types]
+    objects = [
+        obj for obj in window.scene.objects
+        if obj.type in CAPTURE_OBJECT_TYPES
+    ]
 
     context = create_blender_context(selected=objects, window=window)
 
@@ -184,7 +189,7 @@ def applied_view(window, camera, isolate=None, options=None, background_images=F
     area.ui_type = "VIEW_3D"
     space = area.spaces[0]
 
-    types = {"MESH", "GPENCIL", "CAMERA"}
+    types = CAPTURE_OBJECT_TYPES | {"CAMERA"}
     objects = [obj for obj in window.scene.objects if obj.type in types]
 
     if camera == "AUTO":
