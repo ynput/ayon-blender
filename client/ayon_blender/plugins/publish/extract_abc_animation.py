@@ -4,7 +4,7 @@ import bpy
 
 from ayon_core.lib import BoolDef, EnumDef
 from ayon_core.pipeline import publish
-from ayon_blender.api import plugin
+from ayon_blender.api import plugin, lib
 
 
 class ExtractAnimationABC(
@@ -48,22 +48,12 @@ class ExtractAnimationABC(
         selected = []
         asset_group = instance.data["transientData"]["instance_node"]
 
-        children_by_parent = {}
-        for obj in bpy.data.objects:
-            if obj.parent is not None:
-                children_by_parent.setdefault(obj.parent, []).append(obj)
-
-        objects = set()
+        # Get all objects inside collections (and their children)
+        collection_objects = set()
         for obj in instance:
-            if not isinstance(obj, bpy.types.Collection):
-                continue
-            stack = list(obj.all_objects)
-            while stack:
-                child = stack.pop()
-                if child in objects:
-                    continue
-                objects.add(child)
-                stack.extend(children_by_parent.get(child, []))
+            if isinstance(obj, bpy.types.Collection):
+                collection_objects.update(obj.all_objects)
+        objects = lib.get_objects_with_descendants(collection_objects)
 
         for obj in objects:
             obj.select_set(True)
