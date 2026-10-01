@@ -47,11 +47,13 @@ class JsonLayoutLoader(plugin.BlenderLoader):
     def _remove_animation_instances(self, asset_group):
         instances = bpy.data.collections.get(AYON_INSTANCES)
         if instances:
-            for obj in list(asset_group.children):
+            anim_collections = set()
+            for obj in asset_group.children:
                 anim_collection = instances.children.get(
                     obj.name + "_animation")
                 if anim_collection:
-                    bpy.data.collections.remove(anim_collection)
+                    anim_collections.add(anim_collection)
+            bpy.data.batch_remove(anim_collections)
 
     def _get_loader(self, loaders, product_base_type):
         name = ""
