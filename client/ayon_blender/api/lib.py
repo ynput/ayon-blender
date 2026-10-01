@@ -3,7 +3,7 @@ import hashlib
 import importlib
 import os
 import traceback
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import addon_utils
 import bpy
@@ -259,13 +259,8 @@ def lsattrs(attrs: Dict) -> List:
 
     # For now return all objects, not filtered by scene/collection/view_layer.
     matches = set()
-    for coll in dir(bpy.data):
-        if not isinstance(
-                getattr(bpy.data, coll),
-                bpy.types.bpy_prop_collection,
-        ):
-            continue
-        for node in getattr(bpy.data, coll):
+    for _attr, datablocks in iter_bpy_prop_collection_idprop():
+        for node in datablocks:
             ayon_prop = pipeline.get_ayon_property(node)
             if not ayon_prop:
                 continue
@@ -511,6 +506,41 @@ def get_all_parents(obj):
             break
         result.append(obj)
     return result
+
+
+def get_objects_with_descendants(
+    objects: Iterable[bpy.types.Object]
+) -> set[bpy.types.Object]:
+    """Return the objects including all their descendant objects.
+
+    Blender only stores the parent on the child object, so this iterates
+    `bpy.data.objects` once and walks up each object's parent chain to check
+    whether it descends from any of the input objects. This is a single pass
+    instead of a full scan per object as `Object.children` and
+    `Object.children_recursive` would do.
+
+    Arguments:
+        objects (Iterable[bpy.types.Object]): Objects to get the
+            descendants for.
+
+    Returns:
+        set[bpy.types.Object]: The input objects and all their descendants.
+    """
+    roots: set[bpy.types.Object] = set(objects)
+
+    def _has_ancestor_in_roots(obj: bpy.types.Object) -> bool:
+        parent = obj.parent
+        while parent is not None:
+            if parent in roots:
+                return True
+            parent = parent.parent
+        return False
+
+    descendants = {
+        obj for obj in bpy.data.objects
+        if obj not in roots and _has_ancestor_in_roots(obj)
+    }
+    return roots | descendants
 
 
 def get_highest_root(objects):
@@ -936,16 +966,12 @@ def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
     """
     if cache.users == 0:
         return False
+    if cache.use_fake_user:
+        return True
     # But there's an edge cases where
     # Blender still reports users but they
     # aren't actually there
-    def get_users(datablock):
-        return bpy.data.user_map(subset={datablock})[datablock]
-
-    if not cache.use_fake_user:
-        if not get_users(cache):
-            return False
-        return True
+    return bool(bpy.data.user_map(subset={cache})[cache])
 
 
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
