@@ -194,19 +194,20 @@ class CacheModelLoader(plugin.BlenderLoader):
 
         return libpath
 
-    def _remove(self, asset_group):
+    def _remove(self, asset_group, remove_asset_group=False):
         objects = list(asset_group.children)
-        empties = []
+        datablocks = set()
 
         for obj in objects:
             if obj.type == 'MESH':
-                bpy.data.meshes.remove(obj.data)
+                datablocks.add(obj.data)
             elif obj.type == 'EMPTY':
                 objects.extend(obj.children)
-                empties.append(obj)
+                datablocks.add(obj)
 
-        for empty in empties:
-            bpy.data.objects.remove(empty)
+        if remove_asset_group:
+            datablocks.add(asset_group)
+        bpy.data.batch_remove(datablocks)
 
     def _process(self, libpath, asset_group, group_name, options: Dict):
         if options is None:
@@ -416,7 +417,6 @@ class CacheModelLoader(plugin.BlenderLoader):
         if not asset_group:
             return False
 
-        self._remove(asset_group)
-        bpy.data.objects.remove(asset_group)
+        self._remove(asset_group, remove_asset_group=True)
 
         return True

@@ -102,6 +102,8 @@ class BlendLinkLoader(plugin.BlenderLoader):
         """Remove existing container from the Blender scene."""
         collection = container["node"]
         target_name = f"{container['namespace']}_{container['name']}"
+        # Remove the container collection
+        datablocks = {collection}
         if collection.children:
             library = self._get_library_from_collection(collection.children[0])
             if library:
@@ -109,21 +111,18 @@ class BlendLinkLoader(plugin.BlenderLoader):
             else:
                 target_collection = find_collection_by_name(target_name)
                 if target_collection:
-                    for col in target_collection.children:
-                        bpy.data.collections.remove(col)
-                    for obj in target_collection.objects:
-                        bpy.data.objects.remove(obj)
-
-        # Remove the container collection
-        bpy.data.collections.remove(collection)
+                    datablocks.update(target_collection.children)
+                    datablocks.update(target_collection.objects)
 
         target_collection = find_collection_by_name(target_name)
         if target_collection:
-            bpy.data.collections.remove(target_collection)
+            datablocks.add(target_collection)
 
         target_object = find_objects_by_name(target_name)
         if target_object:
-            bpy.data.objects.remove(target_object)
+            datablocks.add(target_object)
+
+        bpy.data.batch_remove(datablocks)
 
         return True
 
