@@ -88,9 +88,11 @@ def capture(
         "use_overwrite": overwrite,
     }
 
+    image_settings = dict(image_settings or ImageSettings)
     if get_blender_version() >= (5, 0, 0):
-        # Enforce `media_type` is set to IMAGE
-        image_settings["media_type"] = "IMAGE"
+        # Enforce `media_type` to match the file format
+        is_video = image_settings.get("file_format") == "FFMPEG"
+        image_settings["media_type"] = "VIDEO" if is_video else "IMAGE"
 
     with _independent_window() as window:
 
