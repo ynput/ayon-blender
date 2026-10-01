@@ -303,7 +303,7 @@ class BlenderCreator(Creator):
             shared_data(Dict[str, Any]): Shared data.
 
         """
-        if not shared_data.get('blender_cached_instances'):
+        if "blender_cached_instances" not in shared_data:
             cache = {}
             cache_legacy = {}
             convert_avalon_instances()

@@ -368,6 +368,8 @@ def set_resolution(entity: dict):
 
 
 def set_unit_scale_from_settings(blender_settings=None, scene_units=False):
+    if blender_settings is None:
+        blender_settings = get_blender_settings()
     unit_scale_settings = blender_settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
     if unit_scale_enabled or scene_units:
@@ -848,11 +850,13 @@ def ls() -> Iterator:
         AVALON_CONTAINER_ID
     }
 
-    for id_type in container_ids:
-        for container in lib.lsattr("id", id_type):
-            yield parse_container(container)
+    for _attr, datablocks in lib.iter_bpy_prop_collection_idprop():
+        for datablock in datablocks:
+            ayon_prop = get_ayon_property(datablock)
+            if ayon_prop.get("id") in container_ids:
+                yield parse_container(datablock)
 
-    # Compositor nodes are not in `bpy.data` that `lib.lsattr` looks in.
+    # Compositor nodes are not in `bpy.data`.
     node_tree = lib.get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
