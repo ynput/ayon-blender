@@ -77,9 +77,7 @@ class AbcCameraLoader(plugin.BlenderLoader):
         )
 
         objects = lib.get_selection()
-
-        for obj in objects:
-            obj.parent = asset_group
+        lib.parent_to_asset_group(objects, asset_group)
 
         # Add namespace
         if options.get("add_namespace", self.add_namespace):

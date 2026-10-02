@@ -3,7 +3,7 @@ import hashlib
 import importlib
 import os
 import traceback
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import addon_utils
 import bpy
@@ -508,6 +508,41 @@ def get_all_parents(obj):
     return result
 
 
+def get_objects_with_descendants(
+    objects: Iterable[bpy.types.Object]
+) -> set[bpy.types.Object]:
+    """Return the objects including all their descendant objects.
+
+    Blender only stores the parent on the child object, so this iterates
+    `bpy.data.objects` once and walks up each object's parent chain to check
+    whether it descends from any of the input objects. This is a single pass
+    instead of a full scan per object as `Object.children` and
+    `Object.children_recursive` would do.
+
+    Arguments:
+        objects (Iterable[bpy.types.Object]): Objects to get the
+            descendants for.
+
+    Returns:
+        set[bpy.types.Object]: The input objects and all their descendants.
+    """
+    roots: set[bpy.types.Object] = set(objects)
+
+    def _has_ancestor_in_roots(obj: bpy.types.Object) -> bool:
+        parent = obj.parent
+        while parent is not None:
+            if parent in roots:
+                return True
+            parent = parent.parent
+        return False
+
+    descendants = {
+        obj for obj in bpy.data.objects
+        if obj not in roots and _has_ancestor_in_roots(obj)
+    }
+    return roots | descendants
+
+
 def get_highest_root(objects):
     """Get the highest object (the least parents) among the objects.
 
@@ -546,6 +581,29 @@ def get_highest_root(objects):
 
     minimum_parent = min(num_parents_to_obj)
     return num_parents_to_obj[minimum_parent]
+
+
+def parent_to_asset_group(
+    objects: List[bpy.types.Object],
+    asset_group: bpy.types.Object
+):
+    """Parent the top-most of the objects to the asset group.
+
+    Objects whose parent (or any ancestor) is also in `objects` keep their
+    parent so the hierarchy is preserved. The world transform of each
+    re-parented object is preserved.
+
+    Arguments:
+        objects (List[bpy.types.Object]): Objects to parent.
+        asset_group (bpy.types.Object): The object to parent to.
+    """
+    objects = set(objects)
+    for obj in objects:
+        if any(parent in objects for parent in get_all_parents(obj)):
+            continue
+        matrix_world = obj.matrix_world.copy()
+        obj.parent = asset_group
+        obj.matrix_world = matrix_world
 
 
 @contextlib.contextmanager
