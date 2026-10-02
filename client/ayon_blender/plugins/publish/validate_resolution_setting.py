@@ -27,7 +27,14 @@ class ValidateResolution(pyblish.api.InstancePlugin,
         if not self.is_active(instance.data):
             return
 
-        width, height = self.get_context_resolution(instance)
+        context_resolution = self.get_context_resolution(instance)
+        if context_resolution is None:
+            self.log.debug(
+                "Skipping resolution validation for instance '%s': no "
+                "task or folder entity resolution found.", instance.name
+            )
+            return
+        width, height = context_resolution 
         current_width, current_height = self.get_current_resolution()
         if (current_width, current_height) != (width, height):
             raise PublishValidationError(
