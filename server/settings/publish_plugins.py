@@ -268,7 +268,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateResolutionSetting: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Resolution Setting",
-        description="Checks if the resolution setting  matches AYON project values for the context.",
+        description="Checks if the resolution setting matches AYON project values for the context.",
     )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,
