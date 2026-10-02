@@ -12,8 +12,8 @@ from ayon_core.pipeline.publish import (
 from ayon_blender.api.pipeline import set_resolution
 
 
-class ValidateResolutionSetting(pyblish.api.InstancePlugin,
-                                OptionalPyblishPluginMixin):
+class ValidateResolution(pyblish.api.InstancePlugin,
+                         OptionalPyblishPluginMixin):
     """Validate the resolution setting aligned with DB"""
 
     order = pyblish.api.ValidatorOrder - 0.01
@@ -27,25 +27,16 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         if not self.is_active(instance.data):
             return
 
-        context_resolution = self.get_context_resolution(instance)
-        if context_resolution is None:
-            self.log.debug(
-                "Skipping resolution validation for instance '%s': no "
-                "task or folder entity resolution found.", instance.name
-            )
-            return
-
-        width, height = folder_resolution
+        width, height = self.get_context_resolution(instance)
         current_width, current_height = self.get_current_resolution()
-
         if (current_width, current_height) != (width, height):
             raise PublishValidationError(
-                "Resolution setting is incorrect.\n\n"
+                "Resolution is incorrect.\n\n"
                 f"Current resolution: {current_width}x{current_height}\n"
                 f"Expected resolution: {width}x{height}\n\n"
                 "The expected resolution is set on the task context. "
                 "You can use the repair action to set it.",
-                title="Resolution Setting incorrect",
+                title="Incorrect Resolution",
             )
 
     def get_current_resolution(self) -> tuple[int, int]:
@@ -80,7 +71,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
             or instance.data.get("folderEntity")
         )
         if entity:
-            attributes = entity.get("attrib") or {}
+            attributes = entity["attrib"]
             width = attributes.get("resolutionWidth")
             height = attributes.get("resolutionHeight")
             if width is not None and height is not None:
@@ -100,11 +91,4 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
             instance.data.get("taskEntity")
             or instance.data.get("folderEntity")
         )
-        if not entity:
-            cls.log.debug(
-                "Skipping resolution repair for instance '%s': no task or "
-                "folder entity available.", instance.name
-            )
-            return
-
         set_resolution(entity)
