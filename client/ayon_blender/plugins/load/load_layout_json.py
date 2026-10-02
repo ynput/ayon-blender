@@ -36,8 +36,6 @@ class JsonLayoutLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    animation_creator_name = "CreateAnimation"
-
     def _remove(self, asset_group):
         objects = list(asset_group.children)
 
@@ -56,17 +54,11 @@ class JsonLayoutLoader(plugin.BlenderLoader):
             bpy.data.batch_remove(anim_collections)
 
     def _get_loader(self, loaders, product_base_type):
-        name = ""
-        if product_base_type == 'rig':
-            name = "BlendRigLoader"
-        elif product_base_type == 'model':
-            name = "BlendModelLoader"
-
-        if name == "":
+        if product_base_type not in {"rig", "model"}:
             return None
 
         for loader in loaders:
-            if loader.__name__ == name:
+            if loader.__name__ == "BlendLoader":
                 return loader
 
         return None
@@ -287,7 +279,9 @@ class JsonLayoutLoader(plugin.BlenderLoader):
 
         self._remove(asset_group)
 
-        self._process(str(libpath), asset_group, actions)
+        self._process(
+            str(libpath), metadata["asset_name"], asset_group, actions
+        )
 
         asset_group.matrix_basis = mat
 
