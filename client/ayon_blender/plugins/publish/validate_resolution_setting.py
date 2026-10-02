@@ -69,7 +69,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
 
         Args:
             instance (pyblish.api.Instance): The instance to get the
-                folder resolution from.
+                task or folder resolution from.
 
         Returns:
             Optional[tuple[int, int]]: The resolution set on the entity
