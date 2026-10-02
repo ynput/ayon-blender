@@ -65,7 +65,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         cls,
         instance: pyblish.api.Instance
     ) -> Optional[tuple[int, int]]:
-        """Get the resolution set on the folder (task entity).
+        """Get the resolution set on the task (or folder if no task).
 
         Args:
             instance (pyblish.api.Instance): The instance to get the
