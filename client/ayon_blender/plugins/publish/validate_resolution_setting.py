@@ -43,7 +43,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
                 "Resolution setting is incorrect.\n\n"
                 f"Current resolution: {current_width}x{current_height}\n"
                 f"Expected resolution: {width}x{height}\n\n"
-                "The expected resolution is set on the asset or shot. "
+                "The expected resolution is set on the task context. "
                 "You can use the repair action to set it.",
                 title="Resolution Setting incorrect",
             )
