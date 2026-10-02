@@ -23,15 +23,6 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
     actions = [RepairAction]
 
     def process(self, instance: pyblish.api.Instance) -> None:
-        if (
-            "render.local" in instance.data["families"] or
-            "render.local_no_render" in instance.data["families"]
-        ):
-            self.log.debug(
-                "Skipping Validate Frame Range for "
-                "local render instance as it is already validated."
-            )
-            return
         if not self.is_active(instance.data):
             return
         width, height = self.get_folder_resolution(instance)
