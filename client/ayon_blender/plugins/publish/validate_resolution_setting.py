@@ -53,7 +53,10 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         Returns:
             tuple[int, int]: The current resolution (width, height).
         """
-        return instance.data["resolutionWidth"], instance.data["resolutionHeight"]
+        return (
+            bpy.context.scene.render.resolution_x,
+            bpy.context.scene.render.resolution_y,
+        )
 
     @classmethod
     def get_folder_resolution(
