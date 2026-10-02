@@ -265,6 +265,11 @@ class PublishPluginsModel(BaseSettingsModel):
         title="Validate Frame Range",
         description="Checks if scene frame range matches AYON project values for the context.",
     )
+    ValidateResolutionSetting: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
+        title="Validate Resolution Setting",
+        description="Checks if the resolution setting matches the resolution set on the asset or shot.",
+    )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,
         title="Extract Blend",
@@ -390,6 +395,11 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "active": True
     },
     "ValidateFrameRange": {
+        "enabled": True,
+        "optional": True,
+        "active": True
+    },
+    "ValidateResolutionSetting": {
         "enabled": True,
         "optional": True,
         "active": True
