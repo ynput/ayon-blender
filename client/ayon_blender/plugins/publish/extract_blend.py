@@ -177,7 +177,7 @@ class ExtractBlendLook(ExtractBlend):
         for obj in instance:
             if not isinstance(obj, bpy.types.Object):
                 continue
-            if not hasattr(obj.data, "materials"):
-                continue
-            datablock_to_be_exported.update(obj.data.materials)
+            datablock_to_be_exported.update(
+                slot.material for slot in obj.material_slots if slot.material
+            )
         return datablock_to_be_exported
