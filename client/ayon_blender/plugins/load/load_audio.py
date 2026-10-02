@@ -12,6 +12,17 @@ from ayon_blender.api.constants import AYON_PROPERTY
 from ayon_blender.api.pipeline import add_to_ayon_container
 
 
+def get_all_strips(sequence_editor: bpy.types.SequenceEditor):
+    """Return all strips of the sequence editor.
+
+    Blender 4.4 renamed `sequences_all` to `strips_all` and Blender 5.0
+    removed `sequences_all`.
+    """
+    if hasattr(sequence_editor, "strips_all"):
+        return sequence_editor.strips_all
+    return sequence_editor.sequences_all
+
+
 class AudioLoader(plugin.BlenderLoader):
     """Load audio in Blender."""
 
@@ -156,7 +167,7 @@ class AudioLoader(plugin.BlenderLoader):
             # need to remove.
             bpy.ops.sequencer.select_all(action='DESELECT')
             scene = bpy.context.scene
-            scene.sequence_editor.sequences_all[old_audio].select = True
+            get_all_strips(scene.sequence_editor)[old_audio].select = True
 
             bpy.ops.sequencer.delete()
             bpy.data.sounds.remove(bpy.data.sounds[old_audio])
@@ -206,7 +217,7 @@ class AudioLoader(plugin.BlenderLoader):
             # need to remove.
             bpy.ops.sequencer.select_all(action='DESELECT')
             scene = bpy.context.scene
-            scene.sequence_editor.sequences_all[audio].select = True
+            get_all_strips(scene.sequence_editor)[audio].select = True
             bpy.ops.sequencer.delete()
 
         window_manager.windows[-1].screen.areas[0].type = old_type
