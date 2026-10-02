@@ -10,7 +10,6 @@ from ayon_core.pipeline.publish import (
 from ayon_blender.api.pipeline import set_resolution
 
 
-
 class ValidateResolutionSetting(pyblish.api.InstancePlugin,
                                 OptionalPyblishPluginMixin):
     """Validate the resolution setting aligned with DB"""
