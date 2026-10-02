@@ -64,19 +64,20 @@ class ExtractCamera(
             scene_overrides["render.fps_base"] = 1
 
         with lib.attribute_overrides(bpy.context.scene, scene_overrides):
-            with bpy.context.temp_override(**context):
-                # We export the fbx
-                bpy.ops.export_scene.fbx(
-                    filepath=filepath,
-                    use_active_collection=False,
-                    use_selection=True,
-                    bake_anim_use_nla_strips=False,
-                    bake_anim_use_all_actions=False,
-                    add_leaf_bones=False,
-                    armature_nodetype='ROOT',
-                    object_types={'CAMERA'},
-                    bake_anim_simplify_factor=0.0
-                )
+            with plugin.objects_in_object_mode():
+                with bpy.context.temp_override(**context):
+                    # We export the fbx
+                    bpy.ops.export_scene.fbx(
+                        filepath=filepath,
+                        use_active_collection=False,
+                        use_selection=True,
+                        bake_anim_use_nla_strips=False,
+                        bake_anim_use_all_actions=False,
+                        add_leaf_bones=False,
+                        armature_nodetype='ROOT',
+                        object_types={'CAMERA'},
+                        bake_anim_simplify_factor=0.0
+                    )
 
         plugin.deselect_all()
 
