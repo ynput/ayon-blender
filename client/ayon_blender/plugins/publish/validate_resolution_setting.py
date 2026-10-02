@@ -61,7 +61,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         )
 
     @classmethod
-    def get_folder_resolution(
+    def get_context_resolution(
         cls,
         instance: pyblish.api.Instance
     ) -> Optional[tuple[int, int]]:
