@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pyblish.api
 import bpy
 from ayon_core.pipeline import (
@@ -17,28 +19,35 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
     order = pyblish.api.ValidatorOrder - 0.01
     families = ["render", "review"]
     hosts = ["blender"]
-    label = "Validate Resolution Setting"
+    label = "Validate Resolution"
     optional = True
     actions = [RepairAction]
 
     def process(self, instance: pyblish.api.Instance) -> None:
         if not self.is_active(instance.data):
             return
-        width, height = self.get_folder_resolution(instance)
-        current_width, current_height = self.get_current_resolution()
-        if current_width != width and current_height != height:
-            raise PublishValidationError("Resolution Setting "
-                                         "not matching resolution "
-                                         "set on asset or shot.")
-        if current_width != width:
-            raise PublishValidationError("Width in Resolution Setting "
-                                         "not matching resolution set "
-                                         "on asset or shot.")
 
-        if current_height != height:
-            raise PublishValidationError("Height in Resolution Setting "
-                                         "not matching resolution set "
-                                         "on asset or shot.")
+        folder_resolution = self.get_folder_resolution(instance)
+        if folder_resolution is None:
+            self.log.debug(
+                "Skipping resolution validation for instance '%s': no "
+                "resolutionWidth/resolutionHeight set on the task or "
+                "folder entity.", instance.name
+            )
+            return
+
+        width, height = folder_resolution
+        current_width, current_height = self.get_current_resolution()
+
+        if (current_width, current_height) != (width, height):
+            raise PublishValidationError(
+                "Resolution setting is incorrect.\n\n"
+                f"Current resolution: {current_width}x{current_height}\n"
+                f"Expected resolution: {width}x{height}\n\n"
+                "The expected resolution is set on the asset or shot. "
+                "You can use the repair action to set it.",
+                title="Resolution Setting incorrect",
+            )
 
     def get_current_resolution(self) -> tuple[int, int]:
         """Get the current resolution from the instance data.
@@ -53,7 +62,9 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
 
     @classmethod
     def get_folder_resolution(
-        cls, instance: pyblish.api.Instance) -> tuple[int, int]:
+        cls,
+        instance: pyblish.api.Instance
+    ) -> Optional[tuple[int, int]]:
         """Get the resolution set on the folder (task entity).
 
         Args:
@@ -61,21 +72,22 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
                 folder resolution from.
 
         Returns:
-            tuple[int, int]: The resolution set on the folder (width, height).
+            Optional[tuple[int, int]]: The resolution set on the folder
+                (width, height), or None when the task/folder entity does
+                not define a resolution.
         """
         entity = (
             instance.data.get("taskEntity")
             or instance.data.get("folderEntity")
         )
         if entity:
-            attributes = entity["attrib"]
+            attributes = entity.get("attrib") or {}
             width = attributes.get("resolutionWidth")
             height = attributes.get("resolutionHeight")
             if width is not None and height is not None:
                 return int(width), int(height)
 
-        # Defaults if not found in folder entity
-        return 1920, 1080
+        return None
 
     @classmethod
     def repair(cls, instance: pyblish.api.Instance) -> None:
@@ -89,9 +101,11 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
             instance.data.get("taskEntity")
             or instance.data.get("folderEntity")
         )
-        if entity:
-            set_resolution(entity)
-        else:
-            scene = bpy.context.scene
-            scene.render.resolution_x = 1920
-            scene.render.resolution_y = 1080
+        if not entity:
+            cls.log.debug(
+                "Skipping resolution repair for instance '%s': no task or "
+                "folder entity available.", instance.name
+            )
+            return
+
+        set_resolution(entity)
