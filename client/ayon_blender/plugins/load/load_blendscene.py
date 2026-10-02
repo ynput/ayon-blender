@@ -8,9 +8,7 @@ from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,
-    get_blender_version,
-    clean_filename,
-    iter_bpy_prop_collection_idprop,
+    get_library_by_filepath,
 )
 from ayon_blender.api.constants import (
     AYON_CONTAINERS,
@@ -83,14 +81,9 @@ class BlendSceneLoader(plugin.BlenderLoader):
         bpy.context.scene.collection.children.link(container)
 
         # Remove the library from the blend file
-        filepath = bpy.path.basename(libpath)
-        # Blender has a limit of 63 characters for any data name.
-        # If the filepath is longer, it will be truncated for blender
-        # version elder than 5.0
-        if get_blender_version() < (5, 0, 0) and len(filepath) > 63:
-            filepath = clean_filename(filepath)
-        library = bpy.data.libraries.get(filepath)
-        bpy.data.libraries.remove(library)
+        library = get_library_by_filepath(libpath)
+        if library:
+            bpy.data.libraries.remove(library)
 
         return container, members
 
@@ -227,13 +220,6 @@ class BlendSceneLoader(plugin.BlenderLoader):
         asset_group = bpy.data.collections.get(group_name)
 
         members = set(asset_group.get(AYON_PROPERTY).get("members", []))
-
-        if members:
-            for _, attr in iter_bpy_prop_collection_idprop():
-                # make a list copy because we remove members as we iterate
-                for data in list(attr):
-                    if data not in members or data == asset_group:
-                        continue
-                    attr.remove(data)
-
-        bpy.data.collections.remove(asset_group)
+        members.discard(None)
+        members.add(asset_group)
+        bpy.data.batch_remove(members)
