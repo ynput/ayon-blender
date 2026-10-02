@@ -72,7 +72,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
                 folder resolution from.
 
         Returns:
-            Optional[tuple[int, int]]: The resolution set on the folder
+            Optional[tuple[int, int]]: The resolution set on the entity
                 (width, height), or None when the task/folder entity does
                 not define a resolution.
         """
