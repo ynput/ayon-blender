@@ -31,8 +31,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         if folder_resolution is None:
             self.log.debug(
                 "Skipping resolution validation for instance '%s': no "
-                "resolutionWidth/resolutionHeight set on the task or "
-                "folder entity.", instance.name
+                "task or folder entity resolution found.", instance.name
             )
             return
 
