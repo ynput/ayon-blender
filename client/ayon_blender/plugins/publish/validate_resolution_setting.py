@@ -70,12 +70,16 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         Returns:
             tuple[int, int]: The resolution set on the folder (width, height).
         """
-        task_entity = instance.data.get("taskEntity")
-        if task_entity:
-            task_attributes = task_entity["attrib"]
-            width = task_attributes["resolutionWidth"]
-            height = task_attributes["resolutionHeight"]
-            return int(width), int(height)
+        entity = (
+            instance.data.get("taskEntity")
+            or instance.data.get("folderEntity")
+        )
+        if entity:
+            attributes = entity["attrib"]
+            width = attributes.get("resolutionWidth")
+            height = attributes.get("resolutionHeight")
+            if width is not None and height is not None:
+                return int(width), int(height)
 
         # Defaults if not found in folder entity
         return 1920, 1080
