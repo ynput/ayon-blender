@@ -25,10 +25,7 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
         if not self.is_active(instance.data):
             return
         width, height = self.get_folder_resolution(instance)
-        current_width, current_height = (
-            self.get_current_resolution(instance)
-        )
-
+        current_width, current_height = self.get_current_resolution()
         if current_width != width and current_height != height:
             raise PublishValidationError("Resolution Setting "
                                          "not matching resolution "
@@ -43,12 +40,8 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
                                          "not matching resolution set "
                                          "on asset or shot.")
 
-    def get_current_resolution(
-            self, instance: pyblish.api.Instance) -> tuple[int, int]:
+    def get_current_resolution(self) -> tuple[int, int]:
         """Get the current resolution from the instance data.
-
-        Args:
-            instance (pyblish.api.Instance): The instance to get the resolution from.
 
         Returns:
             tuple[int, int]: The current resolution (width, height).
@@ -92,9 +85,12 @@ class ValidateResolutionSetting(pyblish.api.InstancePlugin,
             instance (pyblish.api.Instance): The instance to repair
                 the resolution for.
         """
-        task_entity = instance.data.get("taskEntity")
-        if task_entity:
-            set_resolution(task_entity)
+        entity = (
+            instance.data.get("taskEntity")
+            or instance.data.get("folderEntity")
+        )
+        if entity:
+            set_resolution(entity)
         else:
             scene = bpy.context.scene
             scene.render.resolution_x = 1920
