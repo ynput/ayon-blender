@@ -1,6 +1,7 @@
 import bpy
 import pyblish.api
 from ayon_blender.api import plugin
+from ayon_blender.api.constants import CAPTURE_OBJECT_TYPES
 
 
 class CollectReview(plugin.BlenderInstancePlugin):
@@ -34,11 +35,11 @@ class CollectReview(plugin.BlenderInstancePlugin):
         focal_length = cameras[0].data.lens
 
         # get isolate objects list from meshes instance members.
-        types = {"MESH", "GPENCIL"}
         isolate_objects = [
             obj
             for obj in instance
-            if isinstance(obj, bpy.types.Object) and obj.type in types
+            if isinstance(obj, bpy.types.Object)
+            and obj.type in CAPTURE_OBJECT_TYPES
         ]
 
         # Store focal length in `burninDataMembers`
