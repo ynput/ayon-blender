@@ -126,7 +126,6 @@ class AudioLoader(plugin.BlenderLoader):
             "asset_name": asset_name,
             "objectName": group_name,
             "audio": audio,
-            "frame_start": frame_start,
             "project_name": context["project"]["name"],
         }
 
@@ -185,7 +184,6 @@ class AudioLoader(plugin.BlenderLoader):
         old_audio = container["audio"]
         p = Path(libpath)
         new_audio = p.name
-        version_frame_start = get_version_frame_start(context)
 
         # Blender needs the Sequence Editor in the current window, to be able
         # to update the audio. We take one of the areas in the window, save its
@@ -210,21 +208,10 @@ class AudioLoader(plugin.BlenderLoader):
             old_strip = get_all_strips(scene.sequence_editor)[old_audio]
             old_strip.select = True
 
-            # Preserve the channel and any offset the user applied to the
-            # strip relative to the frame start of the loaded version.
+            # Keep the strip where the user placed it. Moving it to match
+            # the new version is left to the user.
             channel = old_strip.channel
-            strip_frame_start = int(old_strip.frame_start)
-            loaded_frame_start = metadata.get("frame_start")
-            if loaded_frame_start is not None:
-                frame_start = version_frame_start + (
-                    strip_frame_start - loaded_frame_start
-                )
-            elif strip_frame_start == 1:
-                # Backwards compatibility: containers loaded before the
-                # frame start was stored were always placed at frame 1.
-                frame_start = version_frame_start
-            else:
-                frame_start = strip_frame_start
+            frame_start = int(old_strip.frame_start)
 
             bpy.ops.sequencer.delete()
             bpy.data.sounds.remove(bpy.data.sounds[old_audio])
@@ -240,7 +227,6 @@ class AudioLoader(plugin.BlenderLoader):
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
         metadata["audio"] = new_audio
-        metadata["frame_start"] = version_frame_start
         metadata["project_name"] = context["project"]["name"]
 
     def exec_remove(self, container: Dict) -> bool:
