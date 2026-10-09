@@ -30,23 +30,28 @@ class FbxModelLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    def _remove(self, asset_group):
+    def _remove(self, asset_group, remove_asset_group=False):
         objects = list(asset_group.children)
+        datablocks = set()
 
         for obj in objects:
             if obj.type == 'MESH':
-                for material_slot in list(obj.material_slots):
+                for material_slot in obj.material_slots:
                     if material_slot.material:
-                        bpy.data.materials.remove(material_slot.material)
-                bpy.data.meshes.remove(obj.data)
+                        datablocks.add(material_slot.material)
+                datablocks.add(obj.data)
             elif obj.type == 'ARMATURE':
                 objects.extend(obj.children)
-                bpy.data.armatures.remove(obj.data)
+                datablocks.add(obj.data)
             elif obj.type == 'CURVE':
-                bpy.data.curves.remove(obj.data)
+                datablocks.add(obj.data)
             elif obj.type == 'EMPTY':
                 objects.extend(obj.children)
-                bpy.data.objects.remove(obj)
+                datablocks.add(obj)
+
+        if remove_asset_group:
+            datablocks.add(asset_group)
+        bpy.data.batch_remove(datablocks)
 
     def _process(self, libpath, asset_group, group_name, action):
         plugin.deselect_all()
@@ -271,8 +276,6 @@ class FbxModelLoader(plugin.BlenderLoader):
         if not asset_group:
             return False
 
-        self._remove(asset_group)
-
-        bpy.data.objects.remove(asset_group)
+        self._remove(asset_group, remove_asset_group=True)
 
         return True

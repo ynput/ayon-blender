@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+from functools import partial
 from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import bpy
@@ -71,6 +72,7 @@ ORIGINAL_EXCEPTHOOK = sys.excepthook
 
 log = Logger.get_logger(__name__)
 _is_opening_workfile_template = False
+_build_template_timers: Dict[bool, Callable] = {}
 
 
 class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
@@ -451,15 +453,15 @@ def _deferred_build_workfile_from_template(on_app_launched: bool = False) -> Non
         on_app_launched (bool): Whether this is being called on application
             launch or on new file creation.
     """
-    if bpy.app.timers.is_registered(
-        lambda: _build_from_template_timer(on_app_launched=on_app_launched)
-    ):
+    timer = _build_template_timers.get(on_app_launched)
+    if timer is not None and bpy.app.timers.is_registered(timer):
         return
 
-    bpy.app.timers.register(
-        lambda: _build_from_template_timer(on_app_launched=on_app_launched),
-        first_interval=0.1,
+    timer = partial(
+        _build_from_template_timer, on_app_launched=on_app_launched
     )
+    _build_template_timers[on_app_launched] = timer
+    bpy.app.timers.register(timer, first_interval=0.1)
 
 
 def on_open():
@@ -845,11 +847,13 @@ def ls() -> Iterator:
         AVALON_CONTAINER_ID
     }
 
-    for id_type in container_ids:
-        for container in lib.lsattr("id", id_type):
-            yield parse_container(container)
+    for _attr, datablocks in lib.iter_bpy_prop_collection_idprop():
+        for datablock in datablocks:
+            ayon_prop = get_ayon_property(datablock)
+            if ayon_prop.get("id") in container_ids:
+                yield parse_container(datablock)
 
-    # Compositor nodes are not in `bpy.data` that `lib.lsattr` looks in.
+    # Compositor nodes are not in `bpy.data`.
     node_tree = lib.get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
