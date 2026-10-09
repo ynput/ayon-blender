@@ -84,18 +84,19 @@ class ExtractLayout(
 
             override = plugin.create_blender_context(
                 active=asset, selected=[asset, obj])
-            with bpy.context.temp_override(**override):
-                # We export the fbx
-                bpy.ops.export_scene.fbx(
-                    filepath=filepath,
-                    use_active_collection=False,
-                    use_selection=True,
-                    bake_anim_use_nla_strips=False,
-                    bake_anim_use_all_actions=False,
-                    add_leaf_bones=False,
-                    armature_nodetype='ROOT',
-                    object_types={'EMPTY', 'ARMATURE'}
-                )
+            with plugin.objects_in_object_mode():
+                with bpy.context.temp_override(**override):
+                    # We export the fbx
+                    bpy.ops.export_scene.fbx(
+                        filepath=filepath,
+                        use_active_collection=False,
+                        use_selection=True,
+                        bake_anim_use_nla_strips=False,
+                        bake_anim_use_all_actions=False,
+                        add_leaf_bones=False,
+                        armature_nodetype='ROOT',
+                        object_types={'EMPTY', 'ARMATURE'}
+                    )
             obj.name = armature_name
             asset.name = asset_group_name
             asset.select_set(False)
