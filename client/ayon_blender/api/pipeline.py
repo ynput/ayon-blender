@@ -613,25 +613,20 @@ def convert_avalon_instances():
     if not avalon_instances:
         return
     ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
-    if ayon_instances:
-        avalon_instance_objs = (
-            avalon_instances.objects if avalon_instances else []
-        )
-        # link the objects parented from
-        # avalon instance to ayon instance
-        for instance_obj in avalon_instance_objs:
-            ayon_instances.children.link(instance_obj)
-
-        for children in avalon_instances.children_recursive:
-            if isinstance(children, bpy.types.Collection):
-                bpy.data.collections.remove(children)
-            else:
-                bpy.data.objects.remove(children)
-
-        # remove deprecated avalon references
-        bpy.data.collections.remove(avalon_instances)
-    else:
+    if not ayon_instances:
         avalon_instances.name = AYON_INSTANCES
+        return
+
+    # Move the legacy instances into the AYON instances collection
+    for instance_obj in avalon_instances.objects:
+        if instance_obj.name not in ayon_instances.objects:
+            ayon_instances.objects.link(instance_obj)
+    for instance_collection in avalon_instances.children:
+        if instance_collection.name not in ayon_instances.children:
+            ayon_instances.children.link(instance_collection)
+
+    # remove deprecated avalon references
+    bpy.data.collections.remove(avalon_instances)
 
 
 def add_to_ayon_container(
