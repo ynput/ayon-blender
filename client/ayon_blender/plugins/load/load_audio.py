@@ -23,6 +23,55 @@ def get_all_strips(sequence_editor: bpy.types.SequenceEditor):
     return sequence_editor.sequences_all
 
 
+def get_sequencer_scene() -> bpy.types.Scene:
+    """Return the scene the sequencer operates on in the current context.
+
+    Since Blender 5.0 the sequencer scene is defined per workspace instead
+    of always being the active scene. It may be unset, in which case the
+    sequencer operators can not run, so we then set it to the active scene.
+    """
+    context = bpy.context
+    workspace = context.workspace
+    if not hasattr(workspace, "sequencer_scene"):
+        return context.scene
+    if workspace.sequencer_scene is None:
+        workspace.sequencer_scene = context.scene
+    return workspace.sequencer_scene
+
+
+def get_version_frame_start(context: dict) -> Optional[int]:
+    """Return the start frame, including handles, of the version to load.
+
+    Returns None if the version has no frame range data.
+    """
+    version_attrib = context["version"]["attrib"]
+    frame_start = version_attrib.get("frameStart")
+    if frame_start is None:
+        return None
+    handle_start = version_attrib.get("handleStart") or 0
+    return int(frame_start - handle_start)
+
+
+def add_sound_strip(scene: bpy.types.Scene, **kwargs):
+    """Add a sound strip to the sequencer and return the created strip.
+
+    The strip name is unique in the sequence editor so it may differ from
+    the filename if a strip with that name already exists.
+    """
+    bpy.ops.sequencer.sound_strip_add(**kwargs)
+    return scene.sequence_editor.active_strip
+
+
+def remove_sound_strip(strip):
+    """Remove a sound strip and its sound if it has no other users."""
+    sound = strip.sound
+    bpy.ops.sequencer.select_all(action='DESELECT')
+    strip.select = True
+    bpy.ops.sequencer.delete()
+    if sound and not sound.users:
+        bpy.data.sounds.remove(sound)
+
+
 class AudioLoader(plugin.BlenderLoader):
     """Load audio in Blender."""
 
@@ -68,17 +117,25 @@ class AudioLoader(plugin.BlenderLoader):
         old_type = window_manager.windows[-1].screen.areas[0].type
         window_manager.windows[-1].screen.areas[0].type = "SEQUENCE_EDITOR"
 
+        # The sequencer scene must be resolved before copying the context,
+        # otherwise the override would still contain an unset sequencer scene.
+        scene = get_sequencer_scene()
+
+        # Versions without frame range data start at the scene frame start
+        frame_start = get_version_frame_start(context)
+        if frame_start is None:
+            frame_start = scene.frame_start
+
         # We override the context to load the audio in the sequence editor.
         oc = bpy.context.copy()
         oc["area"] = window_manager.windows[-1].screen.areas[0]
 
         with bpy.context.temp_override(**oc):
-            bpy.ops.sequencer.sound_strip_add(filepath=libpath, frame_start=1)
+            strip = add_sound_strip(
+                scene, filepath=libpath, frame_start=frame_start)
+            audio = strip.name
 
         window_manager.windows[-1].screen.areas[0].type = old_type
-
-        p = Path(libpath)
-        audio = p.name
 
         asset_group[AYON_PROPERTY] = {
             "schema": "ayon:container-3.0",
@@ -147,8 +204,6 @@ class AudioLoader(plugin.BlenderLoader):
             return
 
         old_audio = container["audio"]
-        p = Path(libpath)
-        new_audio = p.name
 
         # Blender needs the Sequence Editor in the current window, to be able
         # to update the audio. We take one of the areas in the window, save its
@@ -158,22 +213,30 @@ class AudioLoader(plugin.BlenderLoader):
         old_type = window_manager.windows[-1].screen.areas[0].type
         window_manager.windows[-1].screen.areas[0].type = "SEQUENCE_EDITOR"
 
+        # The sequencer scene must be resolved before copying the context,
+        # otherwise the override would still contain an unset sequencer scene.
+        scene = get_sequencer_scene()
+
         # We override the context to load the audio in the sequence editor.
         oc = bpy.context.copy()
         oc["area"] = window_manager.windows[-1].screen.areas[0]
 
         with bpy.context.temp_override(**oc):
-            # We deselect all sequencer strips, and then select the one we
-            # need to remove.
-            bpy.ops.sequencer.select_all(action='DESELECT')
-            scene = bpy.context.scene
-            get_all_strips(scene.sequence_editor)[old_audio].select = True
+            old_strip = get_all_strips(scene.sequence_editor)[old_audio]
 
-            bpy.ops.sequencer.delete()
-            bpy.data.sounds.remove(bpy.data.sounds[old_audio])
+            # Keep the strip where the user placed it. Moving it to match
+            # the new version is left to the user.
+            channel = old_strip.channel
+            frame_start = int(old_strip.frame_start)
 
-            bpy.ops.sequencer.sound_strip_add(
-                filepath=str(libpath), frame_start=1)
+            remove_sound_strip(old_strip)
+            new_strip = add_sound_strip(
+                scene,
+                filepath=str(libpath),
+                frame_start=frame_start,
+                channel=channel,
+            )
+            new_audio = new_strip.name
 
         window_manager.windows[-1].screen.areas[0].type = old_type
 
@@ -208,21 +271,18 @@ class AudioLoader(plugin.BlenderLoader):
         old_type = window_manager.windows[-1].screen.areas[0].type
         window_manager.windows[-1].screen.areas[0].type = "SEQUENCE_EDITOR"
 
+        # The sequencer scene must be resolved before copying the context,
+        # otherwise the override would still contain an unset sequencer scene.
+        scene = get_sequencer_scene()
+
         # We override the context to load the audio in the sequence editor.
         oc = bpy.context.copy()
         oc["area"] = window_manager.windows[-1].screen.areas[0]
 
         with bpy.context.temp_override(**oc):
-            # We deselect all sequencer strips, and then select the one we
-            # need to remove.
-            bpy.ops.sequencer.select_all(action='DESELECT')
-            scene = bpy.context.scene
-            get_all_strips(scene.sequence_editor)[audio].select = True
-            bpy.ops.sequencer.delete()
+            remove_sound_strip(get_all_strips(scene.sequence_editor)[audio])
 
         window_manager.windows[-1].screen.areas[0].type = old_type
-
-        bpy.data.sounds.remove(bpy.data.sounds[audio])
 
         bpy.data.objects.remove(asset_group)
 
