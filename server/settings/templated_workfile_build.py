@@ -31,10 +31,19 @@ class TemplatedWorkfileProfileModel(BaseSettingsModel):
     )
     keep_placeholder: bool = SettingsField(
         False,
-        title="Keep placeholders")
+        title="Keep placeholders"
+    )
+    execute_on_new_file: bool = SettingsField(
+        False,
+        title="Apply to New Scene"
+    )
+    execute_on_app_launch: bool = SettingsField(
+        True,
+        title="Apply on Blender launch"
+    )
     create_first_version: bool = SettingsField(
         True,
-        title="Create first version"
+        title="Save first workfile version"
     )
 
 

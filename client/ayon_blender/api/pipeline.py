@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+from functools import partial
 from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import bpy
@@ -70,6 +71,8 @@ ORIGINAL_EXCEPTHOOK = sys.excepthook
 
 
 log = Logger.get_logger(__name__)
+_is_opening_workfile_template = False
+_build_template_timers: Dict[bool, Callable] = {}
 
 
 class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
@@ -205,6 +208,9 @@ def install():
 
     if not IS_HEADLESS:
         ops.register()
+
+        # should be performed after registering the plugin
+        _deferred_build_workfile_from_template(on_app_launched=True)
 
 
 def uninstall():
@@ -364,6 +370,8 @@ def set_resolution(entity: dict):
 
 
 def set_unit_scale_from_settings(blender_settings=None, scene_units=False):
+    if blender_settings is None:
+        blender_settings = get_blender_settings()
     unit_scale_settings = blender_settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
     if unit_scale_enabled or scene_units:
@@ -390,6 +398,70 @@ def on_new():
         set_frame_range(task_entity)
 
     set_unit_scale_from_settings(blender_settings=settings)
+
+    if not IS_HEADLESS:
+        _deferred_build_workfile_from_template()
+
+
+def _build_from_template_timer(on_app_launched: bool = False) -> Optional[float]:
+    """Build first workfile from template after Blender startup settles.
+
+    Running this during load_post/homefile initialization can be unstable,
+    so defer execution and retry until context is ready.
+
+    Args:
+        on_app_launched (bool): Whether this is being called on application
+            launch or on new file creation.
+    Returns:
+        Optional[float]: Return None to stop the timer, or a float to retry
+            after that many seconds.
+    """
+    # Import here to avoid circular imports at module level
+    from .workfile_template_builder import (
+        trigger_on_app_launch,
+        trigger_on_new_file,
+    )
+    window_manager = getattr(bpy.context, "window_manager", None)
+    scene = getattr(bpy.context, "scene", None)
+    if not window_manager or not scene:
+        return 0.1
+
+    global _is_opening_workfile_template
+    try:
+        _is_opening_workfile_template = True
+        if on_app_launched:
+            trigger_on_app_launch()
+        else:
+            trigger_on_new_file()
+
+    except Exception:
+        log.warning(
+            "Failed to create first workfile from template on new file.",
+            exc_info=True,
+        )
+
+    finally:
+        _is_opening_workfile_template = False
+
+    return None
+
+
+def _deferred_build_workfile_from_template(on_app_launched: bool = False) -> None:
+    """Schedule deferred workfile template creation once.
+
+    Args:
+        on_app_launched (bool): Whether this is being called on application
+            launch or on new file creation.
+    """
+    timer = _build_template_timers.get(on_app_launched)
+    if timer is not None and bpy.app.timers.is_registered(timer):
+        return
+
+    timer = partial(
+        _build_from_template_timer, on_app_launched=on_app_launched
+    )
+    _build_template_timers[on_app_launched] = timer
+    bpy.app.timers.register(timer, first_interval=0.1)
 
 
 def on_open():
@@ -471,7 +543,8 @@ def _on_load_post(*args):
         # Likely this was an open operation since it has a filepath
         emit_event("open")
     else:
-        emit_event("new")
+        if not _is_opening_workfile_template:
+            emit_event("new")
 
     ops.OpenFileCacher.post_load()
 
@@ -540,25 +613,20 @@ def convert_avalon_instances():
     if not avalon_instances:
         return
     ayon_instances = bpy.data.collections.get(AYON_INSTANCES)
-    if ayon_instances:
-        avalon_instance_objs = (
-            avalon_instances.objects if avalon_instances else []
-        )
-        # link the objects parented from
-        # avalon instance to ayon instance
-        for instance_obj in avalon_instance_objs:
-            ayon_instances.children.link(instance_obj)
-
-        for children in avalon_instances.children_recursive:
-            if isinstance(children, bpy.types.Collection):
-                bpy.data.collections.remove(children)
-            else:
-                bpy.data.objects.remove(children)
-
-        # remove deprecated avalon references
-        bpy.data.collections.remove(avalon_instances)
-    else:
+    if not ayon_instances:
         avalon_instances.name = AYON_INSTANCES
+        return
+
+    # Move the legacy instances into the AYON instances collection
+    for instance_obj in avalon_instances.objects:
+        if instance_obj.name not in ayon_instances.objects:
+            ayon_instances.objects.link(instance_obj)
+    for instance_collection in avalon_instances.children:
+        if instance_collection.name not in ayon_instances.children:
+            ayon_instances.children.link(instance_collection)
+
+    # remove deprecated avalon references
+    bpy.data.collections.remove(avalon_instances)
 
 
 def add_to_ayon_container(
@@ -779,11 +847,13 @@ def ls() -> Iterator:
         AVALON_CONTAINER_ID
     }
 
-    for id_type in container_ids:
-        for container in lib.lsattr("id", id_type):
-            yield parse_container(container)
+    for _attr, datablocks in lib.iter_bpy_prop_collection_idprop():
+        for datablock in datablocks:
+            ayon_prop = get_ayon_property(datablock)
+            if ayon_prop.get("id") in container_ids:
+                yield parse_container(datablock)
 
-    # Compositor nodes are not in `bpy.data` that `lib.lsattr` looks in.
+    # Compositor nodes are not in `bpy.data`.
     node_tree = lib.get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:

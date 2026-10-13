@@ -34,6 +34,7 @@ from . import render_lib
 
 
 PREVIEW_COLLECTIONS: Dict = dict()
+ADDON_KEYMAPS: List = list()
 TIMER_INTERVAL: float = 0.01
 
 
@@ -217,7 +218,7 @@ def _process_app_events() -> Optional[float]:
 class LaunchQtApp(bpy.types.Operator):
     """A Base class for operators to launch a Qt app."""
 
-    _window = Union[QtWidgets.QDialog, ModuleType]
+    _window: Optional[Union[QtWidgets.QDialog, ModuleType]] = None
     _tool_name: str = None
     _init_args: Optional[List] = list()
     _init_kwargs: Optional[Dict] = dict()
@@ -464,16 +465,14 @@ class BuildWorkfileFromTemplate(LaunchQtApp):
 
 
 class OpenTemplate(LaunchQtApp):
-    """Build Workfile from ayon template settings."""
+    """Open workfile template."""
 
     bl_idname = "wm.ayon_open_template"
     bl_label = "Open Template"
     def execute(self, context):
         from .workfile_template_builder import open_template
-        window = open_template()
-        BlenderApplication.store_window(self.bl_idname, window)
-        self._window = window
-        return super().execute(context)
+        open_template()
+        return {"FINISHED"}
 
 
 
@@ -568,19 +567,11 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
         project_settings = get_project_settings(project_name)
         if project_settings["core"]["tools"]["ayon_menu"].get(
             "version_up_current_workfile"):
-                layout.separator()
-                layout.operator(
-                    VersionUpWorkfile.bl_idname,
-                    text="Version Up Workfile"
-                )
-                wm = bpy.context.window_manager
-                keyconfigs = wm.keyconfigs
-                keymap = keyconfigs.addon.keymaps.new(name='Window', space_type='EMPTY')
-                keymap.keymap_items.new(
-                    VersionUpWorkfile.bl_idname, 'S',
-                    'PRESS', ctrl=True, alt=True
-                )
-                bpy.context.window_manager.keyconfigs.addon.keymaps.update()
+            layout.separator()
+            layout.operator(
+                VersionUpWorkfile.bl_idname,
+                text="Version Up Workfile"
+            )
 
         layout.separator()
         layout.operator(LaunchWorkFiles.bl_idname, text="Work Files...")
@@ -637,6 +628,31 @@ classes = [
 ]
 
 
+def register_keymaps():
+    """Register the Version Up Workfile hotkey if enabled in settings."""
+    project_settings = get_project_settings(get_current_project_name())
+    if not project_settings["core"]["tools"]["ayon_menu"].get(
+            "version_up_current_workfile"):
+        return
+
+    keyconfig = bpy.context.window_manager.keyconfigs.addon
+    if keyconfig is None:
+        return
+
+    keymap = keyconfig.keymaps.new(name="Window", space_type="EMPTY")
+    keymap_item = keymap.keymap_items.new(
+        VersionUpWorkfile.bl_idname, "S", "PRESS", ctrl=True, alt=True
+    )
+    ADDON_KEYMAPS.append((keymap, keymap_item))
+
+
+def unregister_keymaps():
+    """Unregister the hotkeys registered by `register_keymaps`."""
+    for keymap, keymap_item in ADDON_KEYMAPS:
+        keymap.keymap_items.remove(keymap_item)
+    ADDON_KEYMAPS.clear()
+
+
 def register():
     "Register the operators and menu."
 
@@ -649,10 +665,12 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_editor_menus.append(draw_ayon_menu)
+    register_keymaps()
 
 
 def unregister():
     """Unregister the operators and menu."""
+    unregister_keymaps()
 
     pcoll = PREVIEW_COLLECTIONS.pop("ayon")
     bpy.utils.previews.remove(pcoll)

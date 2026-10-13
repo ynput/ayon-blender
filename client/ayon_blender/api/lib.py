@@ -1,22 +1,17 @@
+import contextlib
 import hashlib
+import importlib
 import os
 import traceback
-import importlib
-import contextlib
-from typing import Dict, List, Union
+from typing import Dict, Iterable, List, Optional, Union
 
-import bpy
 import addon_utils
-from ayon_core.lib import (
-    Logger,
-    NumberDef
-)
+import bpy
+from ayon_core.lib import Logger, NumberDef
 from ayon_core.pipeline import registered_host
-
 from ayon_core.pipeline.create import CreateContext
 
 from . import pipeline
-
 from .constants import AYON_PROPERTY
 
 log = Logger.get_logger(__name__)
@@ -264,13 +259,8 @@ def lsattrs(attrs: Dict) -> List:
 
     # For now return all objects, not filtered by scene/collection/view_layer.
     matches = set()
-    for coll in dir(bpy.data):
-        if not isinstance(
-                getattr(bpy.data, coll),
-                bpy.types.bpy_prop_collection,
-        ):
-            continue
-        for node in getattr(bpy.data, coll):
+    for _attr, datablocks in iter_bpy_prop_collection_idprop():
+        for node in datablocks:
             ayon_prop = pipeline.get_ayon_property(node)
             if not ayon_prop:
                 continue
@@ -518,6 +508,41 @@ def get_all_parents(obj):
     return result
 
 
+def get_objects_with_descendants(
+    objects: Iterable[bpy.types.Object]
+) -> set[bpy.types.Object]:
+    """Return the objects including all their descendant objects.
+
+    Blender only stores the parent on the child object, so this iterates
+    `bpy.data.objects` once and walks up each object's parent chain to check
+    whether it descends from any of the input objects. This is a single pass
+    instead of a full scan per object as `Object.children` and
+    `Object.children_recursive` would do.
+
+    Arguments:
+        objects (Iterable[bpy.types.Object]): Objects to get the
+            descendants for.
+
+    Returns:
+        set[bpy.types.Object]: The input objects and all their descendants.
+    """
+    roots: set[bpy.types.Object] = set(objects)
+
+    def _has_ancestor_in_roots(obj: bpy.types.Object) -> bool:
+        parent = obj.parent
+        while parent is not None:
+            if parent in roots:
+                return True
+            parent = parent.parent
+        return False
+
+    descendants = {
+        obj for obj in bpy.data.objects
+        if obj not in roots and _has_ancestor_in_roots(obj)
+    }
+    return roots | descendants
+
+
 def get_highest_root(objects):
     """Get the highest object (the least parents) among the objects.
 
@@ -556,6 +581,29 @@ def get_highest_root(objects):
 
     minimum_parent = min(num_parents_to_obj)
     return num_parents_to_obj[minimum_parent]
+
+
+def parent_to_asset_group(
+    objects: List[bpy.types.Object],
+    asset_group: bpy.types.Object
+):
+    """Parent the top-most of the objects to the asset group.
+
+    Objects whose parent (or any ancestor) is also in `objects` keep their
+    parent so the hierarchy is preserved. The world transform of each
+    re-parented object is preserved.
+
+    Arguments:
+        objects (List[bpy.types.Object]): Objects to parent.
+        asset_group (bpy.types.Object): The object to parent to.
+    """
+    objects = set(objects)
+    for obj in objects:
+        if any(parent in objects for parent in get_all_parents(obj)):
+            continue
+        matrix_world = obj.matrix_world.copy()
+        obj.parent = asset_group
+        obj.matrix_world = matrix_world
 
 
 @contextlib.contextmanager
@@ -756,7 +804,7 @@ def strip_namespace(containers):
     nodes = [
         container["node"] for container in containers
     ]
-    original_namespaces = {}
+    original_names = {}
     for node in nodes:
         if isinstance(node, bpy.types.Collection):
             children = node.children_recursive
@@ -771,15 +819,14 @@ def strip_namespace(containers):
             original_name = child.name
             if ":" not in original_name:
                 continue
-            namespace, name = original_name.rsplit(':', 1)
-            child.name = name
-            original_namespaces[child] = namespace
+            original_names[child] = original_name
+            child.name = original_name.rsplit(":", 1)[-1]
 
     try:
         yield
     finally:
-        for node, original_namespace in original_namespaces.items():
-            node.name = f"{original_namespace}:{name}"
+        for node, original_name in original_names.items():
+            node.name = original_name
 
 
 @contextlib.contextmanager
@@ -833,7 +880,7 @@ def packed_images(datablocks, logger=None):
 
     finally:
         for image in unpacked_node_images:
-            image.unpack()
+            image.unpack(method="REMOVE")
 
 
 def search_replace_render_paths(src: str, dest: str) -> bool:
@@ -919,16 +966,12 @@ def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
     """
     if cache.users == 0:
         return False
+    if cache.use_fake_user:
+        return True
     # But there's an edge cases where
     # Blender still reports users but they
     # aren't actually there
-    def get_users(datablock):
-        return bpy.data.user_map(subset={datablock})[datablock]
-
-    if not cache.use_fake_user:
-        if not get_users(cache):
-            return False
-        return True
+    return bool(bpy.data.user_map(subset={cache})[cache])
 
 
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
@@ -1000,6 +1043,29 @@ def update_content_on_context_change():
         create_context.save_changes()
 
 
+def iter_bpy_prop_collection_idprop():
+    """Iterate over all Blender property collections.
+
+    See:
+        https://docs.blender.org/api/current/bpy.types.bpy_prop_collection_idprop.html
+    """ # noqa
+    data = bpy.data
+    for attr in dir(data):
+        prop = getattr(data, attr)
+        if not isinstance(prop, bpy.types.bpy_prop_collection):
+            continue
+
+        # Check if this is `bpy_prop_collection_idprop` by checking for an
+        # attribute this base class should expose that does not live
+        # on bpy_prop_collection. In Blender 5.2+ `bpy.data.all_ids` attribute
+        # was added which is a `bpy_prop_collection` but does not come with
+        # the `remove` method for example which we want to skip here.
+        if not hasattr(prop, "remove"):
+            continue
+
+        yield attr, prop
+
+
 def clean_filename(filename: str) -> str:
     """Clean filename from characters which has reached more than maximum 63 characters.
     It would be removed after fully supporting blender 5.0, because blender 5.0 supports
@@ -1012,3 +1078,22 @@ def clean_filename(filename: str) -> str:
     """
     digest = hashlib.sha1(filename.encode("utf-8")).hexdigest()[:8]
     return f"{filename[:54]}_{digest}"
+
+
+def get_library_by_filepath(filepath: str) -> Optional[bpy.types.Library]:
+    """Return the library datablock that was loaded from `filepath`.
+
+    Args:
+        filepath (str): The filepath of the library .blend file.
+
+    Returns:
+        Optional[bpy.types.Library]: The library, if found.
+    """
+    def _normalize(path: str) -> str:
+        return os.path.normcase(os.path.normpath(bpy.path.abspath(path)))
+
+    filepath = _normalize(filepath)
+    for library in bpy.data.libraries:
+        if _normalize(library.filepath) == filepath:
+            return library
+    return None

@@ -14,7 +14,7 @@ from .pipeline import (
 )
 
 from .plugin import (
-    Creator,
+    BlenderCreator,
 )
 
 from .workio import (
@@ -49,7 +49,7 @@ __all__ = [
     "containerise",
     "BlenderHost",
 
-    "Creator",
+    "BlenderCreator",
 
     # Workfiles API
     "open_file",

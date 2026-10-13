@@ -8,9 +8,8 @@ from ayon_core.pipeline import AYON_CONTAINER_ID
 from ayon_blender.api import plugin
 from ayon_blender.api.lib import (
     imprint,
-    get_blender_version,
     create_animation_instance,
-    clean_filename,
+    get_library_by_filepath,
 )
 from ayon_blender.api.pipeline import (
     add_to_ayon_container,
@@ -127,14 +126,9 @@ class BlendLoader(plugin.BlenderLoader):
             bpy.context.scene.collection.objects.link(obj)
 
         # Remove the library from the blend file
-        filepath = bpy.path.basename(libpath)
-        # Blender has a limit of 63 characters for any data name.
-        # If the filename is longer, it will be truncated for blender
-        # version elder than 5.0
-        if get_blender_version() < (5, 0, 0) and len(filepath) > 63:
-            filepath = clean_filename(filepath)
-        library = bpy.data.libraries.get(filepath)
-        bpy.data.libraries.remove(library)
+        library = get_library_by_filepath(libpath)
+        if library:
+            bpy.data.libraries.remove(library)
 
         return container, members
 
@@ -294,15 +288,7 @@ class BlendLoader(plugin.BlenderLoader):
         group_name = container["objectName"]
         asset_group = bpy.data.objects.get(group_name)
 
-        attrs = [
-            attr for attr in dir(bpy.data)
-            if isinstance(
-                getattr(bpy.data, attr),
-                bpy.types.bpy_prop_collection
-            )
-        ]
-
-        members = asset_group.get(AYON_PROPERTY).get("members", [])
+        members = set(asset_group.get(AYON_PROPERTY).get("members", []))
 
         # We need to update all the parent container members
         parent_containers = self.get_all_container_parents(asset_group)
@@ -312,12 +298,6 @@ class BlendLoader(plugin.BlenderLoader):
                 lambda i: i not in members,
                 parent.get(AYON_PROPERTY).get("members", [])))
 
-        for attr in attrs:
-            for data in getattr(bpy.data, attr):
-                if data in members:
-                    # Skip the asset group
-                    if data == asset_group:
-                        continue
-                    getattr(bpy.data, attr).remove(data)
-
-        bpy.data.objects.remove(asset_group)
+        members.discard(None)
+        members.add(asset_group)
+        bpy.data.batch_remove(members)

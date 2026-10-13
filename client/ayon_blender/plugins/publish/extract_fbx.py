@@ -68,8 +68,7 @@ class ExtractFBX(
 
         plugin.deselect_all()
 
-        for mat in new_materials:
-            bpy.data.materials.remove(mat)
+        bpy.data.batch_remove(new_materials)
 
         for obj in new_materials_objs:
             obj.data.materials.pop()

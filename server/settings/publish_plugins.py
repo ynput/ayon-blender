@@ -184,7 +184,13 @@ class ExtractPlayblastModel(BaseSettingsModel):
     active: bool = SettingsField(title="Active")
     presets: str = SettingsField("", title="Presets", widget="textarea")
     compress: bool = SettingsField(False, title="Compress")
-
+    background_images: bool = SettingsField(
+        False, title="Background Images",
+        description=(
+            "When enabled, publishing the playblast will also include background images in the capture. "
+            "Only active for Blender 5.2 or newer."
+        )
+    )
     @validator("presets")
     def validate_json(cls, value):
         return validate_json_dict(value)
@@ -258,6 +264,11 @@ class PublishPluginsModel(BaseSettingsModel):
         default_factory=ValidatePluginModel,
         title="Validate Frame Range",
         description="Checks if scene frame range matches AYON project values for the context.",
+    )
+    ValidateResolutionSetting: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
+        title="Validate Resolution Setting",
+        description="Checks if the resolution setting matches AYON project values for the context.",
     )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,
@@ -388,6 +399,11 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "optional": True,
         "active": True
     },
+    "ValidateResolutionSetting": {
+        "enabled": True,
+        "optional": True,
+        "active": True
+    },
     "ExtractBlend": {
         "enabled": True,
         "optional": True,
@@ -460,9 +476,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
             {
                 "model": {
                     "image_settings": {
-                        "file_format": "JPEG",
-                        "color_mode": "RGB",
-                        "quality": 100
+                        "file_format": "PNG",
+                        "color_mode": "RGB"
                     },
                     "display_options": {
                         "shading": {
@@ -481,9 +496,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 },
                 "rig": {
                     "image_settings": {
-                        "file_format": "JPEG",
-                        "color_mode": "RGB",
-                        "quality": 100
+                        "file_format": "PNG",
+                        "color_mode": "RGB"
                     },
                     "display_options": {
                         "shading": {
@@ -517,7 +531,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 }
             },
             indent=4,
-        )
+        ),
+        "background_images": False,
     },
     "ExtractPlayblast": {
         "enabled": True,
@@ -544,7 +559,8 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
                 }
             },
             indent=4
-        )
+        ),
+        "background_images": False
     },
     "ExtractUSD": {
         "convert_orientation": False,

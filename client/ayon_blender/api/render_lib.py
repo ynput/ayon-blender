@@ -73,7 +73,7 @@ def set_render_format(ext: str, multilayer: bool):
         image_settings.file_format = "IRIS"
     elif ext == "png":
         image_settings.file_format = "PNG"
-    elif ext == "jpeg":
+    elif ext in {"jpg", "jpeg"}:
         image_settings.file_format = "JPEG"
     elif ext == "jp2":
         image_settings.file_format = "JPEG2000"
@@ -97,7 +97,7 @@ def get_file_format_extension(file_format: str) -> str:
     elif file_format == "PNG":
         return "png"
     elif file_format == "JPEG":
-        return "jpeg"
+        return "jpg"
     elif file_format == "JPEG2000":
         return "jp2"
     elif file_format == "TARGA" or file_format == "TARGA_RAW":
@@ -138,7 +138,7 @@ def set_render_passes(settings, renderer, view_layers):
         aov_list = base_aov_list.union(existing_aov_list)
         aov_list_combined.update(aov_list)
 
-        if renderer == "BLENDER_EEVEE":
+        if _is_legacy_eevee_renderer(renderer):
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
             eevee_attrs: set[str] = {
@@ -178,6 +178,29 @@ def set_render_passes(settings, renderer, view_layers):
     return list(aov_list_combined), custom_passes
 
 
+def _is_legacy_eevee_renderer(renderer):
+    """Return whether renderer is Eevee in Blender lower than 4.2.
+
+    Note:
+      In Blender <4.2 'BLENDER_EEVEE' represents Eevee renderer.
+      In Blender 4.2-4.5 'BLENDER_EEVEE_NEXT' represents Eevee renderer.
+      In Blender 5.0+ 'BLENDER_EEVEE' represents Eevee renderer.
+
+    Args:
+        renderer (str): Renderer name.
+
+    Returns:
+        bool: Whether renderer is Eevee in Blender version lower than 4.2.
+    """
+    if renderer != "BLENDER_EEVEE":
+        return False
+
+    ver_major, ver_minor, _ = lib.get_blender_version()
+    if (ver_major, ver_minor) < (4, 2):
+        return True
+    return False
+
+
 def get_aov_options(renderer: str) -> dict[str, str]:
     """Return the available AOV options based on the renderer name."""
     aov_options = {
@@ -196,7 +219,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
         "cryptomatte_material": "use_pass_cryptomatte_material",
         "cryptomatte_asset": "use_pass_cryptomatte_asset",
     }
-    if renderer == "BLENDER_EEVEE":
+    if _is_legacy_eevee_renderer(renderer):
         eevee_options = {
             "shadow": "use_pass_shadow",
             "volume_light": "use_pass_volume_direct",
@@ -216,7 +239,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
             "sample_count": "pass_debug_sample_count",
             "diffuse_indirect": "use_pass_diffuse_indirect",
             "specular_indirect": "use_pass_glossy_indirect",
-            "transmission_direct": "use_pass_transmission_direct",
+            "transmission_light": "use_pass_transmission_direct",
             "transmission_indirect": "use_pass_transmission_indirect",
             "transmission_color": "use_pass_transmission_color",
             "volume_light": "use_pass_volume_direct",
@@ -233,7 +256,7 @@ def existing_aov_options(
 ) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
-    if renderer == "BLENDER_EEVEE":
+    if _is_legacy_eevee_renderer(renderer):
         eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
         for pass_name, attr in aov_options.items():
             target = view_layer.eevee if attr in eevee_attrs else view_layer
@@ -290,8 +313,9 @@ def get_base_render_output_path(
     The output path is based on the AYON project settings and the current
     Blender scene workfile path.
 
-    If the render settings are not set to multi-EXR then only the base path
-    is returned, otherwise the full path to the render output file is returned.
+    For Blender versions prior to 5.0.0, if the render settings are not set
+    to multi-EXR then only the base path is returned, otherwise the full path
+    to the render output file is returned.
 
     """
     workfile_filepath = Path(bpy.data.filepath)
@@ -304,7 +328,8 @@ def get_base_render_output_path(
     workfile_dir = workfile_filepath.parent
     workfile_filename = Path(workfile_filepath.name).stem
     base_folder = Path.joinpath(workfile_dir, render_folder, workfile_filename)
-    if not multi_exr:
+    blender_version = lib.get_blender_version()
+    if blender_version < (5, 0, 0) and not multi_exr:
         # If not multi-exr, we only supply the root folder to render to.
         return str(base_folder)
 
@@ -538,8 +563,10 @@ def prepare_rendering(
     multilayer = get_multilayer(project_settings)
     renderer = get_renderer(project_settings)
     ver_major, ver_minor, _ = lib.get_blender_version()
+
+    # Between Blender 4.2 and 4.5, the Eevee renderer is BLENDER_EEVEE_NEXT
     if renderer == "BLENDER_EEVEE" and (
-        ver_major >= 4 and ver_minor >=2
+        (4, 2) <= (ver_major, ver_minor) < (5, 0)
     ):
         renderer = "BLENDER_EEVEE_NEXT"
 

@@ -89,34 +89,72 @@ def prepare_data(data, container_name=None):
     return local_data
 
 
+def add_namespace(datablock: bpy.types.ID, namespace: str):
+    """Prefix the datablock name with `namespace:` if not prefixed yet.
+
+    Datablocks like mesh data and materials can be shared by multiple
+    objects, so this avoids prefixing them more than once.
+    """
+    prefix = f"{namespace}:"
+    if not datablock.name.startswith(prefix):
+        datablock.name = f"{prefix}{datablock.name}"
+
+
 def create_blender_context(active: Optional[bpy.types.Object] = None,
                            selected: Optional[bpy.types.Object] = None,
                            window: Optional[bpy.types.Window] = None):
-    """Create a new Blender context. If an object is passed as
-    parameter, it is set as selected and active.
+    """Create a new Blender context override.
+
+    If `active` is provided it is set as the active object in the override.
+    If `selected` is provided it is set as `selected_objects` in the override.
+
+    This function first prefers a VIEW_3D area (best for most ops). If no
+    VIEW_3D is available in the current layout, it falls back to the first
+    available area/region with a 'WINDOW' region. When Blender is running in
+    background/headless mode (no windows), return a minimal context containing
+    scene/view_layer/active/selected so non-UI-dependent ops still work.
     """
 
-    if not isinstance(selected, list):
+    # Normalize selected to a list/tuple
+    if not isinstance(selected, (list, tuple)):
         selected = [selected]
 
-    override_context = bpy.context.copy()
+    def _region_context(win_, area_, region_):
+        override_context = bpy.context.copy()
+        override_context['window'] = win_
+        override_context['screen'] = win_.screen
+        override_context['area'] = area_
+        override_context['region'] = region_
+        override_context['scene'] = bpy.context.scene
+        override_context['active_object'] = active
+        override_context['selected_objects'] = selected
+        override_context['view_layer'] = bpy.context.view_layer
+        return override_context
 
     windows = [window] if window else bpy.context.window_manager.windows
-
     for win in windows:
         for area in win.screen.areas:
             if area.type == 'VIEW_3D':
                 for region in area.regions:
                     if region.type == 'WINDOW':
-                        override_context['window'] = win
-                        override_context['screen'] = win.screen
-                        override_context['area'] = area
-                        override_context['region'] = region
-                        override_context['scene'] = bpy.context.scene
-                        override_context['active_object'] = active
-                        override_context['selected_objects'] = selected
-                        return override_context
-    raise Exception("Could not create a custom Blender context.")
+                        return _region_context(win, area, region)
+
+    # Second pass: use first area with a WINDOW region (any area type)
+    for win in windows:
+        for area in win.screen.areas:
+            for region in area.regions:
+                if region.type == 'WINDOW':
+                    return _region_context(win, area, region)
+
+    # Headless / background fallback: provide minimal context so non-UI ops
+    # work. Some operators may require a full UI context and will raise
+    # accordingly.
+    override_context = bpy.context.copy()
+    override_context['scene'] = bpy.context.scene
+    override_context['view_layer'] = bpy.context.view_layer
+    override_context['active_object'] = active
+    override_context['selected_objects'] = selected
+    return override_context
 
 
 def get_parent_collection(collection):
@@ -202,7 +240,7 @@ class BlenderCreator(Creator):
             shared_data(Dict[str, Any]): Shared data.
 
         """
-        if not shared_data.get('blender_cached_instances'):
+        if "blender_cached_instances" not in shared_data:
             cache = {}
             cache_legacy = {}
             convert_avalon_instances()
@@ -232,7 +270,7 @@ class BlenderCreator(Creator):
                     continue
 
                 creator_id = ayon_prop.get("creator_identifier")
-                if "openpype" in creator_id:
+                if creator_id and "openpype" in creator_id:
                     creator_id = creator_id.replace("openpype", "ayon")
                     ayon_prop["creator_identifier"] = creator_id
 
@@ -344,7 +382,7 @@ class BlenderCreator(Creator):
                     f"Unable to update instance {created_instance} "
                     f"without instance node."
                 )
-                return
+                continue
 
             # Rename the instance node in the scene if product
             #   or folder changed.
@@ -368,13 +406,13 @@ class BlenderCreator(Creator):
 
             # Remove collection node and its children
             if isinstance(node, bpy.types.Collection):
-                # Remove recursively linked child collections and objects
-                for child in node.children_recursive:
-                     if isinstance(child, bpy.types.Object):
-                        if len(child.users_collection) == 1:
-                            if child.name not in bpy.context.scene.collection:
-                                bpy.context.scene.collection.objects.link(child)
-                # Remove directly linked objects
+                # Keep child collections in the scene if only used by the
+                # instance collection
+                scene_collection = bpy.context.scene.collection
+                for child in node.children:
+                    if child.users - int(child.use_fake_user) == 1:
+                        scene_collection.children.link(child)
+                # Keep directly linked objects in the scene
                 for obj in node.objects:
                     if len(obj.users_collection) == 1:
                         if obj.name not in bpy.context.scene.collection.objects:

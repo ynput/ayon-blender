@@ -28,6 +28,7 @@ class ExtractPlayblast(
     order = pyblish.api.ExtractorOrder + 0.01
 
     presets = "{}"
+    background_images = False
 
     def process(self, instance):
         if not self.is_active(instance.data):
@@ -65,6 +66,9 @@ class ExtractPlayblast(
 
         self.log.debug(f"Outputting images to {path}")
 
+        if self.background_images:
+            instance.data["background_images"] = self.background_images
+
         presets = json.loads(self.presets)
         preset = presets.get("default")
         preset.update({
@@ -74,7 +78,10 @@ class ExtractPlayblast(
             "filename": path,
             "overwrite": True,
             "isolate": isolate,
+            "background_images": self.background_images,
+            "log": self.log,
         })
+        self.log.debug(f"Using preset: {preset}")
         preset.setdefault(
             "image_settings",
             {

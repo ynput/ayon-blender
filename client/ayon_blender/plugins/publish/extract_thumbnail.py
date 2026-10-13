@@ -22,6 +22,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
     families = ["review.playblast"]
     order = pyblish.api.ExtractorOrder + 0.01
     presets = "{}"
+    background_images = False
 
     def process(self, instance):
         self.log.debug("Extracting capture..")
@@ -54,11 +55,13 @@ class ExtractThumbnail(plugin.BlenderExtractor):
             "filename": path,
             "overwrite": True,
             "isolate": isolate,
+            "background_images": instance.data.get("background_images", self.background_images),
+            "log": self.log
         })
         preset.setdefault(
             "image_settings",
             {
-                "file_format": "JPEG",
+                "file_format": "PNG",
                 "color_mode": "RGB",
                 "quality": 100,
             },
@@ -75,7 +78,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
 
         representation = {
             "name": "thumbnail",
-            "ext": "jpg",
+            "ext": "png",
             "files": thumbnail,
             "stagingDir": stagingdir,
             "thumbnail": True
@@ -98,7 +101,7 @@ class ExtractThumbnail(plugin.BlenderExtractor):
             return None
 
         if not os.path.exists(filepath):
-            files = glob.glob(f"{filepath}.*.jpg")
+            files = glob.glob(f"{filepath}.*.png")
 
             if not files:
                 raise RuntimeError(f"Couldn't find playblast from: {filepath}")
