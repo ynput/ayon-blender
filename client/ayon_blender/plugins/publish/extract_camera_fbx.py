@@ -64,7 +64,7 @@ class ExtractCamera(
             scene_overrides["render.fps_base"] = 1
 
         with lib.attribute_overrides(bpy.context.scene, scene_overrides):
-            with plugin.objects_in_object_mode():
+            with plugin.objects_in_object_mode(objects=selected):
                 with bpy.context.temp_override(**context):
                     # We export the fbx
                     bpy.ops.export_scene.fbx(

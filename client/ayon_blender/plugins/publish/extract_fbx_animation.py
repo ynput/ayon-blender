@@ -148,7 +148,7 @@ class ExtractAnimationFBX(
 
         # Ensure objects are in Object Mode, otherwise the FBX exporter fails
         # to restore e.g. Pose Mode after exporting (Blender 5.x).
-        with plugin.objects_in_object_mode():
+        with plugin.objects_in_object_mode(objects=[root, armature]):
             with bpy.context.temp_override(**override):
                 # We export the fbx
                 bpy.ops.export_scene.fbx(

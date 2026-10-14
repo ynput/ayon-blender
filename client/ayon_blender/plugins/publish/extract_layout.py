@@ -84,7 +84,7 @@ class ExtractLayout(
 
             override = plugin.create_blender_context(
                 active=asset, selected=[asset, obj])
-            with plugin.objects_in_object_mode():
+            with plugin.objects_in_object_mode(objects=[asset, obj]):
                 with bpy.context.temp_override(**override):
                     # We export the fbx
                     bpy.ops.export_scene.fbx(
