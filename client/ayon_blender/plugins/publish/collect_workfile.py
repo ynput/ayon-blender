@@ -33,7 +33,7 @@ class CollectWorkfile(plugin.BlenderInstancePlugin):
                 "frameStart": context.data.get("frameStart", 1),
                 "frameEnd": context.data.get("frameEnd", 1),
                 "handleStart": context.data.get("handleStart", 1),
-                "handledEnd": context.data.get("handleEnd", 1),
+                "handleEnd": context.data.get("handleEnd", 1),
                 "representations": [
                     {
                         "name": ext.lstrip("."),

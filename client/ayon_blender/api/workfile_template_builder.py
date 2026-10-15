@@ -100,12 +100,10 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
         placeholder = bpy.data.collections.new(placeholder_name)
         if parent_object:
             parent_object.children.link(placeholder)
-            imprinted_placeholder = parent_object
         else:
             bpy.context.scene.collection.children.link(placeholder)
-            imprinted_placeholder = placeholder
 
-        imprint(imprinted_placeholder, placeholder_data)
+        imprint(placeholder, placeholder_data)
 
     def update_placeholder(self, placeholder_item, placeholder_data):
         node_name = placeholder_item.scene_identifier

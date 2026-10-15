@@ -27,18 +27,7 @@ class ValidateMeshHasUvs(
     @staticmethod
     def has_uvs(obj: bpy.types.Object) -> bool:
         """Check if an object has uv's."""
-        if not obj.data.uv_layers:
-            return False
-        for uv_layer in obj.data.uv_layers:
-            for polygon in obj.data.polygons:
-                for loop_index in polygon.loop_indices:
-                    if (
-                        loop_index >= len(uv_layer.data)
-                        or not uv_layer.data[loop_index].uv
-                    ):
-                        return False
-
-        return True
+        return bool(obj.data.uv_layers)
 
     @classmethod
     def get_invalid(cls, instance) -> List:
