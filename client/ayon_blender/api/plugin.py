@@ -262,13 +262,21 @@ def objects_in_object_mode(objects=None):
     original_modes = [(obj.name, obj.mode) for obj in candidates]
     # Only two sets of objects can change selection while switching modes: the
     # ones which are selected now (they get deselected) and the candidates (they
-    # get selected). Keeping just those avoids touching the whole scene.
+    # get selected), so keeping just those is enough to restore it.
+    # `bpy.context.selected_objects` is not available in every context the
+    # extractors run in, so the view layer is scanned instead.
     selection = {}
-    for obj in list(bpy.context.selected_objects) + candidates:
+    for obj in bpy.context.view_layer.objects:
+        if obj is None:
+            continue
         try:
-            selection[obj.name] = obj.select_get()
+            is_selected = obj.select_get()
         except RuntimeError:
             continue
+        if is_selected:
+            selection[obj.name] = True
+    for obj in candidates:
+        selection.setdefault(obj.name, False)
     active_name = active.name
 
     by_mode = {}
@@ -294,8 +302,12 @@ def objects_in_object_mode(objects=None):
         # `mode_set` acts on the whole selection, not only on the active object,
         # so the objects of the other mode groups have to be deselected first.
         # Otherwise they are dragged into this mode change and e.g. undo a mode
-        # which was already restored.
-        for obj in list(bpy.context.selected_objects):
+        # which was already restored. Only these objects can be selected here:
+        # everything else which was selected was deselected on entry.
+        for name in selection:
+            obj = bpy.data.objects.get(name)
+            if obj is None:
+                continue
             try:
                 obj.select_set(False)
             except RuntimeError:
