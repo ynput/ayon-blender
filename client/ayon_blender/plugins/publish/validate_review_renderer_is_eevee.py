@@ -30,7 +30,8 @@ class ValidateReviewRendererIsEevee(plugin.BlenderContextPlugin):
             )
     @classmethod
     def repair(cls, context):
-        if lib.get_blender_version() < (5, 2, 0):
+        blender_version = lib.get_blender_version()
+        if (4, 2, 0) <= blender_version < (5, 0, 0):
             bpy.context.scene.render.engine = "BLENDER_EEVEE_NEXT"
         else:
             bpy.context.scene.render.engine = "BLENDER_EEVEE"
