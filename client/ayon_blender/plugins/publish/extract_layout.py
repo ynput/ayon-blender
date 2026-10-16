@@ -63,15 +63,28 @@ class ExtractLayout(
             original_actions.append(curr_action)
 
             # We compute the starting and ending frames
-            max_frame = min(starting_frames)
-            min_frame = max(ending_frames)
+            frame_start = min(starting_frames)
+            frame_end = max(ending_frames)
 
             # We bake the copy of the current action for each object
+            bake_options = bpy_extras.anim_utils.BakeOptions(
+                only_selected=False,
+                do_pose=True,
+                do_object=False,
+                do_visual_keying=True,
+                do_constraint_clear=False,
+                do_parents_clear=False,
+                do_clean=False,
+                do_location=True,
+                do_rotation=True,
+                do_scale=True,
+                do_bbone=True,
+                do_custom_props=True
+            )
             bpy_extras.anim_utils.bake_action_objects(
                 object_action_pairs,
-                frames=range(int(min_frame), int(max_frame)),
-                do_object=False,
-                do_clean=False
+                frames=range(int(frame_start), int(frame_end) + 1),
+                bake_options=bake_options
             )
 
             for o in bpy.data.objects:
