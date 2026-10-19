@@ -5,6 +5,8 @@ import os
 import bpy
 from ayon_core.pipeline.load import LoadError
 from ayon_blender.api.pipeline import AVALON_PROPERTY
+from .plugin import create_blender_context
+
 
 if TYPE_CHECKING:
     from ayon_core.pipeline.create import CreateContext  # noqa: F401
@@ -17,41 +19,72 @@ def add_override(
     loaded_collection: bpy.types.Collection,
 ) -> bpy.types.Collection:
     """Add overrides for the loaded armatures."""
+    linked_collections = [
+        child for child in loaded_collection.children
+        if child.library is not None
+    ]
+    if not linked_collections:
+        linked_collections = [
+            collection for collection in loaded_collection.all_collections
+            if collection.library
+        ]
+    if not linked_collections:
+        log.warning("No linked collection to override in %r", loaded_collection)
+        return loaded_collection
+
+    reference_collection = linked_collections[0]
     overridden_collections = list(
-        get_overridden_collections_from_reference_collection(loaded_collection)
+        get_overridden_collections_from_reference_collection(reference_collection)
     )
     context = bpy.context
     scene = context.scene
-    loaded_objects = loaded_collection.all_objects
+    linked_objects = [
+        obj for obj in reference_collection.all_objects if obj.library
+    ]
+    if not linked_objects:
+        log.warning("No linked objects to override in %r", reference_collection)
+        return loaded_collection
     # This slightly convoluted way of running the operator seems necessary to
     # have it work reliably for more than 1 rig on both Linux and Windows.
     # Giving it a 'random' object from the collection seems to override
     # everything contained in the loaded collection.
-    context.view_layer.objects.active = loaded_objects[0]
-
-    from .plugin import create_blender_context  # todo: move import
+    context.view_layer.objects.active = linked_objects[0]
     operator_context = create_blender_context(
-        active=loaded_objects[0],
-        selected=loaded_objects
+        active=linked_objects[0],
+        selected=linked_objects
     )
 
     # https://blender.stackexchange.com/questions/289245/how-to-make-a-blender-library-override-in-python  # noqa
     # https://docs.blender.org/api/current/bpy.types.ID.html#bpy.types.ID.override_hierarchy_create  # noqa
     if bpy.app.version[0] >= 4:
         with bpy.context.temp_override(**operator_context):
-            loaded_collection.override_hierarchy_create(
+            reference_collection.override_hierarchy_create(
                 scene, context.view_layer, do_fully_editable=True
             )
+    # Remove the linked originals from the container: the reference collection
+    # and any objects linked directly next to it (load_collection links both).
+    for child in list(loaded_collection.children):
+        if child.library:
+            loaded_collection.children.unlink(child)
+    for obj in list(loaded_collection.objects):
+        if obj.library:
+            loaded_collection.objects.unlink(obj)
 
-    scene.collection.children.unlink(loaded_collection)
-
-    if overridden_collections:
-        local_collection = get_local_collection(
-            overridden_collections,
-            loaded_collection,
-        )
-    else:
-        local_collection = loaded_collection
+    local_collection = get_local_collection(
+        overridden_collections,
+        reference_collection,
+    )
+    # The caller puts the returned override into the AYON container; the local
+    # container which only existed to hold the linked data is not needed anymore
+    if local_collection.name in [
+        child.name for child in loaded_collection.children
+    ]:
+        loaded_collection.children.unlink(local_collection)
+    for child in list(loaded_collection.children):
+        loaded_collection.children.unlink(child)
+    for obj in list(loaded_collection.objects):
+        loaded_collection.objects.unlink(obj)
+    bpy.data.collections.remove(loaded_collection, do_unlink=True)
 
     return local_collection
 

@@ -15,6 +15,7 @@ from ayon_blender.api.pipeline import (
     metadata_update,
     containerise,
     get_container_name,
+    ls,
     show_message
 )
 
@@ -104,11 +105,20 @@ class BlendLinkLoader(plugin.BlenderLoader):
         target_name = f"{container['namespace']}_{container['name']}"
         # Remove the container collection
         datablocks = {collection}
+        # The container's data is nested (container -> local container or
+        # override), so collect the whole subtree, otherwise empty collections
+        # are left behind in the scene after unloading.
+        pending = list(collection.children)
+        while pending:
+            child_collection = pending.pop()
+            datablocks.add(child_collection)
+            datablocks.update(child_collection.objects)
+            pending.extend(child_collection.children)
+
+        library = None
         if collection.children:
             library = self._get_library_from_collection(collection.children[0])
-            if library:
-                bpy.data.libraries.remove(library)
-            else:
+            if not library:
                 target_collection = find_collection_by_name(target_name)
                 if target_collection:
                     datablocks.update(target_collection.children)
@@ -124,7 +134,34 @@ class BlendLinkLoader(plugin.BlenderLoader):
 
         bpy.data.batch_remove(datablocks)
 
+        # Several assets can be loaded from the same .blend file, so only unload
+        # the library when no other container still uses it. Otherwise the other
+        # loaded assets would lose their data as well.
+        if library and not self._is_library_used_elsewhere(library, container):
+            bpy.data.libraries.remove(library)
+
+        # Clean up the data left behind (e.g. orphaned meshes or materials)
+        bpy.data.orphans_purge(do_recursive=True)
+
         return True
+
+    def _is_library_used_elsewhere(
+        self, library: bpy.types.Library, container: Dict
+    ) -> bool:
+        """Whether another loaded container links data from the same library."""
+        node = container["node"]
+        for other_container in ls():
+            other_node = other_container.get("node")
+            if other_node is None or other_node == node:
+                continue
+            if not other_node.children:
+                continue
+            other_library = self._get_library_from_collection(
+                other_node.children[0]
+            )
+            if other_library is not None and other_library == library:
+                return True
+        return False
 
     def _get_library_from_collection(
             self, collection: bpy.types.Collection
@@ -142,6 +179,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             if child.override_library and child.override_library.reference:
                 return child.override_library.reference.library
 
+        self.log.warning(f"Could not find library for collection: {collection.name}")
         return None
 
     def get_loaded_collection(self, **kwargs)-> bpy.types.Collection:
