@@ -139,8 +139,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
         if library and library.users <= 1:
             bpy.data.libraries.remove(library)
 
-        # Clean up the data left behind (e.g. orphaned meshes or materials)
-        bpy.data.orphans_purge(do_recursive=True)
 
         return True
 
