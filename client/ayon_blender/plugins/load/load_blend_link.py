@@ -15,7 +15,6 @@ from ayon_blender.api.pipeline import (
     metadata_update,
     containerise,
     get_container_name,
-    ls,
     show_message
 )
 
