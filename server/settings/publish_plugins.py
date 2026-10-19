@@ -52,6 +52,7 @@ def extract_model_usd_overrides_enum():
         {"label": "Export Mesh Colors", "value": "export_mesh_colors"},
         {"label": "Generate Preview Surface", "value": "generate_preview_surface"},
         {"label": "Generate MaterialX Network", "value": "generate_materialx_network"},
+        {"label": "Export Textures Mode", "value": "export_textures_mode"},
         {"label": "Use Instancing", "value": "use_instancing"},
     ]
 
