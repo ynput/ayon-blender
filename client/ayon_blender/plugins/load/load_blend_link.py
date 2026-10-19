@@ -137,31 +137,13 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # Several assets can be loaded from the same .blend file, so only unload
         # the library when no other container still uses it. Otherwise the other
         # loaded assets would lose their data as well.
-        if library and not self._is_library_used_elsewhere(library, container):
+        if library and not library.users <= 1:
             bpy.data.libraries.remove(library)
 
         # Clean up the data left behind (e.g. orphaned meshes or materials)
         bpy.data.orphans_purge(do_recursive=True)
 
         return True
-
-    def _is_library_used_elsewhere(
-        self, library: bpy.types.Library, container: Dict
-    ) -> bool:
-        """Whether another loaded container links data from the same library."""
-        node = container["node"]
-        for other_container in ls():
-            other_node = other_container.get("node")
-            if other_node is None or other_node == node:
-                continue
-            if not other_node.children:
-                continue
-            other_library = self._get_library_from_collection(
-                other_node.children[0]
-            )
-            if other_library is not None and other_library == library:
-                return True
-        return False
 
     def _get_library_from_collection(
             self, collection: bpy.types.Collection
