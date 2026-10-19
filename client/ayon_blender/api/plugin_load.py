@@ -57,6 +57,28 @@ def add_override(
             reference_collection.override_hierarchy_create(
                 scene, context.view_layer, do_fully_editable=True
             )
+    else:
+        # Blender 3.x has no `override_hierarchy_create`; return the wrapper
+        # untouched so the linked asset still loads (without an override).
+        log.warning(
+            "Library overrides require Blender 4.0 or newer, '%s' is loaded "
+            "without an override.", loaded_collection.name
+        )
+        return loaded_collection
+
+    try:
+        local_collection = get_local_collection(
+            overridden_collections,
+            reference_collection,
+        )
+    except RuntimeError:
+        # No override was created (e.g. the data could not be overridden):
+        # return the untouched wrapper instead of an emptied one.
+        log.warning(
+            "Could not create a library override for %r", reference_collection
+        )
+        return loaded_collection
+
     # Remove the linked originals from the container: the reference collection
     # and any objects linked directly next to it (load_collection links both).
     for child in list(loaded_collection.children):
@@ -65,11 +87,6 @@ def add_override(
     for obj in list(loaded_collection.objects):
         if obj.library:
             loaded_collection.objects.unlink(obj)
-
-    local_collection = get_local_collection(
-        overridden_collections,
-        reference_collection,
-    )
     # The caller puts the returned override into the AYON container; the local
     # container which only existed to hold the linked data is not needed anymore
     if local_collection.name in [
