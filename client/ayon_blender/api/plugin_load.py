@@ -24,13 +24,9 @@ def add_override(
         if child.library is not None
     ]
     if not linked_collections:
-        linked_collections = [
-            collection for collection in loaded_collection.all_collections
-            if collection.library
-        ]
-    if not linked_collections:
         log.warning("No linked collection to override in %r", loaded_collection)
         return loaded_collection
+
 
     reference_collection = linked_collections[0]
     overridden_collections = list(
@@ -41,9 +37,6 @@ def add_override(
     linked_objects = [
         obj for obj in reference_collection.all_objects if obj.library
     ]
-    if not linked_objects:
-        log.warning("No linked objects to override in %r", reference_collection)
-        return loaded_collection
     # This slightly convoluted way of running the operator seems necessary to
     # have it work reliably for more than 1 rig on both Linux and Windows.
     # Giving it a 'random' object from the collection seems to override

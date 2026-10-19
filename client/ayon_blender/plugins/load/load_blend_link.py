@@ -111,7 +111,6 @@ class BlendLinkLoader(plugin.BlenderLoader):
         while pending:
             child_collection = pending.pop()
             datablocks.add(child_collection)
-            datablocks.update(child_collection.objects)
             pending.extend(child_collection.children)
 
         library = None
