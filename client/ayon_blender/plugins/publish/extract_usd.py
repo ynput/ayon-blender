@@ -99,33 +99,26 @@ class ExtractUSD(plugin.BlenderExtractor,
                     "4.2.1 to support it."
                 )
 
-        use_relative_paths = False
         export_textures_mode = attribute_values.get(
             "export_textures_mode",
             self.export_textures_mode
         )
+        # `export_textures_mode` replaced the `export_textures` boolean in the
+        # USD exporter: it exists since Blender 4.2 and is the only variant in
+        # 5.0+, so pass whichever one this exporter supports.
         # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
-        if blender_version >= (5, 0, 0):
+        usd_export_properties = (
+            bpy.ops.wm.usd_export.get_rna_type().properties
+        )
+        if "export_textures_mode" in usd_export_properties:
             kwargs["export_textures_mode"] = export_textures_mode
-            texture_directories = os.path.join(stagingdir, "textures")
-            src_texture_paths = []
-            if os.path.exists(texture_directories):
-                src_texture_paths = os.listdir(texture_directories)
-            else:
-                self.log.warning("Texture directory does not exist: %s", texture_directories)
-            if src_texture_paths and export_textures_mode in {"NEW", "PRESERVE"}:
-                for texture_name in src_texture_paths:
-                    src = os.path.join(texture_directories, texture_name)
-                    dst = os.path.join(
-                        instance.data["publishDir"], "textures", texture_name)
-                    instance.data.setdefault("transfers", []).append([src, dst])
-
         else:
-            kwargs["export_textures"] = bool(
-                export_textures_mode not in
-                {"PRESERVE", "KEEP"}
-            )
-        use_relative_paths = export_textures_mode in {"NEW", "PRESERVE"}
+            kwargs["export_textures"] = export_textures_mode == "NEW"
+
+        # Only `NEW` copies every texture next to the USD, so only then the USD
+        # may use relative paths. `KEEP`/`PRESERVE` keep references to textures
+        # which stay where they are, so those have to stay absolute.
+        use_relative_paths = export_textures_mode == "NEW"
         # Export USD
         with bpy.context.temp_override(**context):
             bpy.ops.wm.usd_export(
@@ -139,6 +132,11 @@ class ExtractUSD(plugin.BlenderExtractor,
             )
 
         plugin.deselect_all()
+
+        # Textures written by the export are referenced relative to the USD, so
+        # they have to be published beside it. This applies to every mode:
+        # `KEEP`/`PRESERVE` publish only the generated ones, `NEW` all of them.
+        self.collect_and_transfer_textures(instance, stagingdir)
 
         # Add representation
         representation = {
@@ -310,6 +308,41 @@ class ExtractUSD(plugin.BlenderExtractor,
                 event["create_context"], instance
             )
             instance.set_publish_plugin_attr_defs(cls.__name__, new_attrs)
+
+    def collect_and_transfer_textures(self, instance, stagingdir):
+        """Queue the textures the USD export wrote for publication.
+
+        Blender writes generated (packed/generated image) textures into
+        `<stagingdir>/textures` and references them relative to the USD, so they
+        are transferred into a `textures` folder beside the published USD. This
+        has to run after the export and applies to every texture mode: `KEEP`
+        and `PRESERVE` only write the generated textures there, `NEW` writes all
+        of them.
+
+        Only the USD is part of the instance representations; the textures are
+        auxiliary file transfers.
+
+        Args:
+            instance (pyblish.api.Instance): The instance to add the transfers
+                to.
+            stagingdir (str): The staging directory of the extracted USD.
+        """
+        texture_dir = os.path.join(stagingdir, "textures")
+        if not os.path.isdir(texture_dir):
+            # No textures were exported (e.g. `KEEP`/`PRESERVE` without packed
+            # or generated images, or a scene without any texture).
+            return
+
+        publish_dir = instance.data["publishDir"]
+        transfers = instance.data.setdefault("transfers", [])
+        for root, _dirs, files in os.walk(texture_dir):
+            for file_name in files:
+                src = os.path.join(root, file_name)
+                # Keep the layout of the `textures` folder, the USD references
+                # its textures relative to itself.
+                relative_filepath = os.path.relpath(src, texture_dir)
+                dst = os.path.join(publish_dir, "textures", relative_filepath)
+                transfers.append([src, dst])
 
 
 class ExtractModelUSD(ExtractUSD):
