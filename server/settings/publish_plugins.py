@@ -33,6 +33,14 @@ def evaluation_mode_enum():
     ]
 
 
+def export_textures_mode_enum():
+    return [
+        {"label": "Preserve", "value": "PRESERVE"},
+        {"label": "Keep", "value": "KEEP"},
+        {"label": "New", "value": "NEW"},
+    ]
+
+
 def extract_model_usd_overrides_enum():
     return [
         {"label": "Convert Orientation", "value": "convert_orientation"},
@@ -97,6 +105,12 @@ class ExtractUSDModel(BaseSettingsModel):
         description=(
             "Whether to generate a MaterialX network for the exported materials or not."
         )
+    )
+    export_textures_mode: str = SettingsField(
+        "PRESERVE",
+        enum_resolver=export_textures_mode_enum,
+        title="Export Textures Mode",
+        description="Mode for exporting textures in USD export."
     )
     use_instancing: bool = SettingsField(
         True,
@@ -572,6 +586,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "export_mesh_colors": True,
         "generate_preview_surface": True,
         "generate_materialx_network": False,
+        "export_textures_mode": "PRESERVE",
         "use_instancing": True,
         "overrides": []
     },

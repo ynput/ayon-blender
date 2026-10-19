@@ -22,6 +22,7 @@ class ExtractUSD(plugin.BlenderExtractor,
     export_normals = True
     export_materials = True
     export_mesh_colors = True
+    export_textures_mode = "PRESERVE"
     generate_preview_surface = True
     generate_materialx_network = False
     use_instancing = True
@@ -100,7 +101,10 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
         if blender_version >= (5, 0, 0):
-            kwargs["export_textures_mode"] = "KEEP"
+            kwargs["export_textures_mode"] = attribute_values.get(
+                "export_textures_mode",
+                self.export_textures_mode
+            )
         else:
             kwargs["export_textures"] = False
 
@@ -229,6 +233,12 @@ class ExtractUSD(plugin.BlenderExtractor,
                 label="Generate MaterialX Network",
                 tooltip="Whether to generate a MaterialX network for exported materials or not.",
                 default=cls.generate_materialx_network,
+            ),
+            "export_textures_mode": BoolDef(
+                "export_textures_mode",
+                label="Export Textures",
+                tooltip="Whether to export texture data or not.",
+                default=cls.export_textures_mode,
             ),
             "use_instancing": BoolDef(
                 "use_instancing",
