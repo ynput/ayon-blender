@@ -41,6 +41,9 @@ def add_override(
     # have it work reliably for more than 1 rig on both Linux and Windows.
     # Giving it a 'random' object from the collection seems to override
     # everything contained in the loaded collection.
+    if not linked_objects:
+        log.warning("No linked objects to override in %r", reference_collection)
+        return loaded_collection
     context.view_layer.objects.active = linked_objects[0]
     operator_context = create_blender_context(
         active=linked_objects[0],
