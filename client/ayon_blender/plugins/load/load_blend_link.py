@@ -136,7 +136,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
         # Several assets can be loaded from the same .blend file, so only unload
         # the library when no other container still uses it. Otherwise the other
         # loaded assets would lose their data as well.
-        if library and not library.users <= 1:
+        if library and library.users <= 1:
             bpy.data.libraries.remove(library)
 
         # Clean up the data left behind (e.g. orphaned meshes or materials)
