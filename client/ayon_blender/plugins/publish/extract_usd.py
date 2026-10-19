@@ -22,7 +22,7 @@ class ExtractUSD(plugin.BlenderExtractor,
     export_normals = True
     export_materials = True
     export_mesh_colors = True
-    export_textures_mode = "PRESERVE"
+    export_textures_mode = "KEEP"
     generate_preview_surface = True
     generate_materialx_network = False
     use_instancing = True
@@ -108,8 +108,10 @@ class ExtractUSD(plugin.BlenderExtractor,
         if blender_version >= (5, 0, 0):
             kwargs["export_textures_mode"] = export_textures_mode
             texture_directories = os.path.join(stagingdir, "textures")
+            if not os.path.exists(texture_directories):
+                self.log.warning("Texture directory does not exist: %s", texture_directories)
             src_texture_paths = set(os.listdir(texture_directories))
-            if src_texture_paths and export_textures_mode not in {"NEW", "PRESERVE"}:
+            if src_texture_paths and export_textures_mode in {"NEW", "PRESERVE"}:
                 for texture_name in src_texture_paths:
                     src = os.path.join(texture_directories, texture_name)
                     dst = os.path.join(

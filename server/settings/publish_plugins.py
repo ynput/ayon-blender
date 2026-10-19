@@ -108,7 +108,7 @@ class ExtractUSDModel(BaseSettingsModel):
         )
     )
     export_textures_mode: str = SettingsField(
-        "PRESERVE",
+        "KEEP",
         enum_resolver=export_textures_mode_enum,
         title="Export Textures Mode",
         description="Mode for exporting textures in USD export."
@@ -587,7 +587,7 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "export_mesh_colors": True,
         "generate_preview_surface": True,
         "generate_materialx_network": False,
-        "export_textures_mode": "PRESERVE",
+        "export_textures_mode": "KEEP",
         "use_instancing": True,
         "overrides": []
     },
