@@ -99,6 +99,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                     "4.2.1 to support it."
                 )
 
+        use_relative_paths = False
         # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
         if blender_version >= (5, 0, 0):
             export_textures_mode = attribute_values.get(
@@ -107,6 +108,7 @@ class ExtractUSD(plugin.BlenderExtractor,
             )
             kwargs["export_textures_mode"] = export_textures_mode
             if export_textures_mode == "NEW":
+                use_relative_paths = True
                 src = os.path.join(stagingdir, "textures")
                 resource_dir = instance.data["resourcesDir"]
                 dst = os.path.join(resource_dir, "textures")
@@ -118,7 +120,6 @@ class ExtractUSD(plugin.BlenderExtractor,
                 self.export_textures_mode) not in
                 {"PRESERVE", "KEEP"}
             )
-
         # Export USD
         with bpy.context.temp_override(**context):
             bpy.ops.wm.usd_export(
@@ -127,7 +128,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                 filepath=filepath,
                 root_prim_path="",
                 selected_objects_only=True,
-                relative_paths=export_textures_mode == "NEW",
+                relative_paths=use_relative_paths,
                 **kwargs
             )
 
