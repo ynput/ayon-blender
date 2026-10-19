@@ -234,10 +234,15 @@ class ExtractUSD(plugin.BlenderExtractor,
                 tooltip="Whether to generate a MaterialX network for exported materials or not.",
                 default=cls.generate_materialx_network,
             ),
-            "export_textures_mode": BoolDef(
+            "export_textures_mode": EnumDef(
                 "export_textures_mode",
-                label="Export Textures",
-                tooltip="Whether to export texture data or not.",
+                label="Export Textures Mode",
+                items={
+                    "PRESERVE": "Preserve",
+                    "KEEP": "Keep",
+                    "NEW": "New",
+                },
+                tooltip="Mode for exporting textures in USD export.",
                 default=cls.export_textures_mode,
             ),
             "use_instancing": BoolDef(
