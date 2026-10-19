@@ -99,6 +99,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                     "4.2.1 to support it."
                 )
 
+        use_relative_paths = False
         export_textures_mode = attribute_values.get(
             "export_textures_mode",
             self.export_textures_mode
@@ -106,6 +107,14 @@ class ExtractUSD(plugin.BlenderExtractor,
         # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
         if blender_version >= (5, 0, 0):
             kwargs["export_textures_mode"] = export_textures_mode
+            texture_directories = os.path.join(stagingdir, "textures")
+            src_texture_paths = set(os.listdir(texture_directories))
+            if src_texture_paths and export_textures_mode not in {"NEW", "PRESERVE"}:
+                for src in src_texture_paths:
+                    dst = os.path.join(
+                        instance.data["publishDir"], os.path.basename(src))
+                    instance.data["transfers"].append([src, dst])
+
         else:
             kwargs["export_textures"] = bool(
                 export_textures_mode not in
@@ -126,19 +135,11 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         plugin.deselect_all()
 
-        files = filename
-        if export_textures_mode == "NEW":
-            files = sorted(
-                os.path.relpath(os.path.join(root, file), stagingdir)
-                for root, _, filenames in os.walk(stagingdir)
-                for file in filenames
-            )
-
         # Add representation
         representation = {
             'name': 'usd',
             'ext': 'usd',
-            'files': files,
+            'files': filename,
             "stagingDir": stagingdir,
         }
 
