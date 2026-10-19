@@ -110,10 +110,11 @@ class ExtractUSD(plugin.BlenderExtractor,
             texture_directories = os.path.join(stagingdir, "textures")
             src_texture_paths = set(os.listdir(texture_directories))
             if src_texture_paths and export_textures_mode not in {"NEW", "PRESERVE"}:
-                for src in src_texture_paths:
+                for texture_name in src_texture_paths:
+                    src = os.path.join(texture_directories, texture_name)
                     dst = os.path.join(
-                        instance.data["publishDir"], os.path.basename(src))
-                    instance.data["transfers"].append([src, dst])
+                        instance.data["publishDir"], "textures", texture_name)
+                    instance.data.setdefault("transfers", []).append([src, dst])
 
         else:
             kwargs["export_textures"] = bool(
