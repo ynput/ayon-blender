@@ -101,12 +101,23 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
         if blender_version >= (5, 0, 0):
-            kwargs["export_textures_mode"] = attribute_values.get(
+            export_textures_mode = attribute_values.get(
                 "export_textures_mode",
                 self.export_textures_mode
             )
+            kwargs["export_textures_mode"] = export_textures_mode
+            if export_textures_mode == "NEW":
+                src = os.path.join(stagingdir, "textures")
+                resource_dir = instance.data["resourcesDir"]
+                dst = os.path.join(resource_dir, "textures")
+                instance.data['transfers'].append([src, dst])
         else:
-            kwargs["export_textures"] = False
+            kwargs["export_textures"] = bool(
+                attribute_values.get(
+                "export_textures_mode",
+                self.export_textures_mode) not in
+                {"PRESERVE", "KEEP"}
+            )
 
         # Export USD
         with bpy.context.temp_override(**context):
@@ -116,7 +127,7 @@ class ExtractUSD(plugin.BlenderExtractor,
                 filepath=filepath,
                 root_prim_path="",
                 selected_objects_only=True,
-                relative_paths=False,
+                relative_paths=export_textures_mode == "NEW",
                 **kwargs
             )
 
@@ -129,6 +140,7 @@ class ExtractUSD(plugin.BlenderExtractor,
             'files': filename,
             "stagingDir": stagingdir,
         }
+
         instance.data.setdefault("representations", []).append(representation)
         self.log.debug("Extracted instance '%s' to: %s",
                        instance.name, representation)
