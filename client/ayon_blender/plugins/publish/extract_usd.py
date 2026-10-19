@@ -99,27 +99,19 @@ class ExtractUSD(plugin.BlenderExtractor,
                     "4.2.1 to support it."
                 )
 
-        use_relative_paths = False
+        export_textures_mode = attribute_values.get(
+            "export_textures_mode",
+            self.export_textures_mode
+        )
         # See: https://docs.blender.org/api/current/bpy.ops.wm.html#bpy.ops.wm.usd_export  # noqa
         if blender_version >= (5, 0, 0):
-            export_textures_mode = attribute_values.get(
-                "export_textures_mode",
-                self.export_textures_mode
-            )
             kwargs["export_textures_mode"] = export_textures_mode
-            if export_textures_mode == "NEW":
-                use_relative_paths = True
-                src = os.path.join(stagingdir, "textures")
-                resource_dir = instance.data["resourcesDir"]
-                dst = os.path.join(resource_dir, "textures")
-                instance.data['transfers'].append([src, dst])
         else:
             kwargs["export_textures"] = bool(
-                attribute_values.get(
-                "export_textures_mode",
-                self.export_textures_mode) not in
+                export_textures_mode not in
                 {"PRESERVE", "KEEP"}
             )
+        use_relative_paths = export_textures_mode == "NEW"
         # Export USD
         with bpy.context.temp_override(**context):
             bpy.ops.wm.usd_export(
@@ -134,11 +126,19 @@ class ExtractUSD(plugin.BlenderExtractor,
 
         plugin.deselect_all()
 
+        files = filename
+        if export_textures_mode == "NEW":
+            files = sorted(
+                os.path.relpath(os.path.join(root, file), stagingdir)
+                for root, _, filenames in os.walk(stagingdir)
+                for file in filenames
+            )
+
         # Add representation
         representation = {
             'name': 'usd',
             'ext': 'usd',
-            'files': filename,
+            'files': files,
             "stagingDir": stagingdir,
         }
 
