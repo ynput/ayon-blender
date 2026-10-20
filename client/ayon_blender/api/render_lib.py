@@ -73,7 +73,7 @@ def set_render_format(ext: str, multilayer: bool):
         image_settings.file_format = "IRIS"
     elif ext == "png":
         image_settings.file_format = "PNG"
-    elif ext == "jpeg":
+    elif ext in {"jpg", "jpeg"}:
         image_settings.file_format = "JPEG"
     elif ext == "jp2":
         image_settings.file_format = "JPEG2000"
@@ -97,7 +97,7 @@ def get_file_format_extension(file_format: str) -> str:
     elif file_format == "PNG":
         return "png"
     elif file_format == "JPEG":
-        return "jpeg"
+        return "jpg"
     elif file_format == "JPEG2000":
         return "jp2"
     elif file_format == "TARGA" or file_format == "TARGA_RAW":
@@ -183,8 +183,8 @@ def _is_legacy_eevee_renderer(renderer):
 
     Note:
       In Blender <4.2 'BLENDER_EEVEE' represents Eevee renderer.
-      In Blender 4.2-5.1 'BLENDER_EEVEE_NEXT' represents Eevee renderer.
-      In Blender >5.2 'BLENDER_EEVEE' represents Eevee renderer.
+      In Blender 4.2-4.5 'BLENDER_EEVEE_NEXT' represents Eevee renderer.
+      In Blender 5.0+ 'BLENDER_EEVEE' represents Eevee renderer.
 
     Args:
         renderer (str): Renderer name.
@@ -239,7 +239,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
             "sample_count": "pass_debug_sample_count",
             "diffuse_indirect": "use_pass_diffuse_indirect",
             "specular_indirect": "use_pass_glossy_indirect",
-            "transmission_direct": "use_pass_transmission_direct",
+            "transmission_light": "use_pass_transmission_direct",
             "transmission_indirect": "use_pass_transmission_indirect",
             "transmission_color": "use_pass_transmission_color",
             "volume_light": "use_pass_volume_direct",
@@ -564,9 +564,9 @@ def prepare_rendering(
     renderer = get_renderer(project_settings)
     ver_major, ver_minor, _ = lib.get_blender_version()
 
-    # Between Blender 4.2 and 5.1, the Eevee renderer is BLENDER_EEVEE_NEXT
+    # Between Blender 4.2 and 4.5, the Eevee renderer is BLENDER_EEVEE_NEXT
     if renderer == "BLENDER_EEVEE" and (
-        (4, 2) <= (ver_major, ver_minor) <= (5, 1)
+        (4, 2) <= (ver_major, ver_minor) < (5, 0)
     ):
         renderer = "BLENDER_EEVEE_NEXT"
 

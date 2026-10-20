@@ -56,20 +56,20 @@ class ExtractFBX(
                 new_materials.append(mat)
                 new_materials_objs.append(obj)
 
-        with bpy.context.temp_override(**context):
-            # We export the fbx
-            bpy.ops.export_scene.fbx(
-                filepath=filepath,
-                use_active_collection=False,
-                use_selection=True,
-                mesh_smooth_type='FACE',
-                add_leaf_bones=False
-            )
+        with plugin.objects_in_object_mode(objects=selected):
+            with bpy.context.temp_override(**context):
+                # We export the fbx
+                bpy.ops.export_scene.fbx(
+                    filepath=filepath,
+                    use_active_collection=False,
+                    use_selection=True,
+                    mesh_smooth_type='FACE',
+                    add_leaf_bones=False
+                )
 
         plugin.deselect_all()
 
-        for mat in new_materials:
-            bpy.data.materials.remove(mat)
+        bpy.data.batch_remove(new_materials)
 
         for obj in new_materials_objs:
             obj.data.materials.pop()

@@ -1,6 +1,7 @@
 from typing import List
 
 import bpy
+from bpy_extras import anim_utils
 
 import ayon_blender.api.action
 from ayon_blender.api import plugin
@@ -9,6 +10,21 @@ from ayon_core.pipeline.publish import (
     PublishValidationError,
     OptionalPyblishPluginMixin
 )
+
+
+def get_action_fcurves(animation_data: bpy.types.AnimData) -> List:
+    """Return the F-Curves of the action assigned to the animation data.
+
+    Blender 4.4+ uses slotted actions and Blender 5.0 removed
+    `Action.fcurves`, so get the F-Curves from the assigned slot instead.
+    """
+    action = animation_data.action
+    if hasattr(anim_utils, "action_get_channelbag_for_slot"):
+        channelbag = anim_utils.action_get_channelbag_for_slot(
+            action, animation_data.action_slot
+        )
+        return list(channelbag.fcurves) if channelbag else []
+    return list(action.fcurves)
 
 
 class ValidateCameraZeroKeyframe(
@@ -34,14 +50,12 @@ class ValidateCameraZeroKeyframe(
         for obj in instance:
             if isinstance(obj, bpy.types.Object) and obj.type == "CAMERA":
                 if obj.animation_data and obj.animation_data.action:
-                    action = obj.animation_data.action
-                    frames_set = set()
-                    for fcu in action.fcurves:
-                        for kp in fcu.keyframe_points:
-                            frames_set.add(kp.co[0])
-                    frames = list(frames_set)
-                    frames.sort()
-                    if frames[0] != 0.0:
+                    frames = {
+                        keyframe.co[0]
+                        for fcurve in get_action_fcurves(obj.animation_data)
+                        for keyframe in fcurve.keyframe_points
+                    }
+                    if frames and min(frames) != 0.0:
                         invalid.append(obj)
         return invalid
 
