@@ -15,7 +15,7 @@ from ayon_blender.api.pipeline import (
     add_to_ayon_container,
     get_ayon_property
 )
-from ayon_blender.api.constants import AYON_PROPERTY
+from ayon_blender.api.constants import AYON_PROPERTY, AYON_INSTANCES
 
 
 
@@ -288,6 +288,8 @@ class BlendLoader(plugin.BlenderLoader):
         group_name = container["objectName"]
         asset_group = bpy.data.objects.get(group_name)
 
+        # remove the animation instances created for this rig/layout too
+        self._remove_animation_instances(asset_group)
         members = set(asset_group.get(AYON_PROPERTY).get("members", []))
 
         # We need to update all the parent container members
@@ -301,3 +303,15 @@ class BlendLoader(plugin.BlenderLoader):
         members.discard(None)
         members.add(asset_group)
         bpy.data.batch_remove(members)
+
+    def _remove_animation_instances(self, asset_group):
+        """Remove the animation instances auto-created for the loaded rigs."""
+        instances = bpy.data.collections.get(AYON_INSTANCES)
+        if not instances:
+            return
+        candidates = {asset_group, *asset_group.children_recursive}
+        anim_instances = {
+            collection for collection in instances.children
+            if candidates.intersection(collection.objects)
+        }
+        bpy.data.batch_remove(anim_instances)
