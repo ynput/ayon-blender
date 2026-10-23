@@ -1,6 +1,7 @@
 import contextlib
 import hashlib
 import importlib
+import itertools
 import os
 import re
 import traceback
@@ -459,6 +460,47 @@ def _strip_name_number_suffix(name: str) -> str:
     return re.sub(r"\.\d{3,}$", "", name)
 
 
+def _get_alembic_name(name: str) -> str:
+    """Return the name as written by Blender's Alembic exporter.
+
+    Mirrors `get_valid_abc_name` in Blender's Alembic exporter, which
+    replaces spaces, periods, colons and slashes with underscores. For
+    example 'bolt.001' -> 'bolt_001'.
+    """
+    return re.sub(r"[ .:/]", "_", name)
+
+
+def _match_published_name(
+    name: str,
+    published_names: Iterable[str],
+    published_names_by_alembic_name: Dict[str, str],
+) -> Optional[str]:
+    """Return the published object name that matches the object name.
+
+    The candidates are tried in order:
+        1. The name without namespace, e.g. 'body_GEO'.
+        2. Without Blender's number suffix: 'body_GEO.001' -> 'body_GEO'.
+        3. As the Alembic name of a published name, for objects loaded
+           from Alembic: 'bolt_001' matches published 'bolt.001'.
+        4. Without the number suffix as Alembic writes it, for duplicates
+           in an Alembic file: 'body_GEO_001' -> 'body_GEO'.
+
+    An exact match always wins over the fallbacks.
+    """
+    name = _strip_name_namespace(name)
+    base_name = _strip_name_number_suffix(name)
+    for candidate in (name, base_name):
+        if candidate in published_names:
+            return candidate
+
+    alembic_base_name = re.sub(r"_\d{3,}$", "", base_name)
+    for candidate in (name, base_name, alembic_base_name):
+        published_name = published_names_by_alembic_name.get(candidate)
+        if published_name:
+            return published_name
+    return None
+
+
 def get_material_assignments(
     objects: Iterable[bpy.types.Object],
 ) -> Dict[str, Dict[str, List[Dict]]]:
@@ -526,7 +568,10 @@ def assign_materials_by_name(
     The object names are compared without namespace. When an object has no
     exact match in the relationships, its name without Blender's duplicate
     number suffix is tried (e.g. 'body_GEO.001' matches 'body_GEO') so that
-    duplicates of the published model receive the look as well.
+    duplicates of the published model receive the look as well. Names of
+    objects loaded from Alembic files are matched too, where '.' became '_'
+    (e.g. 'bolt_001' matches 'bolt.001', 'body_GEO_001' matches 'body_GEO').
+    See `_match_published_name` for the exact order.
 
     Material slots are added to the object (data) when it has fewer slots
     than the look requires. Linked (library) data that cannot be edited is
@@ -566,6 +611,14 @@ def assign_materials_by_name(
                 (member["slot"], member.get("link", "DATA"), material)
             )
 
+    # Published names by the name Alembic would write, to match objects
+    # loaded from Alembic files
+    published_names_by_alembic_name = {}
+    for published_name in sorted(assignments_by_name):
+        published_names_by_alembic_name.setdefault(
+            _get_alembic_name(published_name), published_name
+        )
+
     assigned_objects = []
     matched_names = set()
     for obj in dict.fromkeys(objects):  # unique, but preserve order
@@ -575,12 +628,12 @@ def assign_materials_by_name(
         ):
             continue
 
-        name = _strip_name_namespace(obj.name)
-        if name not in assignments_by_name:
-            name = _strip_name_number_suffix(name)
-        assignments = assignments_by_name.get(name)
-        if not assignments:
+        name = _match_published_name(
+            obj.name, assignments_by_name, published_names_by_alembic_name
+        )
+        if name is None:
             continue
+        assignments = assignments_by_name[name]
         matched_names.add(name)
 
         if obj.library or obj.data.library:
@@ -1009,6 +1062,110 @@ def strip_namespace(containers):
     finally:
         for node, original_name in original_names.items():
             node.name = original_name
+
+
+# Blender data collections per `ID.id_type` of objects and object data
+_DATA_COLLECTION_BY_ID_TYPE = {
+    "OBJECT": "objects",
+    "MESH": "meshes",
+    "CURVE": "curves",
+    "CURVES": "hair_curves",
+    "POINTCLOUD": "pointclouds",
+    "VOLUME": "volumes",
+    "META": "metaballs",
+    "LATTICE": "lattices",
+    "GREASEPENCIL": "grease_pencils",
+    "GREASEPENCIL_V3": "grease_pencils_v3",
+    "CAMERA": "cameras",
+    "LIGHT": "lights",
+}
+
+
+def _get_local_id_by_name(
+    id_block: bpy.types.ID, name: str
+) -> Optional[bpy.types.ID]:
+    """Return the local data block of the same type with the given name."""
+    attr = _DATA_COLLECTION_BY_ID_TYPE.get(id_block.id_type)
+    collection = getattr(bpy.data, attr, None) if attr else None
+    if collection is None:
+        return None
+    found = collection.get(name)
+    # `get` returns a linked data block if there is no local one
+    if found is None or found.library is not None:
+        return None
+    return found
+
+
+@contextlib.contextmanager
+def strip_namespace_from_objects(objects: Iterable[bpy.types.Object]):
+    """Remove namespaces from object (and object data) names during context.
+
+    For example 'char_01_modelMain:body_GEO' is renamed to 'body_GEO'.
+    Unlike `strip_namespace` this only renames the given objects, which is
+    intended for exporting them, and it works for all Blender versions.
+
+    When the stripped name is already used by a data block that is *not*
+    one of the given objects (or their data), that data block is renamed
+    temporarily so the given object gets the clean name. This way the
+    names in the export do not depend on what else is in the scene.
+
+    Only when two of the given objects strip to the same name, the latter
+    (sorted by name) gets Blender's number suffix, e.g. 'body_GEO.001'.
+
+    All names are restored after the context.
+
+    Args:
+        objects (Iterable[bpy.types.Object]): The objects to strip the
+            namespace from. Linked (library) data blocks are ignored.
+
+    """
+    objects = sorted(
+        {obj for obj in objects if isinstance(obj, bpy.types.Object)},
+        key=lambda obj: obj.name
+    )
+    exported_ids = set(objects)
+    exported_ids.update(obj.data for obj in objects if obj.data is not None)
+
+    # Objects first, so object names take precedence over data names
+    ids_to_strip = []
+    processed = set()
+    for id_block in itertools.chain(objects, (obj.data for obj in objects)):
+        if id_block is None or id_block in processed:
+            continue
+        processed.add(id_block)
+        if id_block.library is not None or ":" not in id_block.name:
+            continue
+        ids_to_strip.append(id_block)
+
+    original_names = {id_block: id_block.name for id_block in ids_to_strip}
+    moved_aside_names = {}
+    try:
+        # Temporarily rename data blocks that are not exported but use one
+        # of the stripped names
+        for id_block in ids_to_strip:
+            name = _strip_name_namespace(id_block.name)
+            other = _get_local_id_by_name(id_block, name)
+            if (
+                other is None
+                or other in exported_ids
+                or other in moved_aside_names
+            ):
+                continue
+            moved_aside_names[other] = other.name
+            other.name = "__ayon_tmp__"  # Blender makes it unique
+
+        for id_block in ids_to_strip:
+            id_block.name = _strip_name_namespace(id_block.name)
+
+        yield
+
+    finally:
+        # Restore the stripped names first so the original names of the
+        # data blocks that were moved aside are free again
+        for id_block, name in original_names.items():
+            id_block.name = name
+        for id_block, name in moved_aside_names.items():
+            id_block.name = name
 
 
 @contextlib.contextmanager

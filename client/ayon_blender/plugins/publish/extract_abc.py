@@ -5,6 +5,7 @@ import bpy
 from ayon_core.lib import BoolDef, EnumDef
 from ayon_core.pipeline import publish
 from ayon_blender.api import plugin
+from ayon_blender.api.lib import strip_namespace_from_objects
 
 
 class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
@@ -58,18 +59,22 @@ class ExtractABC(plugin.BlenderExtractor, publish.OptionalPyblishPluginMixin):
         if "frameEndHandle" in instance.data:
             kwargs["end"]: int = instance.data["frameEndHandle"]
 
-        with bpy.context.temp_override(**context):
-            # We export the abc
-            bpy.ops.wm.alembic_export(
-                filepath=filepath,
-                selected=True,
-                flatten=False,
-                subdiv_schema=attr_values.get("subdiv_schema",
-                                              self.subdiv_schema),
-                evaluation_mode=attr_values.get("evaluation_mode",
-                                                self.evaluation_mode),
-                **kwargs
-            )
+        # Export without namespaces, so the names in the Alembic file match
+        # the names of the published model, e.g. 'body_GEO' instead of
+        # 'char_01_modelMain_body_GEO' (Alembic replaces ':' with '_')
+        with strip_namespace_from_objects(selected):
+            with bpy.context.temp_override(**context):
+                # We export the abc
+                bpy.ops.wm.alembic_export(
+                    filepath=filepath,
+                    selected=True,
+                    flatten=False,
+                    subdiv_schema=attr_values.get("subdiv_schema",
+                                                  self.subdiv_schema),
+                    evaluation_mode=attr_values.get("evaluation_mode",
+                                                    self.evaluation_mode),
+                    **kwargs
+                )
 
         plugin.deselect_all()
 
