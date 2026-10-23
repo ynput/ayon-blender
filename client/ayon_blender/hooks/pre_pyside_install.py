@@ -112,14 +112,27 @@ class InstallPySideToBlender(PreLaunchHook):
 
         versions_dir = self.find_versions_dir(executable)
         if versions_dir is None:
-            self.log.warning(
-                "Could not find Blender's install folder (a '<version>' folder"
-                " containing 'python') around '%s'. Point the application at"
-                " the Blender binary instead of the wrapper, or place the"
-                " wrapper inside the Blender installation folder (e.g."
-                " '<install>/bin/blender').",
-                executable,
-            )
+            hint = (
+                "\n"
+                "[AYON] Blender was launched through '{}'\n"
+                "       but Blender's install folder could not be found next"
+                " to it or in its parent\n"
+                "       directories (expected a '<version>' folder such as"
+                " '5.2' containing 'python').\n"
+                "       Blender's python packages are therefore not on"
+                " PYTHONPATH and PySide6 is\n"
+                "       not installed: the AYON menu will not load, and"
+                " imports may fail with\n"
+                "       \"ImportError: cannot import name 'NothingType'"
+                " from 'attrs'\".\n"
+                "       Fix: set the Blender application's \"Executable\" to"
+                " the Blender binary\n"
+                "       instead of a wrapper script, or place the wrapper"
+                " inside the Blender\n"
+                "       installation folder (e.g."
+                " '<install>/bin/blender').\n"
+            ).format(executable)
+            self.log.warning(hint)
             return
 
         version_subfolders = [
