@@ -61,19 +61,23 @@ class ExtractAnimationABC(
 
         context = plugin.create_blender_context(
             active=asset_group, selected=selected)
-        with bpy.context.temp_override(**context):
-            # We export the abc
-            bpy.ops.wm.alembic_export(
-                filepath=filepath,
-                selected=True,
-                flatten=False,
-                start=instance.data["frameStartHandle"],
-                end=instance.data["frameEndHandle"],
-                subdiv_schema=attr_values.get("subdiv_schema",
-                                              self.subdiv_schema),
-                evaluation_mode=attr_values.get("evaluation_mode",
-                                                self.evaluation_mode),
-            )
+        # Export without namespaces, so the names in the Alembic file match
+        # the names of the published model, e.g. 'body_GEO' instead of
+        # 'char_01_rigMain_body_GEO' (Alembic replaces ':' with '_')
+        with lib.strip_namespace_from_objects(selected):
+            with bpy.context.temp_override(**context):
+                # We export the abc
+                bpy.ops.wm.alembic_export(
+                    filepath=filepath,
+                    selected=True,
+                    flatten=False,
+                    start=instance.data["frameStartHandle"],
+                    end=instance.data["frameEndHandle"],
+                    subdiv_schema=attr_values.get("subdiv_schema",
+                                                  self.subdiv_schema),
+                    evaluation_mode=attr_values.get("evaluation_mode",
+                                                    self.evaluation_mode),
+                )
 
         plugin.deselect_all()
 
