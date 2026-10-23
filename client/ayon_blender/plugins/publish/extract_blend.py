@@ -1,4 +1,5 @@
 import os
+import json
 import contextlib
 
 
@@ -14,6 +15,7 @@ from ayon_blender.api.lib import (
     strip_namespace,
     packed_images,
     make_material_image_paths_absolute,
+    get_material_assignments,
 )
 
 
@@ -155,17 +157,55 @@ class ExtractBlendAction(ExtractBlend):
 
 
 class ExtractBlendLook(ExtractBlend):
-    """Extract a blend file from the current scene."""
+    """Extract the look materials to a .blend file.
+
+    Alongside the .blend file a .json file is extracted that records which
+    material is assigned to which object (material slot), so the loader can
+    re-assign the materials to objects with matching names.
+    """
     families = ["look"]
     label = "Extract Blend (Look)"
     optional = False
     # From settings
     compress = False
 
+    def process(self, instance):
+        # Extract the materials to a .blend file
+        super().process(instance)
+
+        # Extract the material assignments to a .json file
+        relationships = get_material_assignments(instance)
+        if not relationships:
+            self.log.warning(
+                "No material assignments found for the objects in instance"
+                " '%s'.", instance.name
+            )
+
+        stagingdir = self.staging_dir(instance)
+        folder_name = instance.data["folderEntity"]["name"]
+        product_name = instance.data["productName"]
+        filename = f"{folder_name}_{product_name}.json"
+        filepath = os.path.join(stagingdir, filename)
+
+        self.log.debug("Extracting material assignments to: %s", filepath)
+        with open(filepath, "w") as f:
+            json.dump({"relationships": relationships}, f, indent=4)
+
+        instance.data["representations"].append({
+            "name": "json",
+            "ext": "json",
+            "files": filename,
+            "stagingDir": stagingdir,
+        })
+
     def add_datablock(self, instance: pyblish.api.Instance) -> set:
         """Add the material data block to the blend file.
         The datablock needs to be exported along with its linked objects
         to preserve the material's node tree and texture links.
+
+        Both the materials of the object data and the materials of the
+        object's material slots are included, so materials linked to the
+        object (instead of its data) are exported as well.
 
         Args:
             instance (pyblish.api.Instance): The instance to add.
@@ -180,4 +220,9 @@ class ExtractBlendLook(ExtractBlend):
             if not hasattr(obj.data, "materials"):
                 continue
             datablock_to_be_exported.update(obj.data.materials)
+            datablock_to_be_exported.update(
+                slot.material for slot in obj.material_slots
+            )
+        # Ignore empty material slots
+        datablock_to_be_exported.discard(None)
         return datablock_to_be_exported

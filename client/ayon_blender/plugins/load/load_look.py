@@ -1,11 +1,14 @@
-"""Load a model asset in Blender."""
+"""Load a look (materials) in Blender."""
+import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ayon_core.lib import BoolDef
+import ayon_api
+
+from ayon_core.lib import BoolDef, EnumDef
 from ayon_core.pipeline.load import LoadError
-from ayon_blender.api import plugin
+from ayon_blender.api import lib, plugin
 from ayon_blender.api.pipeline import (
     containerise_existing,
     metadata_update,
@@ -17,7 +20,13 @@ import bpy
 
 
 class BlendLookLoader(plugin.BlenderLoader):
-    """Load material datablock from a .blend file."""
+    """Load material datablock from a .blend file.
+
+    When the look has a 'json' representation with the material assignments
+    (published alongside the .blend file), the materials are assigned to the
+    objects with matching names. On update, the assignments are re-applied
+    to the objects that use the look's materials.
+    """
 
     product_base_types = {"look"}
     product_types = product_base_types
@@ -34,7 +43,22 @@ class BlendLookLoader(plugin.BlenderLoader):
             label="Use Fake User",
             default=True,
             tooltip="Set the fake user for the loaded asset.",
-        )
+        ),
+        EnumDef(
+            "assign_materials",
+            label="Assign Materials",
+            items=[
+                {"value": "selected",
+                 "label": "Selected objects (and children)"},
+                {"value": "scene", "label": "All objects in scene"},
+                {"value": "none", "label": "Don't assign"},
+            ],
+            default="selected",
+            tooltip=(
+                "Assign the look materials to objects whose names match"
+                " the objects the look was published with."
+            ),
+        ),
     ]
 
     def get_existing_library(self, libpath: str) -> Optional[bpy.types.Library]:
@@ -55,6 +79,119 @@ class BlendLookLoader(plugin.BlenderLoader):
             return True
         return False
 
+    @staticmethod
+    def _link_materials(libpath: str) -> List[bpy.types.Material]:
+        """Link all materials (and images) from the library file."""
+        relative = bpy.context.preferences.filepaths.use_relative_paths
+        with bpy.data.libraries.load(
+            libpath, link=True, relative=relative
+        ) as (data_from, data_to):
+            data_to.materials = data_from.materials
+            data_to.images = data_from.images
+        return [
+            material for material in data_to.materials
+            if material is not None
+        ]
+
+    def _get_material_assignments(self, context: dict) -> Optional[dict]:
+        """Get the material assignments published with the look version.
+
+        Returns:
+            Optional[dict]: The material assignments ('relationships') or
+                None when the version has no 'json' representation, e.g.
+                looks published before assignments were recorded.
+        """
+        project_name = context["project"]["name"]
+        version_id = context["version"]["id"]
+        repre_entity = next(
+            iter(ayon_api.get_representations(
+                project_name,
+                representation_names={"json"},
+                version_ids={version_id},
+            )),
+            None
+        )
+        if not repre_entity:
+            self.log.info(
+                "No material assignments ('json' representation) found for"
+                " this look version. Skipping material assignment."
+            )
+            return None
+
+        path = self.filepath_from_context(
+            {**context, "representation": repre_entity}
+        )
+        if not os.path.exists(path):
+            self.log.warning(
+                "Material assignments file not found: %s", path
+            )
+            return None
+
+        with open(path, "r") as f:
+            return json.load(f).get("relationships", {})
+
+    @staticmethod
+    def _get_objects_to_assign(scope: str) -> List[bpy.types.Object]:
+        """Return the objects to consider for material assignment."""
+        if scope == "scene":
+            return list(bpy.context.scene.objects)
+        if scope == "selected":
+            objects = []
+            for obj in lib.get_selection():
+                objects.append(obj)
+                objects.extend(obj.children_recursive)
+            return objects
+        return []
+
+    @staticmethod
+    def _get_objects_using_library(
+        library: Optional[bpy.types.Library]
+    ) -> List[bpy.types.Object]:
+        """Return objects with a material from the library assigned."""
+        if not library:
+            return []
+        return [
+            obj for obj in bpy.data.objects
+            if any(
+                slot.material and slot.material.library == library
+                for slot in obj.material_slots
+            )
+        ]
+
+    def _assign_materials(
+        self,
+        context: dict,
+        materials: List[bpy.types.Material],
+        objects: List[bpy.types.Object],
+    ):
+        """Assign materials to the objects by matching names."""
+        if not objects:
+            return
+        try:
+            relationships = self._get_material_assignments(context)
+        except Exception:
+            # Do not fail loading the materials when the assignments
+            # cannot be retrieved
+            self.log.error(
+                "Failed to get the material assignments of the look.",
+                exc_info=True
+            )
+            return
+        if not relationships:
+            return
+        assigned = lib.assign_materials_by_name(
+            relationships, materials, objects, logger=self.log
+        )
+        if assigned:
+            self.log.info(
+                "Assigned look materials to %d object(s).", len(assigned)
+            )
+        else:
+            self.log.warning(
+                "No objects with matching names found to assign the look"
+                " materials to."
+            )
+
     def process_asset(
         self, context: dict, name: str, namespace: Optional[str] = None,
         options: Optional[Dict] = None
@@ -66,10 +203,20 @@ class BlendLookLoader(plugin.BlenderLoader):
             context: Full parenthood of representation to load
             options: Additional settings dictionary
         """
+        options = options or {}
         libpath = self.filepath_from_context(context)
         folder_name = context["folder"]["name"]
         product_name = context["product"]["name"]
         lib_container = plugin.prepare_scene_name(folder_name, product_name)
+
+        # Get the objects to assign the materials to before the selection
+        # is cleared
+        assign_scope = options.get("assign_materials", "selected")
+        objects_to_assign = self._get_objects_to_assign(assign_scope)
+        if assign_scope == "selected" and not objects_to_assign:
+            self.log.warning(
+                "No objects selected to assign the look materials to."
+            )
 
         container = bpy.data.collections.new(lib_container)
         containerise_existing(
@@ -82,19 +229,12 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         container_metadata = container.get(AYON_PROPERTY)
 
-        relative = bpy.context.preferences.filepaths.use_relative_paths
-        with bpy.data.libraries.load(
-            libpath, link=True, relative=relative
-        ) as (data_from, data_to):
-            data_to.materials = data_from.materials
-            data_to.images = data_from.images
-
-        if not data_to.materials:
+        materials = self._link_materials(libpath)
+        if not materials:
             raise LoadError(
                 "No material found in the file, please check if "
                 "there is any material datablock in the blend file."
             )
-        materials = data_to.materials
         for material in materials:
             material.use_fake_user = options.get("use_fake_user", True)
         container_metadata["library"] = next(
@@ -102,6 +242,9 @@ class BlendLookLoader(plugin.BlenderLoader):
             in materials if material.library
         )
         metadata_update(container, container_metadata)
+
+        self._assign_materials(context, materials, objects_to_assign)
+
         bpy.ops.object.select_all(action='DESELECT')
         self[:] = [materials]
 
@@ -119,6 +262,10 @@ class BlendLookLoader(plugin.BlenderLoader):
         library = container["library"]
         libpath = self.filepath_from_context(context)
         existing_library = self.get_existing_library(libpath)
+
+        # Objects using the current look materials get the material
+        # assignments of the new version re-applied after the update
+        objects_to_assign = self._get_objects_using_library(library)
 
         # The new path may be the same path the library is already set to when
         # updating to same version (which would merely force a reload) but
@@ -143,6 +290,9 @@ class BlendLookLoader(plugin.BlenderLoader):
                     " Merging container with existing containerized library."
                 )
                 self.remove(container)
+                self._reassign_after_update(
+                    context, libpath, objects_to_assign
+                )
                 return
             else:
                 # Update current container to point to the
@@ -155,6 +305,28 @@ class BlendLookLoader(plugin.BlenderLoader):
 
         new_metadata["representation"] = repre_entity["id"]
         metadata_update(collection, new_metadata)
+
+        self._reassign_after_update(context, libpath, objects_to_assign)
+
+    def _reassign_after_update(
+        self,
+        context: Dict,
+        libpath: str,
+        objects: List[bpy.types.Object],
+    ):
+        """Re-apply the material assignments of the updated look version.
+
+        Materials that are new in this version are linked as well, so they
+        can be assigned.
+        """
+        if not objects:
+            return
+        materials = self._link_materials(libpath)
+        for material in materials:
+            # Protect newly linked, unassigned materials from being purged
+            if not material.users:
+                material.use_fake_user = True
+        self._assign_materials(context, materials, objects)
 
     def remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene.

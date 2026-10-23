@@ -2,7 +2,9 @@ import contextlib
 import hashlib
 import importlib
 import os
+import re
 import traceback
+from collections import defaultdict
 from typing import Dict, Iterable, List, Optional, Union
 
 import addon_utils
@@ -442,6 +444,186 @@ def make_material_image_paths_absolute(material_datablocks: set[bpy.types.Materi
     finally:
         for image, path in original_image_paths.items():
             image.filepath = path
+
+
+def _strip_name_namespace(name: str) -> str:
+    """Return the name without its namespace, e.g. 'asset_01:body' -> 'body'"""
+    return name.rsplit(":", 1)[-1]
+
+
+def _strip_name_number_suffix(name: str) -> str:
+    """Return the name without Blender's duplicate number suffix.
+
+    For example 'body.001' -> 'body'.
+    """
+    return re.sub(r"\.\d{3,}$", "", name)
+
+
+def get_material_assignments(
+    objects: Iterable[bpy.types.Object],
+) -> Dict[str, Dict[str, List[Dict]]]:
+    """Return which material is assigned to which object material slot.
+
+    The data is keyed by material name and lists the objects ('members')
+    that use the material, similar to the look 'relationships' data of
+    the Maya integration. Each member records the object name (without
+    namespace, so it matches the name of the published model), the material
+    slot index and whether the slot links the material to the object
+    ('OBJECT') or to its data ('DATA').
+
+    Example:
+        >>> get_material_assignments(objects)
+        {
+            "body_MAT": {
+                "members": [
+                    {"name": "body_GEO", "slot": 0, "link": "DATA"}
+                ]
+            }
+        }
+
+    Args:
+        objects (Iterable[bpy.types.Object]): Objects to get the material
+            assignments for. Non-object data blocks are ignored.
+
+    Returns:
+        Dict[str, Dict[str, List[Dict]]]: Material assignments per material.
+
+    """
+    relationships: Dict[str, Dict[str, List[Dict]]] = {}
+    objects = sorted(
+        (
+            obj for obj in objects
+            if isinstance(obj, bpy.types.Object)
+            and hasattr(obj.data, "materials")
+        ),
+        key=lambda obj: obj.name
+    )
+    for obj in objects:
+        object_name = _strip_name_namespace(obj.name)
+        for index, slot in enumerate(obj.material_slots):
+            material = slot.material
+            if material is None:
+                continue
+            material_data = relationships.setdefault(
+                material.name, {"members": []}
+            )
+            material_data["members"].append({
+                "name": object_name,
+                "slot": index,
+                "link": slot.link,
+            })
+    return relationships
+
+
+def assign_materials_by_name(
+    relationships: Dict[str, Dict[str, List[Dict]]],
+    materials: Iterable[bpy.types.Material],
+    objects: Iterable[bpy.types.Object],
+    logger=None,
+) -> List[bpy.types.Object]:
+    """Assign materials to objects by matching object names.
+
+    The object names are compared without namespace. When an object has no
+    exact match in the relationships, its name without Blender's duplicate
+    number suffix is tried (e.g. 'body_GEO.001' matches 'body_GEO') so that
+    duplicates of the published model receive the look as well.
+
+    Material slots are added to the object (data) when it has fewer slots
+    than the look requires. Linked (library) data that cannot be edited is
+    skipped with a warning.
+
+    Args:
+        relationships (Dict[str, Dict[str, List[Dict]]]): Material assignments
+            as returned by `get_material_assignments`.
+        materials (Iterable[bpy.types.Material]): The loaded look materials.
+        objects (Iterable[bpy.types.Object]): Objects to assign materials to.
+        logger (Optional[logging.Logger]): Logger to use.
+
+    Returns:
+        List[bpy.types.Object]: The objects that received material
+            assignments.
+
+    """
+    logger = logger or log
+    materials_by_name = {
+        material.name: material
+        for material in materials
+        if material is not None
+    }
+
+    # Collect the slot assignments per published object name
+    assignments_by_name = defaultdict(list)
+    for material_name, material_data in relationships.items():
+        material = materials_by_name.get(material_name)
+        if material is None:
+            logger.warning(
+                "Material '%s' not found in the loaded look, skipping its "
+                "assignments.", material_name
+            )
+            continue
+        for member in material_data.get("members", []):
+            assignments_by_name[member["name"]].append(
+                (member["slot"], member.get("link", "DATA"), material)
+            )
+
+    assigned_objects = []
+    matched_names = set()
+    for obj in dict.fromkeys(objects):  # unique, but preserve order
+        if not (
+            isinstance(obj, bpy.types.Object)
+            and hasattr(obj.data, "materials")
+        ):
+            continue
+
+        name = _strip_name_namespace(obj.name)
+        if name not in assignments_by_name:
+            name = _strip_name_number_suffix(name)
+        assignments = assignments_by_name.get(name)
+        if not assignments:
+            continue
+        matched_names.add(name)
+
+        if obj.library or obj.data.library:
+            logger.warning(
+                "Skipping material assignment on '%s' because it is linked "
+                "from library '%s'. Make it local to assign the look.",
+                obj.name, (obj.library or obj.data.library).filepath
+            )
+            continue
+
+        try:
+            for slot_index, link, material in sorted(
+                assignments, key=lambda assignment: assignment[0]
+            ):
+                # Add missing material slots
+                while len(obj.material_slots) <= slot_index:
+                    obj.data.materials.append(None)
+                slot = obj.material_slots[slot_index]
+                if link in {"DATA", "OBJECT"} and slot.link != link:
+                    slot.link = link
+                slot.material = material
+        except (AttributeError, RuntimeError, TypeError) as exc:
+            logger.warning(
+                "Failed to assign materials to '%s': %s", obj.name, exc
+            )
+            continue
+
+        logger.debug(
+            "Assigned materials to '%s': %s",
+            obj.name,
+            ", ".join(material.name for _, _, material in assignments)
+        )
+        assigned_objects.append(obj)
+
+    unmatched_names = set(assignments_by_name) - matched_names
+    if unmatched_names:
+        logger.debug(
+            "No objects found matching names: %s",
+            ", ".join(sorted(unmatched_names))
+        )
+
+    return assigned_objects
+
 
 @contextlib.contextmanager
 def maintained_selection():
