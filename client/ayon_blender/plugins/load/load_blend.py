@@ -16,7 +16,11 @@ from ayon_blender.api.pipeline import (
     get_ayon_property
 )
 from ayon_blender.api.constants import AYON_PROPERTY
-
+from ayon_blender.api.material_assignments import (
+    apply_material_overrides,
+    get_material_layout,
+    get_material_overrides,
+)
 
 
 class BlendLoader(plugin.BlenderLoader):
@@ -174,6 +178,10 @@ class BlendLoader(plugin.BlenderLoader):
 
         add_to_ayon_container(container)
 
+        # Record the material layout as it was loaded. On update this tells us
+        # which material slots were changed locally by the artist
+        material_baseline = get_material_layout(container.children_recursive)
+
         data = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
@@ -186,6 +194,7 @@ class BlendLoader(plugin.BlenderLoader):
             "objectName": group_name,
             "members": members,
             "project_name": context["project"]["name"],
+            "material_baseline": material_baseline,
         }
 
         container[AYON_PROPERTY] = data
@@ -212,10 +221,23 @@ class BlendLoader(plugin.BlenderLoader):
         )
 
         transform = asset_group.matrix_basis.copy()
-        old_data = dict(asset_group.get(AYON_PROPERTY))
+        # `to_dict` returns plain Python values. A shallow `dict()` would keep
+        # the nested groups of the property alive, which corrupts the property
+        # when it is assigned back below.
+        old_data = asset_group.get(AYON_PROPERTY).to_dict()
         old_members = old_data.get("members", [])
         parent = asset_group.parent
         users_collections = asset_group.users_collection
+
+        # Find the material slots the artist changed locally, so that they can
+        # be restored on the objects of the new version.
+        material_overrides = get_material_overrides(
+            current_layout=get_material_layout(
+                asset_group.children_recursive
+            ),
+            baseline_layout=old_data.get("material_baseline"),
+            container_name=group_name,
+        )
 
         actions = {}
         objects_with_anim = [
@@ -233,6 +255,12 @@ class BlendLoader(plugin.BlenderLoader):
         asset_group, members = self._process_data(libpath, group_name)
 
         add_to_ayon_container(asset_group)
+
+        # Record the material layout of the newly loaded version *before*
+        # restoring the local overrides, so that the baseline keeps describing
+        # the published materials.
+        material_baseline = get_material_layout(asset_group.children_recursive)
+        apply_material_overrides(material_overrides, logger=self.log)
 
         asset_group.matrix_basis = transform
         asset_group.parent = parent
@@ -255,6 +283,7 @@ class BlendLoader(plugin.BlenderLoader):
             "representation": repre_entity["id"],
             "members": members,
             "project_name": context["project"]["name"],
+            "material_baseline": material_baseline,
         }
 
         imprint(asset_group, new_data)

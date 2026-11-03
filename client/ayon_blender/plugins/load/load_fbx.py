@@ -13,6 +13,12 @@ from ayon_blender.api.constants import (
     VALID_EXTENSIONS,
 )
 from ayon_blender.api.pipeline import add_to_ayon_container
+from ayon_blender.api.material_assignments import (
+    apply_material_overrides,
+    get_material_layout,
+    get_material_overrides,
+    get_preserved_material_names,
+)
 
 
 class FbxModelLoader(plugin.BlenderLoader):
@@ -30,15 +36,27 @@ class FbxModelLoader(plugin.BlenderLoader):
     icon = "code-fork"
     color = "orange"
 
-    def _remove(self, asset_group, remove_asset_group=False):
+    def _remove(self, asset_group, remove_asset_group=False,
+                preserve_materials=None):
+        """Remove the datablocks that were loaded with the container.
+
+        Arguments:
+            asset_group (bpy.types.Object): Container to remove the content of.
+            remove_asset_group (bool): Whether to also remove the container.
+            preserve_materials (Optional[set]): Names of materials that must
+                not be removed because they were assigned locally and need to
+                be restored after the update.
+        """
         objects = list(asset_group.children)
         datablocks = set()
+        preserve_materials = preserve_materials or set()
 
         for obj in objects:
             if obj.type == 'MESH':
                 for material_slot in obj.material_slots:
-                    if material_slot.material:
-                        datablocks.add(material_slot.material)
+                    material = material_slot.material
+                    if material and material.name not in preserve_materials:
+                        datablocks.add(material)
                 datablocks.add(obj.data)
             elif obj.type == 'ARMATURE':
                 objects.extend(obj.children)
@@ -164,6 +182,10 @@ class FbxModelLoader(plugin.BlenderLoader):
 
         bpy.context.scene.collection.objects.link(asset_group)
 
+        # Record the material layout as it was loaded. On update this tells us
+        # which material slots were changed locally by the artist
+        material_baseline = get_material_layout(asset_group.children_recursive)
+
         asset_group[AYON_PROPERTY] = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
@@ -175,6 +197,7 @@ class FbxModelLoader(plugin.BlenderLoader):
             "asset_name": asset_name,
             "objectName": group_name,
             "project_name": context["project"]["name"],
+            "material_baseline": material_baseline,
         }
 
         self[:] = objects
@@ -247,15 +270,40 @@ class FbxModelLoader(plugin.BlenderLoader):
                 action = armature.animation_data.action
 
         mat = asset_group.matrix_basis.copy()
-        self._remove(asset_group)
+
+        # Find the material slots the artist changed locally, so that they can
+        # be restored on the objects of the new version.
+        material_overrides = get_material_overrides(
+            current_layout=get_material_layout(
+                asset_group.children_recursive
+            ),
+            baseline_layout=metadata.get("material_baseline"),
+            container_name=object_name,
+        )
+
+        self._remove(
+            asset_group,
+            preserve_materials=get_preserved_material_names(
+                material_overrides, container_name=object_name
+            ),
+        )
 
         self._process(str(libpath), asset_group, object_name, action)
+
+        # Record the material layout of the newly loaded version *before*
+        # restoring the local overrides, so that the baseline keeps describing
+        # the published materials.
+        material_baseline = get_material_layout(
+            asset_group.children_recursive
+        )
+        apply_material_overrides(material_overrides, logger=self.log)
 
         asset_group.matrix_basis = mat
 
         metadata["libpath"] = str(libpath)
         metadata["representation"] = repre_entity["id"]
         metadata["project_name"] = context["project"]["name"]
+        metadata["material_baseline"] = material_baseline
 
     def exec_remove(self, container: Dict) -> bool:
         """Remove an existing container from a Blender scene.
