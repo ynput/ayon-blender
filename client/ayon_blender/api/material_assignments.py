@@ -70,7 +70,8 @@ def get_material_layout(
         Dict[str, list]: Object name mapped to its material slots ordered by
             slot index. Every slot is a dict with the `material` name (empty
             string for an empty slot) and the `link` type (`DATA` or
-            `OBJECT`). Objects without material slots are skipped.
+            `OBJECT`). Material-capable objects without slots are included as
+            empty lists.
     """
     layout: Dict[str, list] = {}
     for obj in objects:
@@ -83,8 +84,6 @@ def get_material_layout(
             }
             for slot in obj.material_slots
         ]
-        if not slots:
-            continue
         layout[obj.name] = slots
     return layout
 
