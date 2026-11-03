@@ -129,8 +129,9 @@ def get_material_overrides(
             continue
 
         if current is None:
-            # Every material slot was removed locally.
-            overrides[obj_name] = {"slots": {}, "slot_count": 0}
+            # Objects without slots are recorded as an empty list, so a
+            # missing entry means the object was deleted or renamed locally.
+            # There is nothing to restore for it.
             continue
 
         # Compare slot by slot so that slots the artist did not touch keep
