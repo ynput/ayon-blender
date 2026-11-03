@@ -20,6 +20,7 @@ from ayon_blender.api.material_assignments import (
     apply_material_overrides,
     get_material_layout,
     get_material_overrides,
+    get_members_still_in_use,
 )
 
 
@@ -329,4 +330,11 @@ class BlendLoader(plugin.BlenderLoader):
 
         members.discard(None)
         members.add(asset_group)
+
+        # Keep the dependencies of datablocks that live outside of the
+        # container, e.g. the images and node groups of a material the artist
+        # duplicated and edited locally. Removing those would leave the
+        # artist's copy broken instead of preserving it.
+        members -= get_members_still_in_use(members)
+
         bpy.data.batch_remove(members)

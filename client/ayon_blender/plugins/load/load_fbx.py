@@ -284,7 +284,8 @@ class FbxModelLoader(plugin.BlenderLoader):
         self._remove(
             asset_group,
             preserve_materials=get_preserved_material_names(
-                material_overrides, container_name=object_name
+                material_overrides,
+                baseline_layout=metadata.get("material_baseline"),
             ),
         )
 

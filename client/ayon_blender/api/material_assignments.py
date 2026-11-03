@@ -18,6 +18,18 @@ Keeping only the changed slots means slots that the artist never touched keep
 following the published file, so material changes coming from a new version
 still come through.
 
+A material counts as published when the recorded baseline assigns it to a
+slot. Anything else was assigned locally, including datablocks Blender
+duplicated on the artist's behalf, e.g. `my_model_01_model:wood.001`. Those
+copies therefore need to be excluded from the datablocks a loader removes
+before the new version is imported, see :func:`get_preserved_material_names`
+and :func:`get_members_still_in_use`.
+
+Containers loaded before this feature existed have no baseline. For those the
+slots are compared by name prefix instead, which cannot tell a duplicated
+published material apart from a published one. They get a baseline recorded on
+their next update and are handled exactly from then on.
+
 An empty slot is represented by an empty string, because Blender's ID
 properties cannot store `None` values.
 """
@@ -30,6 +42,20 @@ from typing import Any, Dict, Iterable, List, Optional
 import bpy
 
 log = logging.getLogger(__name__)
+
+# Datablock types that a locally duplicated material can reference and that a
+# loader may remove together with the container. Objects and meshes are
+# deliberately excluded: they are always removed with the container, and
+# Blender reports the scene as a user of every object, which would otherwise
+# keep the whole container around.
+_DEPENDENCY_TYPES = tuple(
+    datablock_type
+    for datablock_type in (
+        getattr(bpy.types, name, None)
+        for name in ("Material", "Image", "NodeTree", "Texture")
+    )
+    if datablock_type is not None
+)
 
 
 def get_material_layout(
@@ -44,7 +70,7 @@ def get_material_layout(
         Dict[str, list]: Object name mapped to its material slots ordered by
             slot index. Every slot is a dict with the `material` name (empty
             string for an empty slot) and the `link` type (`DATA` or
-            `OBJECT`). Objects that don't support materials are skipped.
+            `OBJECT`). Objects without material slots are skipped.
     """
     layout: Dict[str, list] = {}
     for obj in objects:
@@ -67,8 +93,8 @@ def get_material_overrides(
     current_layout: Dict[str, list],
     baseline_layout: Optional[Dict[str, list]] = None,
     container_name: Optional[str] = None,
-) -> Dict[str, Dict[int, dict]]:
-    """Return the material slots that were changed locally.
+) -> Dict[str, dict]:
+    """Return the material slot changes that were made locally.
 
     Arguments:
         current_layout (Dict[str, list]): Layout of the objects as they are
@@ -83,35 +109,56 @@ def get_material_overrides(
             loaded with the container are prefixed with this name.
 
     Returns:
-        Dict[str, Dict[int, dict]]: Object name mapped to the overridden slot
-            indexes and their slot data.
+        Dict[str, dict]: Object name mapped to a dict with the `slots` that
+            differ from the baseline (slot index mapped to its slot data) and
+            the `slot_count` to restore, which is `None` when the artist did
+            not change the amount of slots.
     """
     baseline_layout = baseline_layout or {}
-    overrides: Dict[str, Dict[int, dict]] = {}
+    overrides: Dict[str, dict] = {}
 
-    for obj_name, slots in current_layout.items():
+    for obj_name in set(current_layout) | set(baseline_layout):
+        current = current_layout.get(obj_name)
         baseline = baseline_layout.get(obj_name)
-        if baseline is None:
-            changed = _get_legacy_overrides(slots, container_name)
-        elif len(baseline) != len(slots):
-            # Slots were added or removed locally. The slots no longer line up
-            # with the baseline, so keep the layout as the artist left it.
-            changed = dict(enumerate(slots))
-        else:
-            changed = {
-                index: slot
-                for index, (slot, base) in enumerate(zip(slots, baseline))
-                if _normalize_slot(slot) != _normalize_slot(base)
-            }
 
-        if changed:
-            overrides[obj_name] = changed
+        if baseline is None:
+            # No baseline for this object. Fall back to telling locally
+            # assigned materials apart by their name.
+            slots = _get_legacy_overrides(current or [], container_name)
+            if slots:
+                overrides[obj_name] = {"slots": slots, "slot_count": None}
+            continue
+
+        if current is None:
+            # Every material slot was removed locally.
+            overrides[obj_name] = {"slots": {}, "slot_count": 0}
+            continue
+
+        # Compare slot by slot so that slots the artist did not touch keep
+        # following the published file, even when the amount of slots differs.
+        # Slots beyond the baseline are slots the artist added.
+        slots = {
+            index: slot
+            for index, slot in enumerate(current)
+            if (
+                index >= len(baseline)
+                or _normalize_slot(slot) != _normalize_slot(baseline[index])
+            )
+        }
+
+        slot_count = None
+        if len(current) < len(baseline):
+            # Slots were removed locally, so restore that amount as well.
+            slot_count = len(current)
+
+        if slots or slot_count is not None:
+            overrides[obj_name] = {"slots": slots, "slot_count": slot_count}
 
     return overrides
 
 
 def apply_material_overrides(
-    overrides: Dict[str, Dict[int, dict]],
+    overrides: Dict[str, dict],
     logger: Optional[logging.Logger] = None,
 ) -> List[str]:
     """Apply material slot overrides to the objects in the current file.
@@ -121,8 +168,8 @@ def apply_material_overrides(
     update.
 
     Arguments:
-        overrides (Dict[str, Dict[int, dict]]): Overrides to apply, as
-            returned by :func:`get_material_overrides`.
+        overrides (Dict[str, dict]): Overrides to apply, as returned by
+            :func:`get_material_overrides`.
         logger (Optional[logging.Logger]): Logger to report problems with.
 
     Returns:
@@ -134,81 +181,147 @@ def apply_material_overrides(
     logger = logger or log
     missing_objects: List[str] = []
 
-    for obj_name, slots in overrides.items():
+    for obj_name, override in overrides.items():
+        slots = override.get("slots") or {}
+        slot_count = override.get("slot_count")
+
         obj = bpy.data.objects.get(obj_name)
         if obj is None:
-            logger.warning(
-                "Unable to restore material overrides: object '%s' no "
-                "longer exists in the loaded version.",
-                obj_name,
-            )
-            missing_objects.append(obj_name)
+            # Only warn when there was an assignment to restore. A pure slot
+            # count override for an object that no longer exists is expected
+            # and harmless.
+            if slots:
+                logger.warning(
+                    "Unable to restore material overrides: object '%s' no "
+                    "longer exists in the loaded version.",
+                    obj_name,
+                )
+                missing_objects.append(obj_name)
             continue
 
         if not _supports_materials(obj):
             continue
 
-        for index, slot_data in slots.items():
-            index = int(index)
-            material_name = slot_data.get("material") or ""
-            material = None
-            if material_name:
-                material = bpy.data.materials.get(material_name)
-                if material is None:
-                    logger.warning(
-                        "Unable to restore material '%s' on '%s': the "
-                        "material does not exist in the loaded version.",
-                        material_name,
-                        obj_name,
-                    )
-                    continue
+        if slot_count is not None:
+            _remove_material_slots_after(obj, slot_count)
 
-            # Make sure the slot exists on the newly loaded object, e.g. when
-            # the artist had added extra slots to the object.
-            while len(obj.material_slots) <= index:
-                obj.data.materials.append(None)
-
-            slot = obj.material_slots[index]
-            link = slot_data.get("link") or "DATA"
-            if slot.link != link:
-                # Set the link type before the material to write the material
-                # to the object instead of to the mesh data.
-                slot.link = link
-            if slot.material != material:
-                slot.material = material
+        # Apply in slot order so that slots which have to be appended are
+        # created in the right order.
+        for index in sorted(slots, key=int):
+            _apply_slot_override(
+                obj, int(index), slots[index], obj_name, logger
+            )
 
     return missing_objects
 
 
 def get_preserved_material_names(
-    overrides: Dict[str, Dict[int, dict]],
-    container_name: Optional[str] = None,
+    overrides: Dict[str, dict],
+    baseline_layout: Optional[Dict[str, list]] = None,
 ) -> set:
-    """Return the names of the materials referenced by the overrides.
+    """Return the names of the materials that must survive the update.
 
-    Loaders that delete the materials of the container on update use this to
-    avoid deleting the materials the artist assigned locally. Materials that
-    were loaded with the container are excluded, because those are re-created
-    by the import itself; keeping them would only result in the new ones being
-    suffixed with e.g. `.001`.
+    Loaders that remove the materials of the container before importing the
+    new version use this to avoid deleting materials the artist assigned or
+    duplicated locally. Materials the published file assigns to a slot are
+    excluded, because those are re-created by the import itself; keeping them
+    would only result in the new ones being suffixed with e.g. `.001`.
 
     Arguments:
-        overrides (Dict[str, Dict[int, dict]]): Overrides, as returned by
+        overrides (Dict[str, dict]): Overrides, as returned by
             :func:`get_material_overrides`.
-        container_name (Optional[str]): Name of the container whose materials
-            are re-created on load and thus don't need preserving.
+        baseline_layout (Optional[Dict[str, list]]): Layout of the container
+            as it was loaded. Materials assigned by it are considered
+            published. When not available, all override materials are kept.
 
     Returns:
-        set: Names of the materials used by the overrides.
+        set: Names of the materials to preserve.
     """
-    prefix = f"{container_name}:" if container_name else None
+    published = {
+        _normalize_slot(slot)["material"]
+        for slots in (baseline_layout or {}).values()
+        for slot in slots
+    }
+    published.discard("")
+
     return {
         slot_data["material"]
-        for slots in overrides.values()
-        for slot_data in slots.values()
+        for override in overrides.values()
+        for slot_data in (override.get("slots") or {}).values()
         if slot_data.get("material")
-        and not (prefix and slot_data["material"].startswith(prefix))
+        and slot_data["material"] not in published
     }
+
+
+def get_members_still_in_use(members: set) -> set:
+    """Return the container members that are still used outside the container.
+
+    Loaders remove every datablock that was loaded with the container. A
+    material the artist duplicated and edited locally is not part of the
+    container though, so removing its dependencies such as images and node
+    groups would leave that copy broken. Those dependencies are returned here
+    so the caller can keep them.
+
+    Arguments:
+        members (set): Datablocks that are about to be removed.
+
+    Returns:
+        set: The members that have a user outside of `members`.
+    """
+    dependencies = {
+        member for member in members
+        if isinstance(member, _DEPENDENCY_TYPES)
+    }
+    if not dependencies:
+        return set()
+
+    user_map = bpy.data.user_map(subset=dependencies)
+    return {
+        member for member, users in user_map.items()
+        if users and not set(users) <= members
+    }
+
+
+def _apply_slot_override(obj, index, slot_data, obj_name, logger):
+    """Apply a single material slot override to `obj`."""
+    material_name = slot_data.get("material") or ""
+    material = None
+    if material_name:
+        material = bpy.data.materials.get(material_name)
+        if material is None:
+            logger.warning(
+                "Unable to restore material '%s' on '%s': the material does "
+                "not exist in the loaded version.",
+                material_name,
+                obj_name,
+            )
+            return
+
+    # Make sure the slot exists on the newly loaded object, e.g. when the
+    # artist had added extra slots to the object.
+    while len(obj.material_slots) <= index:
+        obj.data.materials.append(None)
+
+    slot = obj.material_slots[index]
+    link = slot_data.get("link") or "DATA"
+    if slot.link != link:
+        # Set the link type before the material to write the material to the
+        # object instead of to the mesh data.
+        slot.link = link
+    if slot.material != material:
+        slot.material = material
+
+
+def _remove_material_slots_after(obj, count: int):
+    """Remove the material slots of `obj` with an index of `count` and up."""
+    materials = obj.data.materials
+    if count <= 0:
+        # Popping the last material leaves an empty slot behind in Blender,
+        # clearing removes them all.
+        materials.clear()
+        return
+    while len(materials) > count:
+        materials.pop(index=len(materials) - 1)
 
 
 def _supports_materials(obj: Any) -> bool:
@@ -241,6 +354,12 @@ def _get_legacy_overrides(
     Materials that were loaded together with the container are prefixed with
     the container name, e.g. `my_model_01_model:wood`. Slots referring to
     anything else were assigned locally by the artist.
+
+    Note:
+        A duplicated published material keeps the prefix, e.g.
+        `my_model_01_model:wood.001`, and is indistinguishable from a
+        published material here. Those containers get a baseline recorded on
+        this update and are handled exactly from then on.
     """
     if not container_name:
         return {}
