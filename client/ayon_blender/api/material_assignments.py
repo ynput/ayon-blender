@@ -275,10 +275,16 @@ def get_members_still_in_use(members: set) -> set:
         return set()
 
     user_map = bpy.data.user_map(subset=dependencies)
-    return {
-        member for member, users in user_map.items()
-        if users and not set(users) <= members
-    }
+    preserved = set()
+    while True:
+        removable = members - preserved
+        needed = {
+            member for member, users in user_map.items()
+            if set(users) - removable
+        }
+        if needed <= preserved:
+            return preserved
+        preserved.update(needed)
 
 
 def _apply_slot_override(obj, index, slot_data, obj_name, logger):
