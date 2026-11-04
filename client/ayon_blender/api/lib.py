@@ -2,7 +2,11 @@ import contextlib
 import hashlib
 import importlib
 import os
+import re
+import shutil
+import tempfile
 import traceback
+import uuid
 from typing import Dict, Iterable, List, Optional, Union
 
 import addon_utils
@@ -829,6 +833,221 @@ def strip_namespace(containers):
             node.name = original_name
 
 
+_IMAGE_SEQUENCE_RE = re.compile(
+    r"^(?P<prefix>.*?)(?P<frame>\d+)(?P<extension>\.[^.]+)$"
+)
+
+
+def get_sequence_frames(filepath: str) -> list:
+    """Return the frames of the image sequence the path belongs to.
+
+    Blender stores a sequence as the path of one of its frames, so the other
+    frames are looked up next to it by name. Only the contiguous run of frame
+    numbers around the given frame is returned, so that a gap in the numbering
+    does not pull in unrelated files.
+
+    Arguments:
+        filepath (str): Path of one frame of the sequence.
+
+    Returns:
+        list: `(frame number, path)` tuples sorted by frame number. Empty when
+            the path is not part of a sequence.
+    """
+    directory, filename = os.path.split(filepath)
+    match = _IMAGE_SEQUENCE_RE.match(filename)
+    if not match:
+        return []
+
+    prefix = match.group("prefix")
+    extension = match.group("extension").lower()
+    frame = int(match.group("frame"))
+
+    frames = {}
+    try:
+        entries = os.listdir(directory or ".")
+    except OSError:
+        return []
+
+    for entry in entries:
+        candidate = _IMAGE_SEQUENCE_RE.match(entry)
+        if candidate is None:
+            continue
+        if candidate.group("prefix") != prefix:
+            continue
+        if candidate.group("extension").lower() != extension:
+            continue
+        frames[int(candidate.group("frame"))] = os.path.join(directory, entry)
+
+    if frame not in frames:
+        return []
+
+    sequence = [(frame, frames[frame])]
+    previous = frame - 1
+    while previous in frames:
+        sequence.insert(0, (previous, frames[previous]))
+        previous -= 1
+    following = frame + 1
+    while following in frames:
+        sequence.append((following, frames[following]))
+        following += 1
+    return sequence
+
+
+def restore_unpacked_image(image, logger=None) -> bool:
+    """Restore an image that has been packed to its unpacked state.
+
+    Blender cannot unpack image sequences ("Unpacking movies or image
+    sequences not supported"), so those are restored by relinking the users of
+    the image to a freshly loaded datablock instead.
+
+    Arguments:
+        image (bpy.types.Image): The packed image to restore.
+        logger (logging.Logger): Logger to report problems with.
+
+    Returns:
+        bool: Whether the image was restored.
+    """
+    if logger is None:
+        logger = log
+
+    if image.packed_file is None:
+        return True
+
+    if image.source != 'SEQUENCE':
+        image.unpack(method="REMOVE")
+        return True
+
+    filepath = bpy.path.abspath(image.filepath)
+    name = image.name
+    source = image.source
+    try:
+        replacement = bpy.data.images.load(filepath)
+    except RuntimeError:
+        logger.warning(
+            "Unable to restore the packed image sequence '%s' from '%s'.",
+            name, filepath, exc_info=True
+        )
+        return False
+
+    replacement.name = f"{name}.unpacked"
+    if source != replacement.source:
+        replacement.source = source
+    image.user_remap(replacement)
+    bpy.data.images.remove(image)
+    replacement.name = name
+    return True
+
+
+def _create_alias_directory(reference_path: str):
+    """Create a directory to write the frame aliases of a sequence to.
+
+    The directory of the frames themselves is preferred, because keeping the
+    aliases on the same filesystem allows hard links instead of copying every
+    frame. Falls back to the system temporary directory and to `None` when no
+    directory can be created.
+
+    Arguments:
+        reference_path (str): Path of one frame of the sequence.
+
+    Returns:
+        Optional[str]: The created directory, or None.
+    """
+    name = f"ayon_pack_{uuid.uuid4().hex[:8]}"
+    candidates = [os.path.dirname(os.path.abspath(reference_path)), None]
+    for candidate in candidates:
+        directory = os.path.join(candidate or tempfile.gettempdir(), name)
+        try:
+            # `tempfile.mkdtemp` is not used on purpose: the directory it
+            # creates can end up with permissions that do not allow writing
+            # the aliases into it on Windows.
+            os.makedirs(directory)
+        except OSError:
+            continue
+        return directory
+    return None
+
+
+def pack_image(image, logger=None) -> bool:
+    """Pack a single image, including sequences not starting at frame zero.
+
+    Blender's `Image.pack()` substitutes frame numbers starting at zero into
+    the image filepath. A sequence whose first frame is e.g. 1001 therefore
+    fails with "Unable to pack file, source path '..._0000.png' not found".
+    Such a sequence is packed from a temporary copy that starts at frame zero,
+    after which the packed files are pointed back at the original frames.
+
+    Arguments:
+        image (bpy.types.Image): The image to pack.
+        logger (logging.Logger): Logger to report problems with.
+
+    Returns:
+        bool: Whether the image ended up packed.
+    """
+    if logger is None:
+        logger = log
+
+    if image.packed_file is not None:
+        return True
+
+    if image.source != 'SEQUENCE':
+        image.pack()
+        return True
+
+    frames = get_sequence_frames(bpy.path.abspath(image.filepath))
+    if not frames or frames[0][0] == 0:
+        image.pack()
+        return True
+
+    original_filepath = image.filepath
+    temp_dir = _create_alias_directory(frames[0][1])
+    if temp_dir is None:
+        # Nowhere to write the aliases, keep the original behaviour
+        image.pack()
+        return True
+
+    try:
+        aliases = []
+        for offset, (_frame, path) in enumerate(frames):
+            alias = os.path.join(
+                temp_dir, f"frame_{offset:04d}{os.path.splitext(path)[1]}"
+            )
+            # A hard link avoids duplicating large frames on disk
+            try:
+                os.link(path, alias)
+            except OSError:
+                shutil.copy2(path, alias)
+            aliases.append(alias)
+        image.filepath = aliases[0]
+        image.pack()
+    finally:
+        image.filepath = original_filepath
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    packed_files = list(image.packed_files)
+    if len(packed_files) < len(frames):
+        # Do not publish a truncated sequence
+        logger.warning(
+            "Unable to pack image sequence '%s': only %s of %s frames could "
+            "be packed.", image.name, len(packed_files), len(frames)
+        )
+        restore_unpacked_image(image, logger=logger)
+        return False
+
+    for packed_file, (_frame, path) in zip(packed_files, frames):
+        try:
+            packed_file.filepath = path
+        except (AttributeError, TypeError, RuntimeError):
+            logger.debug(
+                "Unable to restore the packed path of '%s'.", path
+            )
+
+    logger.debug(
+        "Packed image sequence '%s' (%s frames, starting at frame %s).",
+        image.name, len(frames), frames[0][0]
+    )
+    return True
+
+
 @contextlib.contextmanager
 def packed_images(datablocks, logger=None):
     """Unpack packed images during context
@@ -867,7 +1086,8 @@ def packed_images(datablocks, logger=None):
                     continue
 
                 try:
-                    node.image.pack()
+                    if not pack_image(node.image, logger=logger):
+                        continue
                 except RuntimeError:
                     logger.warning(
                         f"Unable to pack node: {node}",
@@ -880,7 +1100,7 @@ def packed_images(datablocks, logger=None):
 
     finally:
         for image in unpacked_node_images:
-            image.unpack(method="REMOVE")
+            restore_unpacked_image(image, logger=logger)
 
 
 def search_replace_render_paths(src: str, dest: str) -> bool:
