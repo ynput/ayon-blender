@@ -937,6 +937,10 @@ def restore_unpacked_image(image, logger=None) -> bool:
     replacement.name = f"{name}.unpacked"
     if source != replacement.source:
         replacement.source = source
+    replacement.filepath = image.filepath
+    replacement.colorspace_settings.name = image.colorspace_settings.name
+    replacement.alpha_mode = image.alpha_mode
+    replacement.use_fake_user = image.use_fake_user
     image.user_remap(replacement)
     bpy.data.images.remove(image)
     replacement.name = name
