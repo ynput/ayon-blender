@@ -876,7 +876,12 @@ def get_sequence_frames(filepath: str) -> list:
             continue
         if candidate.group("extension").lower() != extension:
             continue
-        frames[int(candidate.group("frame"))] = os.path.join(directory, entry)
+        candidate_frame = int(candidate.group("frame"))
+        if candidate.group("frame") != str(candidate_frame).zfill(
+            len(match.group("frame"))
+        ):
+            continue
+        frames[candidate_frame] = os.path.join(directory, entry)
 
     if frame not in frames:
         return []
