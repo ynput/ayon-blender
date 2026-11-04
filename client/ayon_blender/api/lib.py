@@ -1001,6 +1001,13 @@ def pack_image(image, logger=None) -> bool:
     frames = get_sequence_frames(bpy.path.abspath(image.filepath))
     if not frames or frames[0][0] == 0:
         image.pack()
+        if frames and len(image.packed_files) < len(frames):
+            logger.warning(
+                "Unable to pack image sequence '%s': only %s of %s frames could "
+                "be packed.", image.name, len(image.packed_files), len(frames)
+            )
+            restore_unpacked_image(image, logger=logger)
+            return False
         return True
 
     original_filepath = image.filepath
