@@ -1031,7 +1031,12 @@ def pack_image(image, logger=None) -> bool:
             try:
                 os.link(path, alias)
             except OSError:
-                shutil.copy2(path, alias)
+                try:
+                    shutil.copy2(path, alias)
+                except OSError as exc:
+                    raise RuntimeError(
+                        f"Unable to copy sequence frame '{path}' to '{alias}'"
+                    ) from exc
             aliases.append(alias)
         image.filepath = aliases[0]
         image.pack()
