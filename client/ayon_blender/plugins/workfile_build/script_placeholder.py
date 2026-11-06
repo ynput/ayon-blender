@@ -45,6 +45,7 @@ class BlenderPlaceholderScriptPlugin(BlenderPlaceholderPlugin):
 
     identifier = "blender.runscript"
     label = "Run Python Script"
+    icon = {"type": "material-symbols", "name": "code"}
 
     use_selection_as_parent = False
 
