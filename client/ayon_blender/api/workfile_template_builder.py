@@ -52,6 +52,7 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
     Inherited classes must still implement `populate_placeholder`
 
     """
+    skip_discovery = True
 
     use_selection_as_parent = True
     item_class = PlaceholderItem
