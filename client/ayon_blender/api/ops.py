@@ -32,6 +32,15 @@ from .workio import OpenFileCacher
 from . import pipeline
 from . import render_lib
 
+# Tool to manage workfile templates was added in a later ayon-core version
+try:
+    from ayon_core.tools.workfile_template_build import (  # noqa: F401
+        show_workfile_template_builder,
+    )
+    HAS_TEMPLATE_BUILDER_TOOL = True
+except ImportError:
+    HAS_TEMPLATE_BUILDER_TOOL = False
+
 
 PREVIEW_COLLECTIONS: Dict = dict()
 ADDON_KEYMAPS: List = list()
@@ -475,6 +484,19 @@ class OpenTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
+class ShowTemplateBuilder(LaunchQtApp):
+    """Show the workfile template builder tool."""
+
+    bl_idname = "wm.ayon_show_template_builder"
+    bl_label = "Template Builder"
+    def execute(self, context):
+        from .workfile_template_builder import show_template_builder
+        window = show_template_builder()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
+
+
 
 class CreatePlaceholder(LaunchQtApp):
     """Create Placeholder from ayon template settings."""
@@ -594,10 +616,20 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
                         text="Create Render Setup")
 
         layout.separator()
-        layout.menu(
-            TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
-            text="Templated Workfile"
-        )
+        if HAS_TEMPLATE_BUILDER_TOOL:
+            layout.operator(
+                ShowTemplateBuilder.bl_idname,
+                text="Template Builder..."
+            )
+            layout.operator(
+                CreateFirstWorkfileFromTemplate.bl_idname,
+                text="Create First Workfile from Template"
+            )
+        else:
+            layout.menu(
+                TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
+                text="Templated Workfile"
+            )
 
 def draw_ayon_menu(self, context):
     """Draw the AYON menu in the top bar."""
@@ -621,6 +653,7 @@ classes = [
     BuildWorkfileFromTemplate,
     # UpdateWorkfileFromTemplate,
     OpenTemplate,
+    ShowTemplateBuilder,
     CreatePlaceholder,
     UpdatePlaceholder,
     TOPBAR_MT_ayon_Templated_Workfile,

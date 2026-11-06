@@ -151,6 +151,20 @@ class BlenderPlaceholderPlugin(PlaceholderPlugin):
         if node_to_removed:
             bpy.data.collections.remove(node_to_removed)
 
+    def select_placeholder(self, placeholder):
+        """Select placeholder objects in the scene.
+
+        Args:
+            placeholder (PlaceholderItem): Placeholder item to select.
+
+        """
+        collection = bpy.data.collections.get(placeholder.scene_identifier)
+        if collection is None:
+            return
+        for obj in collection.objects:
+            obj.select_set(True)
+
+
 def set_folder_path_for_ayon_instances(folder_path: str) -> None:
     """Set the folder path for AYON instances in the Blender scene.
 
@@ -226,6 +240,43 @@ def open_template(*args, **kwargs):
     builder = BlenderTemplateBuilder(registered_host())
     main_window = kwargs.get("main_window")
     open_template_ui(builder, main_window=main_window)
+
+
+def show_template_builder(*args, **kwargs):
+    """Show the workfile template builder tool for Blender.
+
+    The placeholder collection that is selected in the outliner is selected
+    in the tool.
+
+    Returns:
+        WorkfileTemplateBuilderWindow: The shown tool window.
+    """
+    from ayon_core.tools.workfile_template_build import (
+        show_workfile_template_builder,
+    )
+
+    builder = BlenderTemplateBuilder(registered_host())
+    window = show_workfile_template_builder(
+        builder, parent=kwargs.get("parent")
+    )
+
+    # Added in a later ayon-core version than the tool itself
+    select_placeholder = getattr(window, "select_placeholder", None)
+    if select_placeholder is None:
+        return window
+
+    try:
+        selected_collections = get_selected_collections()
+    except (RuntimeError, IndexError):
+        # No outliner area available to read the selection from.
+        log.debug("Cannot select the placeholder in the tool: no outliner.")
+        return window
+
+    for collection in selected_collections:
+        if select_placeholder(collection.name):
+            break
+
+    return window
 
 
 def create_placeholder(*args, **kwargs):
