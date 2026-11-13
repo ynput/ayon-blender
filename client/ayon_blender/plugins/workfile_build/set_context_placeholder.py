@@ -15,6 +15,7 @@ class SetContextBlenderPlaceholderPlugin(BlenderPlaceholderPlugin):
 
     identifier = "blender.set_context"
     label = "Set Context Settings"
+    icon = {"type": "material-symbols", "name": "tune"}
 
     use_selection_as_parent = False
 
