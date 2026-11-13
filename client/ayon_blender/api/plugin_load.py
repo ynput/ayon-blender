@@ -216,8 +216,8 @@ def load_collection(
         data_from,
         data_to,
     ):
-        for attr in dir(data_to):
-            setattr(data_to, attr, getattr(data_from, attr))
+        data_to.collections = data_from.collections
+        data_to.objects = data_from.objects
 
     for coll in data_to.collections:
         if coll is not None and coll.name not in asset_container.children:
