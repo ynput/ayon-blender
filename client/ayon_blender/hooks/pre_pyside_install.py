@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 import os
 import re
 import subprocess
 from platform import system
 
 from ayon_applications import LaunchTypes, PreLaunchHook
+
+
+# Blender's version folder is named after its version, e.g. "5.2". Some
+# installations (and wrapper setups) use the full version, e.g. "5.2.2".
+# Kept in one place so it is easy to adjust when Blender changes the naming.
+VERSION_FOLDER_RE = re.compile(r"^(\d+)\.(\d+)(?:\.\d+)?$")
 
 
 class InstallPySideToBlender(PreLaunchHook):
@@ -35,55 +43,117 @@ class InstallPySideToBlender(PreLaunchHook):
                 exc_info=True,
             )
 
-    def inner_execute(self):
-        # Get blender's python directory
-        version_regex = re.compile(r"^([2-5])\.[0-9]+$")
+    def find_versions_dir(self, executable: str) -> str | None:
+        """Find the directory that contains Blender's version folder.
 
+        The configured application executable is not necessarily the Blender
+        binary, it can be a wrapper script or a symlink. The version folder
+        (e.g. '5.2') is detected by looking for a '<version>' folder with a
+        'python' directory next to the executable, in its direct children and
+        in its parent directories. The closest location wins, so a version
+        folder of an unrelated application higher up in the tree can be
+        picked up as a last resort.
+
+        Args:
+            executable (str): Path of the configured application executable.
+
+        Returns:
+            str | None: Directory containing Blender's version folder or None
+                when no folder with Blender's python was found.
+        """
+        # Ordered candidates, closest location first.
+        candidates = []
+        executable_dir = os.path.dirname(executable)
+        if system().lower() == "darwin":
+            # On macOS the version folders live next to the executable folder
+            # in "Contents/Resources".
+            candidates.append(
+                os.path.join(os.path.dirname(executable_dir), "Resources")
+            )
+        candidates.append(executable_dir)
+        # Direct children of the executable's directory cover an installation
+        # nested one level below a wrapper placed in the application root.
+        # The directory is checked first because the executable path can be
+        # empty or point to a folder that does not exist (e.g. a stale
+        # application path), which would make the listing raise.
+        if os.path.isdir(executable_dir):
+            for entry in os.scandir(executable_dir):
+                if entry.is_dir() and not VERSION_FOLDER_RE.match(entry.name):
+                    candidates.append(entry.path)
+
+        # The target of a symlink and the parent directories cover a wrapper
+        # living inside the installation, e.g. "<install>/bin/blender". The
+        # walk goes up to the filesystem root so no depth has to be guessed.
+        for base in (
+            executable_dir,
+            os.path.dirname(os.path.realpath(executable)),
+        ):
+            current = os.path.abspath(base)
+            while True:
+                if current not in candidates:
+                    candidates.append(current)
+                parent = os.path.dirname(current)
+                if parent == current:
+                    break
+                current = parent
+
+        for candidate in candidates:
+            if not os.path.isdir(candidate):
+                continue
+            for name in os.listdir(candidate):
+                if VERSION_FOLDER_RE.match(name) and os.path.isdir(
+                        os.path.join(candidate, name, "python")):
+                    return candidate
+        return None
+
+    def inner_execute(self):
         platform = system().lower()
         executable = self.launch_context.executable.executable_path
-        expected_executable = "blender"
-        if platform == "windows":
-            expected_executable += ".exe"
 
-        if os.path.basename(executable).lower() != expected_executable:
-            self.log.info(
-                "Executable does not lead to %s file."
-                "Can't determine blender's python to check/install"
-                " Qt binding.",
-                expected_executable,
-            )
+        versions_dir = self.find_versions_dir(executable)
+        if versions_dir is None:
+            hint = (
+                "\n"
+                "[AYON] Blender was launched through '{}'\n"
+                "       but Blender's install folder could not be found next"
+                " to it or in its parent\n"
+                "       directories (expected a '<version>' folder such as"
+                " '5.2' containing 'python').\n"
+                "       Blender's python packages are therefore not on"
+                " PYTHONPATH and PySide6 is\n"
+                "       not installed: the AYON menu will not load, and"
+                " imports may fail with\n"
+                "       \"ImportError: cannot import name 'NothingType'"
+                " from 'attrs'\".\n"
+                "       Fix: set the Blender application's \"Executable\" to"
+                " the Blender binary\n"
+                "       instead of a wrapper script, or place the wrapper"
+                " inside the Blender\n"
+                "       installation folder (e.g."
+                " '<install>/bin/blender').\n"
+            ).format(executable)
+            self.log.warning(hint)
             return
 
-        versions_dir = os.path.dirname(executable)
-        if platform == "darwin":
-            versions_dir = os.path.join(
-                os.path.dirname(versions_dir), "Resources"
-            )
-        version_subfolders = []
-        for dir_entry in os.scandir(versions_dir):
-            if dir_entry.is_dir() and version_regex.match(dir_entry.name):
-                version_subfolders.append(dir_entry.name)
-
-        if not version_subfolders:
-            self.log.info(
-                "Didn't find version subfolder next to Blender executable"
-            )
-            return
-
+        version_subfolders = [
+            name for name in os.listdir(versions_dir)
+            if VERSION_FOLDER_RE.match(name)
+            and os.path.isdir(os.path.join(versions_dir, name, "python"))
+        ]
         if len(version_subfolders) > 1:
             joined_subfolders = ", ".join([
                 f'"./{name}"' for name in version_subfolders
             ])
-            self.log.info(
-                "Found more than one version subfolder next"
-                " to blender executable. %s",
-                joined_subfolders
+            self.log.warning(
+                "Found more than one version subfolder around the Blender"
+                " executable. %s",
+                joined_subfolders,
             )
             return
 
         version_subfolder = version_subfolders[0]
         before_blender_4 = False
-        if int(version_regex.match(version_subfolder).group(1)) < 4:
+        if int(VERSION_FOLDER_RE.match(version_subfolder).group(1)) < 4:
             before_blender_4 = True
         # Blender 4 has Python 3.11 which does not support 'PySide2'
         # QUESTION could we always install PySide6?
