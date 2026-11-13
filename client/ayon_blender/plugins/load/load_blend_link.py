@@ -104,11 +104,19 @@ class BlendLinkLoader(plugin.BlenderLoader):
         target_name = f"{container['namespace']}_{container['name']}"
         # Remove the container collection
         datablocks = {collection}
+        # The container's data is nested (container -> local container or
+        # override), so collect the whole subtree, otherwise empty collections
+        # are left behind in the scene after unloading.
+        pending = list(collection.children)
+        while pending:
+            child_collection = pending.pop()
+            datablocks.add(child_collection)
+            pending.extend(child_collection.children)
+
+        library = None
         if collection.children:
             library = self._get_library_from_collection(collection.children[0])
-            if library:
-                bpy.data.libraries.remove(library)
-            else:
+            if not library:
                 target_collection = find_collection_by_name(target_name)
                 if target_collection:
                     datablocks.update(target_collection.children)
@@ -123,6 +131,13 @@ class BlendLinkLoader(plugin.BlenderLoader):
             datablocks.add(target_object)
 
         bpy.data.batch_remove(datablocks)
+
+        # Several assets can be loaded from the same .blend file, so only unload
+        # the library when no other container still uses it. Otherwise the other
+        # loaded assets would lose their data as well.
+        if library and library.users <= 1:
+            bpy.data.libraries.remove(library)
+
 
         return True
 
@@ -142,6 +157,7 @@ class BlendLinkLoader(plugin.BlenderLoader):
             if child.override_library and child.override_library.reference:
                 return child.override_library.reference.library
 
+        self.log.warning(f"Could not find library for collection: {collection.name}")
         return None
 
     def get_loaded_collection(self, **kwargs)-> bpy.types.Collection:
