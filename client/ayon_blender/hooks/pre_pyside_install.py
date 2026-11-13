@@ -4,17 +4,20 @@ import subprocess
 from platform import system
 
 from ayon_applications import LaunchTypes, PreLaunchHook
+from ayon_core.lib import get_launcher_local_dir
 
 
 class InstallPySideToBlender(PreLaunchHook):
-    """Install Qt binding to blender's python packages.
+    """Install Qt bindings to 'application_packages' within AYON's local storage.
 
-    Prelaunch hook does 2 things:
-    1.) Blender's python packages are pushed to the beginning of PYTHONPATH.
-    2.) Check if blender has installed PySide2 and will try to install if not.
+    Prelaunch hook does 5 things:
+    1.) Blender's Python packages are pushed to the beginning of PYTHONPATH.
+    2.) Check if Blender has installed Qt bindings. Return if found.
+    3.) Check for application packages dir and add to PYTHONPATH.
+    4.) Try to import Qt bindings from application packages. Return if found.
+    4.) Install Qt bindings into application packages dir. Add to PYTHONPATH.
 
-    For pipeline implementation is required to have Qt binding installed in
-    blender's python packages.
+    For pipeline implementation is required to have Qt bindings available on PYTHONPATH.
     """
 
     app_groups = {"blender"}
@@ -103,18 +106,6 @@ class InstallPySideToBlender(PreLaunchHook):
                     python_version = dir_entry.name
                     break
 
-        # Change PYTHONPATH to contain blender's packages as first
-        python_paths = [
-            python_lib,
-            os.path.join(python_lib, "site-packages"),
-        ]
-        python_path = self.launch_context.env.get("PYTHONPATH") or ""
-        for path in python_path.split(os.pathsep):
-            if path:
-                python_paths.append(path)
-
-        self.launch_context.env["PYTHONPATH"] = os.pathsep.join(python_paths)
-
         # Get blender's python executable
         python_bin = os.path.join(python_dir, "bin")
         if platform == "windows":
@@ -133,112 +124,81 @@ class InstallPySideToBlender(PreLaunchHook):
             )
             return
 
-        # Check if PySide2 is installed and skip if yes
+        # Check if application packages dir exists for Blender's Python version
+        python_minor = self.get_python_version(python_executable)
+        local_dir = get_launcher_local_dir()
+        app_packages = os.path.join(
+            local_dir, "application_packages", f"blender-py{python_minor}"
+        )
+
+        # Change PYTHONPATH to contain blender's packages as first
+        python_paths = [
+            python_lib,
+            os.path.join(python_lib, "site-packages"),
+        ]
+
+        # Append application packages dir to Python path, if it exists
+        if os.path.exists(app_packages):
+            python_paths.append(app_packages)
+        self.prepend_to_pythonpath(python_paths)
+
+        # Check if Qt bindings are available
         if self.is_pyside_installed(python_executable, qt_binding):
-            self.log.debug("Blender has already installed PySide2.")
+            self.log.debug("Qt bindings are available.")
             return
 
-        # Install PySide2 in blender's python
-        if platform == "windows":
-            result = self.install_pyside_windows(
-                python_executable,
-                qt_binding,
-                qt_binding_version,
-                before_blender_4,
-            )
-        else:
-            result = self.install_pyside(
-                python_executable,
-                qt_binding,
-                qt_binding_version,
-            )
+        # Install PySide2 into application packages
+        result = self.install_pyside(
+            python_executable,
+            qt_binding,
+            qt_binding_version,
+            app_packages,
+        )
+        if app_packages not in python_paths:
+            self.prepend_to_pythonpath([app_packages])
 
         if result:
             self.log.info(
-                "Successfully installed %s module to blender.", qt_binding
+                "Successfully installed %s module to application packages.", qt_binding
             )
         else:
             self.log.warning(
-                "Failed to install %s module to blender.", qt_binding
+                "Failed to install %s module to application packages.", qt_binding
             )
 
-    def install_pyside_windows(
-        self,
-        python_executable,
-        qt_binding,
-        qt_binding_version,
-        before_blender_4,
-    ):
-        """Install PySide2 python module to blender's python.
-
-        Installation requires administration rights that's why it is required
-        to use "pywin32" module which can execute command's and ask for
-        administration rights.
-        """
-        try:
-            import pywintypes
-            import win32con
-            import win32event
-            import win32process
-            from win32comext.shell import shellcon
-            from win32comext.shell.shell import ShellExecuteEx
-        except Exception:
-            self.log.warning('Couldn\'t import "pywin32" modules')
-            return
-
-        if qt_binding_version:
-            qt_binding = f"{qt_binding}=={qt_binding_version}"
-
-        try:
-            # Parameters
-            # - use "-m pip" as module pip to install PySide2 and argument
-            #   "--ignore-installed" is to force install module to blender's
-            #   site-packages and make sure it is binary compatible
-            fake_exe = "fake.exe"
-            site_packages_prefix = os.path.dirname(
-                os.path.dirname(python_executable)
-            )
-            args = [
-                fake_exe,
-                "-m",
-                "pip",
-                "install",
-                "--ignore-installed",
-                qt_binding,
-            ]
-            if not before_blender_4:
-                # Define prefix for site package
-                # Python in blender 4.x is installing packages in AppData and
-                #   not in blender's directory.
-                args.extend(["--prefix", site_packages_prefix])
-
-            parameters = (
-                subprocess.list2cmdline(args)
-                .removeprefix(fake_exe)
-                .lstrip(" ")
+    def get_python_version(self, python_executable):
+        """Return the major.minor version of given Python executable."""
+        result = subprocess.run(
+            [python_executable, "--version"],
+            capture_output=True,
+            text=True,
+        )
+        output = result.stdout.strip() or result.stderr.strip()
+        match = re.search(r"(\d+\.\d+)", output)
+        if not match:
+            raise RuntimeError(
+                f"Could not parse Python version from: {output!r}"
             )
 
-            # Execute command and ask for administrator's rights
-            process_info = ShellExecuteEx(
-                nShow=win32con.SW_SHOWNORMAL,
-                fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
-                lpVerb="runas",
-                lpFile=python_executable,
-                lpParameters=parameters,
-                lpDirectory=os.path.dirname(python_executable),
-            )
-            process_handle = process_info["hProcess"]
-            win32event.WaitForSingleObject(process_handle, win32event.INFINITE)
-            returncode = win32process.GetExitCodeProcess(process_handle)
-            return returncode == 0
-        except pywintypes.error:
-            pass
+        version = match.group(1)
+        self.log.debug(f"Blender Python version: {version}")
+        return version
+
+    def prepend_to_pythonpath(self, paths: list[str]):
+        """Prepend given paths to PYTHONPATH"""
+        python_path = self.launch_context.env.get("PYTHONPATH") or ""
+        for path in python_path.split(os.pathsep):
+            if path:
+                paths.append(path)
+
+        self.launch_context.env["PYTHONPATH"] = os.pathsep.join(paths)
 
     def install_pyside(
         self,
         python_executable,
         qt_binding,
         qt_binding_version,
+        target,
     ):
         """Install Qt binding python module to blender's python."""
         if qt_binding_version:
@@ -256,6 +216,8 @@ class InstallPySideToBlender(PreLaunchHook):
                 "pip",
                 "install",
                 "--ignore-installed",
+                "--target",
+                target,
                 qt_binding,
             ]
             process = subprocess.Popen(
