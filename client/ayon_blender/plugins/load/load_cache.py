@@ -17,6 +17,11 @@ from ayon_blender.api.pipeline import (
     add_to_ayon_container,
     get_ayon_container
 )
+from ayon_blender.api.material_assignments import (
+    apply_material_overrides,
+    get_material_layout,
+    get_material_overrides,
+)
 
 
 class ObjectPathMatcher:
@@ -317,6 +322,11 @@ class CacheModelLoader(plugin.BlenderLoader):
         container = get_ayon_container()
         self._link_objects(objects, asset_group, container)
 
+        # Record the material layout as it was loaded. On update this tells us
+        # which material slots were changed locally by the artist, see
+        # https://github.com/ynput/ayon-blender/issues/109
+        material_baseline = get_material_layout(asset_group.children_recursive)
+
         asset_group[AYON_PROPERTY] = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
@@ -329,7 +339,8 @@ class CacheModelLoader(plugin.BlenderLoader):
             "libpath": libpath,
             "asset_name": asset_name,
             "objectName": group_name,
-            "options": options or {}
+            "options": options or {},
+            "material_baseline": material_baseline,
         }
 
         self[:] = objects
@@ -382,12 +393,31 @@ class CacheModelLoader(plugin.BlenderLoader):
             # Special behavior for USD files
             options = container.get("options", {})
             mat = asset_group.matrix_basis.copy()
+
+            # Find the material slots the artist changed locally, so that they
+            # can be restored on the objects of the new version.
+            material_overrides = get_material_overrides(
+                current_layout=get_material_layout(
+                    asset_group.children_recursive
+                ),
+                baseline_layout=metadata.get("material_baseline"),
+                container_name=object_name,
+            )
+
             self._remove(asset_group)
 
             objects = self._process(str(libpath), asset_group, object_name, options)
 
             container = get_ayon_container()
             self._link_objects(objects, asset_group, container)
+
+            # Record the material layout of the newly loaded version *before*
+            # restoring the local overrides, so that the baseline keeps
+            # describing the published materials.
+            metadata["material_baseline"] = get_material_layout(
+                asset_group.children_recursive
+            )
+            apply_material_overrides(material_overrides, logger=self.log)
 
             asset_group.matrix_basis = mat
         else:
