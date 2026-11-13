@@ -25,62 +25,67 @@ class ExtractLayout(
     def _export_animation(self, asset, instance, stagingdir, fbx_count):
         n = fbx_count
 
-        for obj in asset.children:
-            if obj.type != "ARMATURE":
-                continue
-
-            object_action_pairs = []
-            original_actions = []
-
-            starting_frames = []
-            ending_frames = []
-
-            # For each armature, we make a copy of the current action
-            curr_action = None
-            copy_action = None
-
-            if obj.animation_data and obj.animation_data.action:
-                curr_action = obj.animation_data.action
-                copy_action = curr_action.copy()
-
-                curr_frame_range = curr_action.frame_range
-
-                starting_frames.append(curr_frame_range[0])
-                ending_frames.append(curr_frame_range[1])
-            else:
-                self.log.info("Object has no animation.")
-                continue
-
-            asset_group_name = asset.name
-            asset.name = asset.get(AYON_PROPERTY).get("asset_name")
-
-            # Remove : from the armature name for the export
-            armature_name = obj.name
-            original_name = armature_name.rsplit(":", 1)[-1]
-            obj.name = original_name
-
-            object_action_pairs.append((obj, copy_action))
-            original_actions.append(curr_action)
-
-            # We compute the starting and ending frames
-            max_frame = min(starting_frames)
-            min_frame = max(ending_frames)
-
-            # We bake the copy of the current action for each object
-            bpy_extras.anim_utils.bake_action_objects(
-                object_action_pairs,
-                frames=range(int(min_frame), int(max_frame)),
-                do_object=False,
-                do_clean=False
+        armatures = [obj for obj in asset.children if obj.type == "ARMATURE"]
+        animated_armatures = [
+            armature for armature in armatures
+            if armature.animation_data and armature.animation_data.action
+        ]
+        if not animated_armatures:
+            self.log.info("Object has no animation.")
+            return None, n
+        if len(animated_armatures) > 1:
+            self.log.warning(
+                "Rig '%s' has %d animated armatures (%s); only the first one "
+                "is exported as animation.",
+                asset.name, len(animated_armatures),
+                ", ".join(armature.name for armature in animated_armatures)
             )
 
-            for o in bpy.data.objects:
-                o.select_set(False)
+        obj = animated_armatures[0]
+        curr_action = obj.animation_data.action
+        copy_action = curr_action.copy()
+        curr_frame_range = curr_action.frame_range
+        frame_start = int(curr_frame_range[0])
+        frame_end = int(curr_frame_range[1])
+
+        asset_group_name = asset.name
+        armature_name = obj.name
+        fbx_filename = f"{n:03d}.fbx"
+        filepath = os.path.join(stagingdir, fbx_filename)
+
+        # Bake a copy of the action with visual keying so constraint and driver
+        # motion is included in the exported FBX (Blender 4.1+ API).
+        bake_options = bpy_extras.anim_utils.BakeOptions(
+            only_selected=False,
+            do_pose=True,
+            do_object=False,
+            do_visual_keying=True,
+            do_constraint_clear=False,
+            do_parents_clear=False,
+            do_clean=False,
+            do_location=True,
+            do_rotation=True,
+            do_scale=True,
+            do_bbone=True,
+            do_custom_props=True
+        )
+
+        try:
+            asset.name = asset.get(AYON_PROPERTY).get("asset_name")
+            # Remove : from the armature name for the export
+            obj.name = armature_name.rsplit(":", 1)[-1]
+
+            bpy_extras.anim_utils.bake_action_objects(
+                [(obj, copy_action)],
+                frames=range(frame_start, frame_end + 1),
+                bake_options=bake_options
+            )
+
+            for other_object in bpy.data.objects:
+                other_object.select_set(False)
 
             asset.select_set(True)
             obj.select_set(True)
-            fbx_filename = f"{n:03d}.fbx"
-            filepath = os.path.join(stagingdir, fbx_filename)
 
             override = plugin.create_blender_context(
                 active=asset, selected=[asset, obj])
@@ -97,26 +102,20 @@ class ExtractLayout(
                         armature_nodetype='ROOT',
                         object_types={'EMPTY', 'ARMATURE'}
                     )
+        finally:
+            # Restore the scene even when baking or exporting fails, otherwise
+            # the armature keeps the baked action and the objects stay renamed.
             obj.name = armature_name
             asset.name = asset_group_name
             asset.select_set(False)
             obj.select_set(False)
 
-            # We delete the baked action and set the original one back
-            for i in range(0, len(object_action_pairs)):
-                pair = object_action_pairs[i]
-                action = original_actions[i]
+            if obj.animation_data:
+                obj.animation_data.action = curr_action
+            copy_action.user_clear()
+            bpy.data.actions.remove(copy_action)
 
-                if action:
-                    pair[0].animation_data.action = action
-
-                if pair[1]:
-                    pair[1].user_clear()
-                    bpy.data.actions.remove(pair[1])
-
-            return fbx_filename, n + 1
-
-        return None, n
+        return fbx_filename, n + 1
 
     def process(self, instance):
         if not self.is_active(instance.data):
