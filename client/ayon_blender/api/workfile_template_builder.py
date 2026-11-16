@@ -267,9 +267,14 @@ def show_template_builder(*args, **kwargs):
 
     try:
         selected_collections = get_selected_collections()
-    except (RuntimeError, IndexError):
-        # No outliner area available to read the selection from.
-        log.debug("Cannot select the placeholder in the tool: no outliner.")
+    except Exception:
+        # The selection is only a convenience; the tool must open even when
+        #   the outliner selection cannot be read (e.g. headless contexts or
+        #   a workspace without an outliner).
+        log.debug(
+            "Cannot select the placeholder in the tool.",
+            exc_info=True,
+        )
         return window
 
     for collection in selected_collections:

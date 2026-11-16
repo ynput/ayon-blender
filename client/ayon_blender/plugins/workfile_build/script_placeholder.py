@@ -154,6 +154,17 @@ class BlenderPlaceholderScriptPlugin(BlenderPlaceholderPlugin):
             self.builder.add_on_finished_callback(
                 delete_callback, order=placeholder.order + 1)
 
+    def repopulate_placeholder(self, placeholder):
+        """Re-run the populate script of the placeholder.
+
+        Callback scripts (depth processed/finished) are intentionally not
+        registered again, otherwise a test build would run them multiple
+        times.
+        """
+        populate_script = placeholder.data.get("populate_script")
+        if populate_script:
+            self.run_script(placeholder, populate_script)
+
     def run_script(self, placeholder, script, event=None):
         """Run script
 
