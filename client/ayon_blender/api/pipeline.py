@@ -18,10 +18,12 @@ from ayon_core.pipeline import (
     schema,
     register_loader_plugin_path,
     register_creator_plugin_path,
+    register_inventory_action_path,
     register_workfile_build_plugin_path,
     deregister_loader_plugin_path,
     deregister_creator_plugin_path,
     deregister_workfile_build_plugin_path,
+    deregister_inventory_action_path,
     AYON_CONTAINER_ID,
     AVALON_CONTAINER_ID,
     get_current_project_name
@@ -64,6 +66,7 @@ PLUGINS_DIR = os.path.join(BLENDER_ADDON_ROOT, "plugins")
 PUBLISH_PATH = os.path.join(PLUGINS_DIR, "publish")
 LOAD_PATH = os.path.join(PLUGINS_DIR, "load")
 CREATE_PATH = os.path.join(PLUGINS_DIR, "create")
+INVENTORY_ACTION_PATH = os.path.join(PLUGINS_DIR, "inventory")
 WORKFILE_BUILD_PATH = os.path.join(PLUGINS_DIR, "workfile_build")
 
 ORIGINAL_EXCEPTHOOK = sys.excepthook
@@ -178,6 +181,7 @@ def install():
 
     register_loader_plugin_path(str(LOAD_PATH))
     register_creator_plugin_path(str(CREATE_PATH))
+    register_inventory_action_path(str(INVENTORY_ACTION_PATH))
     register_workfile_build_plugin_path(str(WORKFILE_BUILD_PATH))
 
     if lib.get_blender_version() < (5, 0, 0):
@@ -209,6 +213,7 @@ def uninstall():
 
     deregister_loader_plugin_path(str(LOAD_PATH))
     deregister_creator_plugin_path(str(CREATE_PATH))
+    deregister_inventory_action_path(str(INVENTORY_ACTION_PATH))
     deregister_workfile_build_plugin_path(str(WORKFILE_BUILD_PATH))
 
     if not IS_HEADLESS:
