@@ -2,7 +2,6 @@
 import bpy
 import logging
 import itertools
-import traceback
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
     AbstractTemplateBuilder,
@@ -12,11 +11,7 @@ from ayon_core.pipeline.workfile.workfile_template_builder import (
 from ayon_core.tools.workfile_template_build import (
     WorkfileBuildPlaceholderDialog,
 )
-try:
-    from ayon_core.tools.workfile_template_build import open_template_ui
-except ImportError:
-    # Older ayon-core version without the template builder UI.
-    open_template_ui = None
+from ayon_core.tools.workfile_template_build import open_template_ui
 
 from .constants import AYON_INSTANCES
 from .pipeline import get_ayon_property
@@ -244,31 +239,7 @@ def open_template(*args, **kwargs):
     """Open workfile template for Blender."""
     builder = BlenderTemplateBuilder(registered_host())
     main_window = kwargs.get("main_window")
-    if open_template_ui is not None:
-        open_template_ui(builder, main_window=main_window)
-        return
-
-    from qtpy import QtWidgets
-
-    answer = QtWidgets.QMessageBox.question(
-        main_window,
-        "Opening template",
-        (
-            "Caution! You will lose unsaved changes.\n"
-            "Do you want to continue?"
-        ),
-        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-    )
-    if answer != QtWidgets.QMessageBox.Yes:
-        return
-    try:
-        builder.open_template()
-    except Exception:
-        QtWidgets.QMessageBox.critical(
-            main_window,
-            "Template Load Failed",
-            traceback.format_exc(),
-        )
+    open_template_ui(builder, main_window=main_window)
 
 
 def show_template_builder(*args, **kwargs):
