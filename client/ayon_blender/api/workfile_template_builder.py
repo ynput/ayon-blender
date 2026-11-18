@@ -2,6 +2,9 @@
 import bpy
 import logging
 import itertools
+
+from qtpy import QtCore, shiboken
+
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.workfile.workfile_template_builder import (
     AbstractTemplateBuilder,
@@ -242,6 +245,10 @@ def open_template(*args, **kwargs):
     open_template_ui(builder, main_window=main_window)
 
 
+class _TemplateBuilderWindowCache:
+    window = None
+
+
 def show_template_builder(*args, **kwargs):
     """Show the workfile template builder tool for Blender.
 
@@ -251,32 +258,51 @@ def show_template_builder(*args, **kwargs):
     Returns:
         WorkfileTemplateBuilderWindow: The shown tool window.
     """
-    from ayon_core.tools.workfile_template_build import (
-        show_workfile_template_builder,
+    from ayon_core.tools.workfile_template_build.control import (
+        WorkfileTemplateBuilderController,
+    )
+    from ayon_core.tools.workfile_template_build.ui import (
+        WorkfileTemplateBuilderWindow,
     )
 
-    builder = BlenderTemplateBuilder(registered_host())
-    window = show_workfile_template_builder(
-        builder, parent=kwargs.get("parent")
-    )
+    window = _TemplateBuilderWindowCache.window
+    if window is not None:
+        # refresh() can succeed on a wrapper whose C++ object was already
+        #   deleted; the Blender operator would then crash on windowFlags().
+        try:
+            is_valid = shiboken.isValid(window)
+        except RuntimeError:
+            is_valid = False
+        if not is_valid:
+            window = None
+            _TemplateBuilderWindowCache.window = None
+        else:
+            try:
+                window.refresh()
+            except RuntimeError:
+                # The Qt object was deleted, create a new window below.
+                window = None
+                _TemplateBuilderWindowCache.window = None
+
+    if window is None:
+        parent = kwargs.get("main_window") or kwargs.get("parent")
+        builder = BlenderTemplateBuilder(registered_host())
+        controller = WorkfileTemplateBuilderController(builder)
+        window = WorkfileTemplateBuilderWindow(controller, parent=parent)
+        _TemplateBuilderWindowCache.window = window
+        window.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+        # The Blender operator sets the on-top flags and shows the window.
+        # Setting the flag here avoids a second setWindowFlags/show pass which
+        # makes the window flicker when opened.
+        window.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, True)
+
 
     # Added in a later ayon-core version than the tool itself
     select_placeholder = getattr(window, "select_placeholder", None)
     if select_placeholder is None:
         return window
 
-    try:
-        selected_collections = get_selected_collections()
-    except Exception:
-        # The selection is only a convenience; the tool must open even when
-        #   the outliner selection cannot be read (e.g. headless contexts or
-        #   a workspace without an outliner).
-        log.debug(
-            "Cannot select the placeholder in the tool.",
-            exc_info=True,
-        )
-        return window
-
+    selected_collections = get_selected_collections()
     for collection in selected_collections:
         if select_placeholder(collection.name):
             break

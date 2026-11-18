@@ -10,7 +10,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Dict, List, Optional, Union
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, shiboken
 
 import bpy
 import bpy.utils.previews
@@ -87,8 +87,17 @@ class BlenderApplication:
     def store_window(cls, identifier, window):
         current_window = cls.get_window(identifier)
         cls.blender_windows[identifier] = window
-        if current_window:
-            current_window.close()
+        if (
+            current_window
+            and current_window is not window
+            and shiboken.isValid(current_window)
+        ):
+            try:
+                current_window.close()
+            except RuntimeError:
+                # The Qt object was deleted between the validity check and
+                # the close call.
+                pass
             # current_window.deleteLater()
 
     @classmethod
@@ -307,14 +316,13 @@ class LaunchQtApp(bpy.types.Operator):
 
         else:
             origin_flags = self._window.windowFlags()
-            on_top_flags = origin_flags | QtCore.Qt.WindowStaysOnTopHint
-            self._window.setWindowFlags(on_top_flags)
+            if not origin_flags & QtCore.Qt.WindowStaysOnTopHint:
+                on_top_flags = (
+                    origin_flags | QtCore.Qt.WindowStaysOnTopHint
+                )
+                self._window.setWindowFlags(on_top_flags)
             self._window.show()
             pull_to_front(self._window)
-
-            # if on_top_flags != origin_flags:
-            #     self._window.setWindowFlags(origin_flags)
-            #     self._window.show()
 
         return {'FINISHED'}
 
