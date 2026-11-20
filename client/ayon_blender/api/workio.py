@@ -65,7 +65,9 @@ def current_file() -> Optional[str]:
     restricted at that time.
     """
 
-    current_filepath = getattr(bpy.data, "filepath", "")
+    current_filepath = getattr(bpy.data, "filepath", None)
+    if not current_filepath:
+        return None
     if Path(current_filepath).is_file():
         return current_filepath
     return None
