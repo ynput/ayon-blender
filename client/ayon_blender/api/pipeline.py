@@ -38,9 +38,7 @@ from ayon_core.lib import (
     filter_profiles
 )
 from ayon_core.settings import get_project_settings
-from ayon_core.tools.workfiles.widgets.task_in_use_dialog import (
-    install_task_in_use_notifier,
-)
+from ayon_core.tools.task_in_use import install_task_in_use_notifier
 from ayon_blender import BLENDER_ADDON_ROOT
 
 from . import lib
