@@ -1,0 +1,37 @@
+import bpy
+
+import pyblish.api
+
+from ayon_core.pipeline.publish import (
+    RepairContextAction,
+    PublishValidationError
+)
+
+from ayon_blender.api import plugin, lib
+
+
+class ValidateReviewRendererIsEevee(plugin.BlenderContextPlugin):
+    """Validate Renderer is set to Eevee for Review.
+    This ensures that the review renders are consistent and use the Eevee renderer.
+    And avoid the potential attribute error raised from Cycles renderer.
+    """
+
+    order = pyblish.api.ValidatorOrder
+    hosts = ["blender"]
+    families = ["review"]
+    label = "Validate Review Renderer Is Eevee"
+    actions = [RepairContextAction]
+
+    def process(self, context):
+        if bpy.context.scene.render.engine not in {"BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"}:
+            raise PublishValidationError(
+                "Review renderer must be set to Eevee.",
+                title="Invalid Review Renderer"
+            )
+    @classmethod
+    def repair(cls, context):
+        blender_version = lib.get_blender_version()
+        if (4, 2, 0) <= blender_version < (5, 0, 0):
+            bpy.context.scene.render.engine = "BLENDER_EEVEE_NEXT"
+        else:
+            bpy.context.scene.render.engine = "BLENDER_EEVEE"
