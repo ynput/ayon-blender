@@ -10,7 +10,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Dict, List, Optional, Union
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, shiboken
 
 import bpy
 import bpy.utils.previews
@@ -31,6 +31,15 @@ from ayon_core.style import load_stylesheet
 from .workio import OpenFileCacher
 from . import pipeline
 from . import render_lib
+
+# Tool to manage workfile templates was added in a later ayon-core version
+try:
+    from ayon_core.tools.workfile_template_build import (  # noqa: F401
+        show_workfile_template_builder,
+    )
+    HAS_TEMPLATE_BUILDER_TOOL = True
+except ImportError:
+    HAS_TEMPLATE_BUILDER_TOOL = False
 
 
 PREVIEW_COLLECTIONS: Dict = dict()
@@ -78,8 +87,17 @@ class BlenderApplication:
     def store_window(cls, identifier, window):
         current_window = cls.get_window(identifier)
         cls.blender_windows[identifier] = window
-        if current_window:
-            current_window.close()
+        if (
+            current_window
+            and current_window is not window
+            and shiboken.isValid(current_window)
+        ):
+            try:
+                current_window.close()
+            except RuntimeError:
+                # The Qt object was deleted between the validity check and
+                # the close call.
+                pass
             # current_window.deleteLater()
 
     @classmethod
@@ -298,14 +316,13 @@ class LaunchQtApp(bpy.types.Operator):
 
         else:
             origin_flags = self._window.windowFlags()
-            on_top_flags = origin_flags | QtCore.Qt.WindowStaysOnTopHint
-            self._window.setWindowFlags(on_top_flags)
+            if not origin_flags & QtCore.Qt.WindowStaysOnTopHint:
+                on_top_flags = (
+                    origin_flags | QtCore.Qt.WindowStaysOnTopHint
+                )
+                self._window.setWindowFlags(on_top_flags)
             self._window.show()
             pull_to_front(self._window)
-
-            # if on_top_flags != origin_flags:
-            #     self._window.setWindowFlags(origin_flags)
-            #     self._window.show()
 
         return {'FINISHED'}
 
@@ -467,6 +484,19 @@ class OpenTemplate(LaunchQtApp):
         return {"FINISHED"}
 
 
+class ShowTemplateBuilder(LaunchQtApp):
+    """Show the workfile template builder tool."""
+
+    bl_idname = "wm.ayon_show_template_builder"
+    bl_label = "Template Builder"
+    def execute(self, context):
+        from .workfile_template_builder import show_template_builder
+        window = show_template_builder()
+        BlenderApplication.store_window(self.bl_idname, window)
+        self._window = window
+        return super().execute(context)
+
+
 
 class CreatePlaceholder(LaunchQtApp):
     """Create Placeholder from ayon template settings."""
@@ -585,10 +615,20 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
                         text="Create Render Setup")
 
         layout.separator()
-        layout.menu(
-            TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
-            text="Templated Workfile"
-        )
+        if HAS_TEMPLATE_BUILDER_TOOL:
+            layout.operator(
+                ShowTemplateBuilder.bl_idname,
+                text="Template Builder..."
+            )
+            layout.operator(
+                CreateFirstWorkfileFromTemplate.bl_idname,
+                text="Create First Workfile from Template"
+            )
+        else:
+            layout.menu(
+                TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
+                text="Templated Workfile"
+            )
 
 def draw_ayon_menu(self, context):
     """Draw the AYON menu in the top bar."""
@@ -611,6 +651,7 @@ classes = [
     BuildWorkfileFromTemplate,
     # UpdateWorkfileFromTemplate,
     OpenTemplate,
+    ShowTemplateBuilder,
     CreatePlaceholder,
     UpdatePlaceholder,
     TOPBAR_MT_ayon_Templated_Workfile,
