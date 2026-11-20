@@ -38,6 +38,9 @@ from ayon_core.lib import (
     filter_profiles
 )
 from ayon_core.settings import get_project_settings
+from ayon_core.tools.workfiles.widgets.task_in_use_dialog import (
+    install_task_in_use_notifier,
+)
 from ayon_blender import BLENDER_ADDON_ROOT
 
 from . import lib
@@ -199,6 +202,7 @@ def install():
 
     if not IS_HEADLESS:
         ops.register()
+        install_task_in_use_notifier()
 
         # should be performed after registering the plugin
         _deferred_build_workfile_from_template(on_app_launched=True)
