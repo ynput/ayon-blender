@@ -1,5 +1,6 @@
 """Shared functionality for pipeline plugins for Blender."""
 
+import contextlib
 import itertools
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -204,6 +205,144 @@ def deselect_all():
             bpy.ops.object.mode_set(mode=p[1])
 
     bpy.context.view_layer.objects.active = active
+
+
+@contextlib.contextmanager
+def objects_in_object_mode(objects=None):
+    """Context manager that switches objects to Object Mode temporarily.
+
+    Blender's FBX exporter (`io_scene_fbx`) stores the mode of the view
+    layer's *active* object before exporting and restores it afterwards with
+    `bpy.ops.object.mode_set(mode=stored_mode)`.
+
+    Because exporters are called from AYON with a context override whose
+    active object is e.g. the asset group Empty, the operator validates that
+    stored mode against the overridden active object, which does not support
+    it, resulting in e.g.:
+
+        TypeError: Converting py args to operator properties:
+            enum "POSE" not found in ('OBJECT',)
+
+    Making sure every object starts in Object Mode, so there is no mode to
+    restore, avoids the error entirely. Original modes are restored when
+    leaving the context.
+    """
+    active = bpy.context.view_layer.objects.active
+    if active is None or active.mode == "OBJECT":
+        # fast path: nothing to switch, skip iterating the scene
+        yield
+        return
+
+    if objects is None:
+        candidates = [
+            obj for obj in bpy.context.view_layer.objects
+            if obj is not None and obj.mode != "OBJECT"
+        ]
+    else:
+        candidates = [
+            obj for obj in objects if obj is not None and obj.mode != "OBJECT"
+        ]
+
+    if active not in candidates:
+        # The active object drives the mode switch, so it always has to be
+        # part of the candidates, also when it is not in `objects`.
+        candidates.append(active)
+
+    if objects is not None:
+        # Blender switches every object sharing the mode of the active object,
+        # e.g. all armatures in Pose Mode, so these have to be restored too.
+        # This has to happen after the active object was added, otherwise the
+        # objects which were switched along with it are not restored.
+        affected_modes = {obj.mode for obj in candidates}
+        candidates = [
+            obj for obj in bpy.context.view_layer.objects
+            if obj is not None and obj.mode in affected_modes
+        ]
+
+    original_modes = [(obj.name, obj.mode) for obj in candidates]
+    # Only two sets of objects can change selection while switching modes: the
+    # ones which are selected now (they get deselected) and the candidates (they
+    # get selected), so keeping just those is enough to restore it.
+    # `bpy.context.selected_objects` is not available in every context the
+    # extractors run in, so the view layer is scanned instead.
+    selection = {}
+    for obj in bpy.context.view_layer.objects:
+        if obj is None:
+            continue
+        try:
+            is_selected = obj.select_get()
+        except RuntimeError:
+            continue
+        if is_selected:
+            selection[obj.name] = True
+    for obj in candidates:
+        selection.setdefault(obj.name, False)
+    active_name = active.name
+
+    by_mode = {}
+    for name, mode in original_modes:
+        by_mode.setdefault(mode, []).append(name)
+
+    def _switch(names, mode):
+        group = [obj for obj in (bpy.data.objects.get(n) for n in names)
+                 if obj is not None]
+        if not group:
+            return
+        editable = []
+        for obj in group:
+            if obj.hide_viewport or obj.hide_get():
+                continue
+            try:
+                obj.select_set(True)
+            except RuntimeError:
+                continue
+            editable.append(obj)
+        if not editable:
+            return
+        # `mode_set` acts on the whole selection, not only on the active object,
+        # so the objects of the other mode groups have to be deselected first.
+        # Otherwise they are dragged into this mode change and e.g. undo a mode
+        # which was already restored. Only these objects can be selected here:
+        # everything else which was selected was deselected on entry.
+        for name in selection:
+            obj = bpy.data.objects.get(name)
+            if obj is None:
+                continue
+            try:
+                obj.select_set(False)
+            except RuntimeError:
+                continue
+        for obj in editable:
+            try:
+                obj.select_set(True)
+            except RuntimeError:
+                continue
+        bpy.context.view_layer.objects.active = editable[0]
+        override = create_blender_context(active=editable[0], selected=editable)
+        with bpy.context.temp_override(**override):
+            try:
+                bpy.ops.object.mode_set(mode=mode)
+            except RuntimeError:
+                return
+
+    try:
+        for _mode, names in by_mode.items():
+            _switch(names, "OBJECT")
+        yield
+    finally:
+        for mode, names in by_mode.items():
+            _switch(names, mode)
+        for name, is_selected in selection.items():
+            obj = bpy.data.objects.get(name)
+            if obj is not None:
+                try:
+                    obj.select_set(is_selected)
+                except RuntimeError:
+                    continue
+
+        restored_active = bpy.data.objects.get(active_name)
+        if restored_active is not None:
+            bpy.context.view_layer.objects.active = restored_active
 
 
 class BlenderInstancePlugin(pyblish.api.InstancePlugin):
