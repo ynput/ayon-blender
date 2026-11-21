@@ -31,6 +31,9 @@ from ayon_core.pipeline import (
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity
 )
+from ayon_core.pipeline.workfile.task_usage import (
+    install_task_usage_tracker,
+)
 from ayon_core.lib import (
     Logger,
     register_event_callback,
@@ -93,6 +96,8 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
         """Override install method from HostBase.
         Install Blender host functionality."""
         install()
+        if not IS_HEADLESS:
+            install_task_usage_tracker(self)
 
     def get_containers(self) -> Iterator:
         """List containers from active Blender scene."""
