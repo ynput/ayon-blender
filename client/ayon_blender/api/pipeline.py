@@ -31,6 +31,9 @@ from ayon_core.pipeline import (
 from ayon_core.pipeline.context_tools import (
     get_current_task_entity
 )
+from ayon_core.pipeline.workfile.task_usage import (
+    install_task_usage_tracker,
+)
 from ayon_core.lib import (
     Logger,
     register_event_callback,
@@ -38,6 +41,7 @@ from ayon_core.lib import (
     filter_profiles
 )
 from ayon_core.settings import get_project_settings
+from ayon_core.tools.task_in_use import install_task_in_use_notifier
 from ayon_blender import BLENDER_ADDON_ROOT
 
 from . import lib
@@ -92,6 +96,8 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
         """Override install method from HostBase.
         Install Blender host functionality."""
         install()
+        if not IS_HEADLESS:
+            install_task_usage_tracker(self)
 
     def get_containers(self) -> Iterator:
         """List containers from active Blender scene."""
@@ -199,6 +205,7 @@ def install():
 
     if not IS_HEADLESS:
         ops.register()
+        install_task_in_use_notifier()
 
         # should be performed after registering the plugin
         _deferred_build_workfile_from_template(on_app_launched=True)
