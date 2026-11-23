@@ -16,7 +16,13 @@ from ayon_blender.api.pipeline import (
     get_ayon_property
 )
 from ayon_blender.api.constants import AYON_PROPERTY
-
+from ayon_blender.api.material_assignments import (
+    apply_material_overrides,
+    get_material_layout,
+    get_material_overrides,
+    get_members_still_in_use,
+    get_preserved_material_names,
+)
 
 
 class BlendLoader(plugin.BlenderLoader):
@@ -174,6 +180,10 @@ class BlendLoader(plugin.BlenderLoader):
 
         add_to_ayon_container(container)
 
+        # Record the material layout as it was loaded. On update this tells us
+        # which material slots were changed locally by the artist
+        material_baseline = get_material_layout(container.children_recursive)
+
         data = {
             "schema": "ayon:container-3.0",
             "id": AYON_CONTAINER_ID,
@@ -186,6 +196,7 @@ class BlendLoader(plugin.BlenderLoader):
             "objectName": group_name,
             "members": members,
             "project_name": context["project"]["name"],
+            "material_baseline": material_baseline,
         }
 
         container[AYON_PROPERTY] = data
@@ -212,10 +223,30 @@ class BlendLoader(plugin.BlenderLoader):
         )
 
         transform = asset_group.matrix_basis.copy()
-        old_data = dict(asset_group.get(AYON_PROPERTY))
+        # `to_dict` returns plain Python values. A shallow `dict()` would keep
+        # the nested groups of the property alive, which corrupts the property
+        # when it is assigned back below.
+        old_data = asset_group.get(AYON_PROPERTY).to_dict()
         old_members = old_data.get("members", [])
         parent = asset_group.parent
         users_collections = asset_group.users_collection
+
+        # Find the material slots the artist changed locally, so that they can
+        # be restored on the objects of the new version.
+        material_baseline = old_data.get("material_baseline")
+        material_overrides = get_material_overrides(
+            current_layout=get_material_layout(
+                asset_group.children_recursive
+            ),
+            baseline_layout=material_baseline,
+            container_name=group_name,
+        )
+        # Locally renamed or duplicated materials are still container members,
+        # but the new version cannot re-create them, so they must survive the
+        # removal of the old version.
+        preserve_materials = get_preserved_material_names(
+            material_overrides, material_baseline
+        )
 
         actions = {}
         objects_with_anim = [
@@ -228,11 +259,19 @@ class BlendLoader(plugin.BlenderLoader):
             if obj.animation_data.action not in old_members:
                 actions[obj.name] = obj.animation_data.action
 
-        self.exec_remove(container)
+        self._remove_container(
+            container, preserve_materials=preserve_materials
+        )
 
         asset_group, members = self._process_data(libpath, group_name)
 
         add_to_ayon_container(asset_group)
+
+        # Record the material layout of the newly loaded version *before*
+        # restoring the local overrides, so that the baseline keeps describing
+        # the published materials.
+        material_baseline = get_material_layout(asset_group.children_recursive)
+        apply_material_overrides(material_overrides, logger=self.log)
 
         asset_group.matrix_basis = transform
         asset_group.parent = parent
@@ -255,6 +294,7 @@ class BlendLoader(plugin.BlenderLoader):
             "representation": repre_entity["id"],
             "members": members,
             "project_name": context["project"]["name"],
+            "material_baseline": material_baseline,
         }
 
         imprint(asset_group, new_data)
@@ -285,6 +325,21 @@ class BlendLoader(plugin.BlenderLoader):
         """
         Remove an existing container from a Blender scene.
         """
+        self._remove_container(container)
+
+    def _remove_container(
+        self,
+        container: dict,
+        preserve_materials: Optional[set] = None,
+    ):
+        """Remove the container and the datablocks loaded with it.
+
+        Arguments:
+            container (dict): Container to remove.
+            preserve_materials (Optional[set]): Names of materials that must
+                not be removed, together with their dependencies, because
+                they are restored after an update.
+        """
         group_name = container["objectName"]
         asset_group = bpy.data.objects.get(group_name)
 
@@ -300,4 +355,20 @@ class BlendLoader(plugin.BlenderLoader):
 
         members.discard(None)
         members.add(asset_group)
+
+        if preserve_materials:
+            members = {
+                member for member in members
+                if not (
+                    isinstance(member, bpy.types.Material)
+                    and member.name in preserve_materials
+                )
+            }
+
+        # Keep the dependencies of datablocks that live outside of the
+        # container, e.g. the images and node groups of a material the artist
+        # duplicated and edited locally. Removing those would leave the
+        # artist's copy broken instead of preserving it.
+        members -= get_members_still_in_use(members)
+
         bpy.data.batch_remove(members)
