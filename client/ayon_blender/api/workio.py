@@ -59,9 +59,15 @@ def save_file(filepath: str, copy: bool = False) -> Optional[str]:
 
 
 def current_file() -> Optional[str]:
-    """Return the path of the open scene file."""
+    """Return the path of the open scene file.
 
-    current_filepath = bpy.data.filepath
+    Returns None while add-ons are registered on startup, 'bpy.data' is
+    restricted at that time.
+    """
+
+    current_filepath = getattr(bpy.data, "filepath", None)
+    if not current_filepath:
+        return None
     if Path(current_filepath).is_file():
         return current_filepath
     return None
@@ -77,13 +83,3 @@ def file_extensions() -> List[str]:
     """Return the supported file extensions for Blender scene files."""
 
     return [".blend"]
-
-
-def work_root(session: dict) -> str:
-    """Return the default root to browse for work files."""
-
-    work_dir = session["AYON_WORKDIR"]
-    scene_dir = session.get("AVALON_SCENEDIR")
-    if scene_dir:
-        return str(Path(work_dir, scene_dir))
-    return work_dir

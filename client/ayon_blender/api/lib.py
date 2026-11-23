@@ -409,10 +409,16 @@ def iter_images_in_node_tree(tree: bpy.types.NodeTree):
     nodes = list(tree.nodes)
     processed = set(nodes)
     for node in nodes:
-        if hasattr(node, "image"):
+        if (
+            hasattr(node, "image") 
+            and getattr(node, "image", None)
+        ):
             yield node.image
         # Traverse down into node groups
-        if hasattr(node, "node_tree"):
+        if (
+            hasattr(node, "node_tree") 
+            and getattr(node, "node_tree", None)
+        ):
             children = node.node_tree.nodes
             nodes.extend(
                 node for node in children

@@ -129,6 +129,10 @@ def set_render_passes(settings, renderer, view_layers):
     base_aov_list = set(settings["blender"]["RenderSettings"]["aov_list"])
     custom_passes = settings["blender"]["RenderSettings"]["custom_passes"]
     aov_list_combined: set[str] = set()
+    ver_major, ver_minor, _ = lib.get_blender_version()
+    # `use_pass_bloom` is deprecated since Blender 4.2, where it is only an
+    # alias for the transparent and volume direct passes.
+    supports_bloom = (ver_major, ver_minor) < (4, 2)
     # Common passes for both renderers
     for vl in view_layers:
         # Compute per-layer AOV list: project settings AOVs unioned with only
@@ -138,7 +142,7 @@ def set_render_passes(settings, renderer, view_layers):
         aov_list = base_aov_list.union(existing_aov_list)
         aov_list_combined.update(aov_list)
 
-        if _is_legacy_eevee_renderer(renderer):
+        if _is_eevee_renderer(renderer):
             # Eevee exclusive passes
             aov_options = get_aov_options(renderer)
             eevee_attrs: set[str] = {
@@ -147,11 +151,14 @@ def set_render_passes(settings, renderer, view_layers):
                 "use_pass_volume_direct"
             }
             for pass_name, attr in aov_options.items():
+                if attr == "use_pass_bloom" and not supports_bloom:
+                    continue
+                if (attr == "use_pass_cryptomatte_accurate"
+                        and pass_name not in base_aov_list):
+                    # This is a mode, not an AOV pass. Do not switch it off
+                    # just because it is not part of the generated AOV list.
+                    continue
                 target = vl.eevee if attr in eevee_attrs else vl
-                ver_major, ver_minor, _ = lib.get_blender_version()
-                if ver_major >= 3 and ver_minor > 6:
-                    if attr == "use_pass_bloom":
-                        continue
                 setattr(target, attr, pass_name in aov_list)
         elif renderer == "CYCLES":
             # Cycles exclusive passes
@@ -178,8 +185,8 @@ def set_render_passes(settings, renderer, view_layers):
     return list(aov_list_combined), custom_passes
 
 
-def _is_legacy_eevee_renderer(renderer):
-    """Return whether renderer is Eevee in Blender lower than 4.2.
+def _is_eevee_renderer(renderer):
+    """Return whether the renderer is Eevee in any Blender version.
 
     Note:
       In Blender <4.2 'BLENDER_EEVEE' represents Eevee renderer.
@@ -190,15 +197,9 @@ def _is_legacy_eevee_renderer(renderer):
         renderer (str): Renderer name.
 
     Returns:
-        bool: Whether renderer is Eevee in Blender version lower than 4.2.
+        bool: Whether the renderer is Eevee.
     """
-    if renderer != "BLENDER_EEVEE":
-        return False
-
-    ver_major, ver_minor, _ = lib.get_blender_version()
-    if (ver_major, ver_minor) < (4, 2):
-        return True
-    return False
+    return renderer in {"BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"}
 
 
 def get_aov_options(renderer: str) -> dict[str, str]:
@@ -219,7 +220,7 @@ def get_aov_options(renderer: str) -> dict[str, str]:
         "cryptomatte_material": "use_pass_cryptomatte_material",
         "cryptomatte_asset": "use_pass_cryptomatte_asset",
     }
-    if _is_legacy_eevee_renderer(renderer):
+    if _is_eevee_renderer(renderer):
         eevee_options = {
             "shadow": "use_pass_shadow",
             "volume_light": "use_pass_volume_direct",
@@ -256,9 +257,27 @@ def existing_aov_options(
 ) -> list[str]:
     aov_list = []
     aov_options = get_aov_options(renderer)
-    if _is_legacy_eevee_renderer(renderer):
-        eevee_attrs = ["use_pass_shadow", "cryptomatte_accurate"]
+    ver_major, ver_minor, _ = lib.get_blender_version()
+    supports_bloom = (ver_major, ver_minor) < (4, 2)
+    if _is_eevee_renderer(renderer):
+        # Only these passes live on the Eevee properties of the view layer, the
+        # other ones are read from the view layer itself. This matches the
+        # targets used by `set_render_passes`.
+        eevee_attrs = [
+            "use_pass_bloom",
+            "use_pass_transparent",
+            "use_pass_volume_direct",
+        ]
         for pass_name, attr in aov_options.items():
+            if attr == "use_pass_bloom" and not supports_bloom:
+                # Deprecated in 4.2+, where it aliases transparent and volume
+                # direct and can therefore be reported as enabled without the
+                # user requesting bloom.
+                continue
+            if pass_name == "cryptomatte_accurate":
+                # A mode, not an AOV pass. New view layers have it enabled by
+                # default, so it is not an "existing pass" to preserve.
+                continue
             target = view_layer.eevee if attr in eevee_attrs else view_layer
             if getattr(target, attr, False):
                 aov_list.append(pass_name)
