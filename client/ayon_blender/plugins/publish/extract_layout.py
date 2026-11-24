@@ -292,7 +292,7 @@ class ExtractLayout(
         if len(fbx_files) == 1:
             fbx_representation = {
                 'name': 'fbx',
-                'ext': '000.fbx',
+                'ext': 'fbx',
                 'files': fbx_files[0],
                 "stagingDir": stagingdir,
             }
