@@ -70,6 +70,15 @@ class HooksModel(BaseSettingsModel):
             "**This may require admin privileges**"
         )
     )
+    use_system_env: bool = SettingsField(
+        True,
+        title="Add --python-use-system-env argument",
+        description=(
+            "Launch Blender with the `--python-use-system-env` argument so "
+            "it uses the launched context's PYTHONPATH. Without it the AYON "
+            "integration fails to load."
+        )
+    )
 
 
 class BlenderSettings(BaseSettingsModel):
@@ -142,6 +151,7 @@ DEFAULT_VALUES = {
     },
     "hooks": {
         "install_pyside": True,
+        "use_system_env": True,
     },
     "RenderSettings": DEFAULT_RENDER_SETTINGS,
     "create": DEFAULT_CREATORS_SETTINGS,

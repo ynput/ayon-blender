@@ -355,14 +355,6 @@ class LaunchManager(LaunchQtApp):
     _tool_name = "sceneinventory"
 
 
-class LaunchLibrary(LaunchQtApp):
-    """Launch Library Loader."""
-
-    bl_idname = "wm.library_loader"
-    bl_label = "Library..."
-    _tool_name = "libraryloader"
-
-
 class LaunchWorkFiles(LaunchQtApp):
     """Launch AYON Work Files."""
 
@@ -585,7 +577,6 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
             icon_value=pyblish_menu_icon_id,
         )
         layout.operator(LaunchManager.bl_idname, text="Manage...")
-        layout.operator(LaunchLibrary.bl_idname, text="Library...")
         layout.separator()
         layout.operator(SetFrameRange.bl_idname, text="Set Frame Range")
         layout.operator(SetResolution.bl_idname, text="Set Resolution")
@@ -610,7 +601,6 @@ classes = [
     LaunchLoader,
     LaunchPublisher,
     LaunchManager,
-    LaunchLibrary,
     LaunchWorkFiles,
     SetFrameRange,
     SetResolution,
