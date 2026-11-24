@@ -38,13 +38,13 @@ class RenderColorspaceData(TypedDict):
 
     Attributes:
         colorspaceConfig (str): Path to the OCIO configuration file.
-        colorspaceDisplay (str): Display device name.
-        colorspaceView (str): View transform name.
+        sceneDisplay (str): Display device name.
+        sceneView (str): View transform name.
         colorspace (str): Colorspace of the output image.
     """
     colorspaceConfig: str
-    colorspaceDisplay: str
-    colorspaceView: str
+    sceneDisplay: str
+    sceneView: str
     colorspace: str
 
 
