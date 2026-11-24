@@ -1069,6 +1069,94 @@ def pack_image(image, logger=None) -> bool:
     return True
 
 
+def _can_reload_image(image) -> bool:
+    """Return whether an unpacked copy of the image can be loaded.
+
+    An image whose source path cannot be loaded must not be unpacked: its
+    packed data would be lost, and there would be nothing to pack again when
+    the context exits.
+
+    Arguments:
+        image (bpy.types.Image): The packed image to check.
+
+    Returns:
+        bool: Whether the source of the image can be loaded.
+    """
+    filepath = bpy.path.abspath(image.filepath)
+    try:
+        image_copy = bpy.data.images.load(filepath, check_existing=False)
+    except RuntimeError:
+        return False
+    bpy.data.images.remove(image_copy)
+    return True
+
+
+@contextlib.contextmanager
+def unpacked_images(datablocks, logger=None):
+    """Unpack images during context
+    This will unpack all packed images found in the given datablocks,
+    and restore them back when exiting the context.
+
+    Args:
+        datablocks (set): Datablocks to search for packed images.
+        logger (logging.Logger): Logger to use for warnings if unpacking fails.
+
+    """
+
+    if logger is None:
+        logger = log
+
+    unpacked_node_images = set()
+    for data in datablocks:
+        if not (
+            isinstance(data, bpy.types.Object) and data.type == 'MESH'
+        ):
+            continue
+        for material_slot in data.material_slots:
+            mat = material_slot.material
+            if not (mat and mat.use_nodes):
+                continue
+            tree = mat.node_tree
+            if tree.type != 'SHADER':
+                continue
+            for node in tree.nodes:
+                if node.bl_idname != 'ShaderNodeTexImage':
+                    continue
+                if not node.image:
+                    continue
+                if node.image.packed_file is None:
+                    continue
+
+                if not _can_reload_image(node.image):
+                    logger.warning(
+                        "Unable to unpack image '%s': its source '%s' cannot"
+                        " be loaded. It will be published packed.",
+                        node.image.name,
+                        bpy.path.abspath(node.image.filepath)
+                    )
+                    continue
+
+                try:
+                    restore_unpacked_image(node.image, logger=logger)
+                except RuntimeError:
+                    logger.warning(
+                        f"Unable to unpack node: {node}",
+                        exc_info=True
+                    )
+                    continue
+                unpacked_node_images.add(node.image)
+    try:
+        yield
+
+    finally:
+        for image in unpacked_node_images:
+            repacked = pack_image(image, logger=logger)
+            if not repacked:
+                logger.warning(
+                    f"Unable to repack image: {image.name}"
+                )
+
+
 @contextlib.contextmanager
 def packed_images(datablocks, logger=None):
     """Unpack packed images during context
