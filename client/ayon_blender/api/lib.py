@@ -7,7 +7,7 @@ from typing import Dict, Iterable, List, Optional, Union
 
 import addon_utils
 import bpy
-from ayon_core.lib import Logger, NumberDef
+from ayon_core.lib import BoolDef, Logger, NumberDef, UILabelDef
 from ayon_core.pipeline import registered_host
 from ayon_core.pipeline.create import CreateContext
 
@@ -1053,6 +1053,76 @@ def update_content_on_context_change():
 
     if has_changes:
         create_context.save_changes()
+
+
+def prompt_reset_context():
+    """Prompt the user which scene settings to match to the new context.
+
+    Used when the workfile is saved into a different folder or task.
+    """
+    from qtpy import QtWidgets
+    from ayon_core.tools.attribute_defs.dialog import (
+        AttributeDefinitionsDialog
+    )
+
+    definitions = [
+        UILabelDef(
+            label=(
+                "You are saving your workfile into a different folder or "
+                "task.\n\n"
+                "Would you like to update some settings to the new context?\n"
+            )
+        ),
+        BoolDef(
+            "frame_range",
+            label="Frame Range",
+            tooltip="Reset the scene frame range and FPS",
+            default=True
+        ),
+        BoolDef(
+            "resolution",
+            label="Resolution",
+            tooltip="Reset the render resolution",
+            default=True
+        ),
+    ]
+    if pipeline.get_blender_settings()["imageio"]["workfile"]["enabled"]:
+        definitions.append(
+            BoolDef(
+                "colorspace",
+                label="Colorspace",
+                tooltip="Reset the scene color management",
+                default=True
+            )
+        )
+    definitions.append(
+        BoolDef(
+            "instances",
+            label="Publish instances",
+            tooltip="Update all publish instance's folder and task to match "
+                    "the new folder and task",
+            default=True
+        )
+    )
+
+    dialog = AttributeDefinitionsDialog(
+        definitions,
+        title="Saving to different context",
+        parent=QtWidgets.QApplication.activeWindow(),
+    )
+    accepted = dialog.exec_()
+    options = dialog.get_values()
+    dialog.deleteLater()
+    if not accepted:
+        return
+
+    pipeline.set_context_settings(
+        frame_range=options["frame_range"],
+        resolution=options["resolution"],
+        colorspace=options.get("colorspace", False),
+    )
+    if options["instances"]:
+        update_content_on_context_change()
 
 
 def iter_bpy_prop_collection_idprop():

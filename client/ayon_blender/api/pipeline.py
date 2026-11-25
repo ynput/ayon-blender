@@ -9,6 +9,8 @@ import bpy
 import pyblish.api
 
 from ayon_core.host import (
+    ContextChangeData,
+    ContextChangeReason,
     HostBase,
     IWorkfileHost,
     IPublishHost,
@@ -168,6 +170,20 @@ class BlenderHost(HostBase, IWorkfileHost, IPublishHost, ILoadHost):
         """
         bpy.context.scene[AYON_PROPERTY] = data
 
+    def _after_context_change(self, context_change_data: ContextChangeData):
+        """Offer to match the scene to the new context when saving into it.
+
+        Args:
+            context_change_data (ContextChangeData): Object with information
+                about context change.
+        """
+        super()._after_context_change(context_change_data)
+        if IS_HEADLESS:
+            return
+
+        if context_change_data.reason == ContextChangeReason.workfile_save:
+            lib.prompt_reset_context()
+
 
 def pype_excepthook_handler(*args):
     traceback.print_exception(*args)
@@ -279,13 +295,15 @@ def get_frame_range(task_entity=None) -> Union[Dict[str, int], None]:
 
 def set_context_settings(frame_range: bool = True,
                          resolution: bool = True,
-                         scene_units: bool = False):
+                         scene_units: bool = False,
+                         colorspace: bool = False):
     """Set context settings for the current scene.
 
     Args:
         frame_range (bool): Set frame range context variable.
         resolution (bool): Set resolution context variable.
         scene_units (bool): Set scene units context variable.
+        colorspace (bool): Set the workfile color management from settings.
     """
     task_entity = get_current_task_entity()
     if not task_entity:
@@ -297,6 +315,8 @@ def set_context_settings(frame_range: bool = True,
         set_resolution(task_entity)
     if scene_units:
         set_unit_scale_from_settings(scene_units=scene_units)
+    if colorspace:
+        set_colorspace_from_settings()
 
 
 def set_frame_range(entity: dict):
