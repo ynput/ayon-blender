@@ -43,6 +43,12 @@ class BlenderTemplateBuilder(AbstractTemplateBuilder):
         bpy.ops.wm.read_homefile(filepath=path)
         update_content_on_context_change()
 
+    def get_selected_placeholder_identifiers(self):
+        """Return selected collections so the tool follows Blender selection."""
+        return [
+            collection.name for collection in get_selected_collections()
+        ]
+
 
 class BlenderPlaceholderPlugin(PlaceholderPlugin):
     """Base Placeholder Plugin for Blender with one unified cache.
