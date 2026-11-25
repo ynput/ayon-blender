@@ -913,24 +913,30 @@ def search_replace_render_paths(src: str, dest: str) -> bool:
         bpy.context.scene.render.filepath = new_path
         changes = True
 
-    # Base paths for Compositor File Output Nodes
+    # Compositor File Output Nodes
+    if get_blender_version() >= (5, 0, 0):
+        node_path_attrs = ("directory", "file_name")
+    else:
+        node_path_attrs = ("base_path",)
+
     node_tree = get_scene_node_tree()
     if node_tree:
         for node in node_tree.nodes:
             if node.bl_idname != "CompositorNodeOutputFile":
                 continue
 
-            path: str = node.base_path
-            new_path: str = path.replace(src, dest)
-            if new_path == path:
-                continue
+            for attr in node_path_attrs:
+                path: str = getattr(node, attr)
+                new_path: str = path.replace(src, dest)
+                if new_path == path:
+                    continue
 
-            log.info(
-                "Updating compositor output file node base render path from "
-                f"'{path}' to '{new_path}'"
-            )
-            node.base_path = new_path
-            changes = True
+                log.info(
+                    f"Updating compositor output file node {attr} render "
+                    f"path from '{path}' to '{new_path}'"
+                )
+                setattr(node, attr, new_path)
+                changes = True
 
     return changes
 
