@@ -624,6 +624,15 @@ class TOPBAR_MT_ayon(bpy.types.Menu):
                 CreateFirstWorkfileFromTemplate.bl_idname,
                 text="Create First Workfile from Template"
             )
+            layout.separator()
+            layout.operator(
+                BuildWorkfileFromTemplate.bl_idname,
+                text="Build Workfile from Template"
+            )
+            layout.operator(
+                OpenTemplate.bl_idname,
+                text="Open Template"
+            )
         else:
             layout.menu(
                 TOPBAR_MT_ayon_Templated_Workfile.bl_idname,
