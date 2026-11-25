@@ -40,6 +40,7 @@ from ayon_core.lib import (
 from ayon_core.settings import get_project_settings
 from ayon_blender import BLENDER_ADDON_ROOT
 
+from . import colorspace
 from . import lib
 from . import ops
 
@@ -371,6 +372,22 @@ def set_unit_scale_from_settings(blender_settings=None, scene_units=False):
         bpy.context.scene.unit_settings.scale_length = unit_scale
 
 
+def set_colorspace_from_settings(blender_settings=None):
+    if blender_settings is None:
+        blender_settings = get_blender_settings()
+    workfile_settings = blender_settings["imageio"]["workfile"]
+    if not workfile_settings["enabled"]:
+        return
+    colorspace.set_scene_colorspace(
+        bpy.context.scene,
+        display=workfile_settings["display"],
+        view=workfile_settings["view"],
+        look=workfile_settings["look"],
+        working_space=workfile_settings["working_space"],
+        sequencer_colorspace=workfile_settings["sequencer_colorspace"],
+    )
+
+
 def get_blender_settings(project_name=None) -> Dict:
     if not project_name:
         project_name = get_current_project_name()
@@ -390,6 +407,7 @@ def on_new():
         set_frame_range(task_entity)
 
     set_unit_scale_from_settings(blender_settings=settings)
+    set_colorspace_from_settings(blender_settings=settings)
 
     if not IS_HEADLESS:
         _deferred_build_workfile_from_template()
@@ -469,6 +487,9 @@ def on_open():
         set_resolution(task_entity)
     if set_frames_startup:
         set_frame_range(task_entity)
+
+    if settings["imageio"]["workfile"]["apply_on_opening"]:
+        set_colorspace_from_settings(blender_settings=settings)
 
     unit_scale_settings = settings.get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")

@@ -1,4 +1,62 @@
+import logging
+
 import attr
+import bpy
+
+log = logging.getLogger(__name__)
+
+
+def set_scene_colorspace(
+    scene: "bpy.types.Scene",
+    display: str = "",
+    view: str = "",
+    look: str = "",
+    working_space: str = "",
+    sequencer_colorspace: str = "",
+):
+    """Set the scene color management and the blend file working space.
+
+    Empty values are skipped. The display is set before the view and the view
+    before the look because the available views depend on the display and the
+    available looks depend on the view.
+
+    Args:
+        scene (bpy.types.Scene): Scene to set the color management on.
+        display (str): OCIO display name.
+        view (str): OCIO view name.
+        look (str): OCIO look name, or 'None'.
+        working_space (str): OCIO colorspace name for the blend file's
+            working space. Requires Blender 5.0+.
+        sequencer_colorspace (str): OCIO colorspace name for the sequencer.
+    """
+    if working_space:
+        # Blender 4.x has no per blend file working space, it was added in
+        # Blender 5.0. Remove this check once Blender 4 is no longer supported.
+        if not hasattr(bpy.data, "colorspace"):
+            log.warning(
+                "Blender %s has no working color space. Skipping '%s'.",
+                bpy.app.version_string, working_space
+            )
+        elif bpy.data.colorspace.working_space != working_space:
+            try:
+                bpy.ops.wm.set_working_color_space(
+                    working_space=working_space, convert_colors=True
+                )
+            except TypeError as exc:
+                log.warning("Unable to set working space: %s", exc)
+
+    for settings, attribute, value in (
+        (scene.display_settings, "display_device", display),
+        (scene.view_settings, "view_transform", view),
+        (scene.view_settings, "look", look),
+        (scene.sequencer_colorspace_settings, "name", sequencer_colorspace),
+    ):
+        if not value:
+            continue
+        try:
+            setattr(settings, attribute, value)
+        except TypeError as exc:
+            log.warning("Unable to set %s: %s", attribute, exc)
 
 
 @attr.s

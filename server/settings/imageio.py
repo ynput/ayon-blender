@@ -23,6 +23,47 @@ class ImageIOFileRulesModel(BaseSettingsModel):
         return value
 
 
+class WorkfileImageIOModel(BaseSettingsModel):
+    """Set the scene color management on new workfiles.
+
+    Existing workfiles are only changed on opening when enabled.
+    Empty values are left as they are in the workfile."""
+
+    enabled: bool = SettingsField(False, title="Enabled")
+    apply_on_opening: bool = SettingsField(
+        False, title="Apply on Opening Existing Files")
+    display: str = SettingsField(
+        "",
+        title="Display",
+        description="OCIO display, e.g. 'sRGB - Display'.",
+    )
+    view: str = SettingsField(
+        "",
+        title="View",
+        description="OCIO view of the display, e.g. 'ACES 1.0 - SDR Video'.",
+    )
+    look: str = SettingsField(
+        "",
+        title="Look",
+        description="OCIO look of the view, or 'None' to disable the look.",
+    )
+    working_space: str = SettingsField(
+        "",
+        title="Working Space",
+        description=(
+            "Blender 5.0+ only. Scene linear working color space of the"
+            " blend file, e.g. 'ACEScg'. Blender only accepts colorspaces of"
+            " the OCIO config that match Linear Rec.709, Linear Rec.2020 or"
+            " ACEScg. Colors in the blend file are converted on change."
+        ),
+    )
+    sequencer_colorspace: str = SettingsField(
+        "",
+        title="Sequencer Colorspace",
+        description="Colorspace the Video Sequencer works in, e.g. 'ACEScg'.",
+    )
+
+
 class BlenderImageIOModel(BaseSettingsModel):
     activate_host_color_management: bool = SettingsField(
         True, title="Enable Color Management",
@@ -31,4 +72,8 @@ class BlenderImageIOModel(BaseSettingsModel):
     file_rules: ImageIOFileRulesModel = SettingsField(
         default_factory=ImageIOFileRulesModel,
         title="File Rules"
+    )
+    workfile: WorkfileImageIOModel = SettingsField(
+        default_factory=WorkfileImageIOModel,
+        title="Workfile"
     )
