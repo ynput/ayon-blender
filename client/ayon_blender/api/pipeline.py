@@ -385,6 +385,8 @@ def set_colorspace_from_settings(blender_settings=None):
         look=workfile_settings["look"],
         working_space=workfile_settings["working_space"],
         sequencer_colorspace=workfile_settings["sequencer_colorspace"],
+        exposure=workfile_settings["exposure"],
+        gamma=workfile_settings["gamma"],
     )
 
 

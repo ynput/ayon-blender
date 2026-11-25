@@ -27,7 +27,8 @@ class WorkfileImageIOModel(BaseSettingsModel):
     """Set the scene color management on new workfiles.
 
     Existing workfiles are only changed on opening when enabled.
-    Empty values are left as they are in the workfile."""
+    Empty text values are left as they are in the workfile. Exposure and
+    gamma are always set."""
 
     enabled: bool = SettingsField(False, title="Enabled")
     apply_on_opening: bool = SettingsField(
@@ -46,6 +47,16 @@ class WorkfileImageIOModel(BaseSettingsModel):
         "",
         title="Look",
         description="OCIO look of the view, or 'None' to disable the look.",
+    )
+    exposure: float = SettingsField(
+        0.0,
+        title="Exposure",
+        description="Exposure of the view in stops. Blender's default is 0.0.",
+    )
+    gamma: float = SettingsField(
+        1.0,
+        title="Gamma",
+        description="Gamma of the view. Blender's default is 1.0.",
     )
     working_space: str = SettingsField(
         "",

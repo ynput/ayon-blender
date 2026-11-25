@@ -273,7 +273,7 @@ class PublishPluginsModel(BaseSettingsModel):
     ValidateSceneColorspace: ValidatePluginModel = SettingsField(
         default_factory=ValidatePluginModel,
         title="Validate Scene Colorspace",
-        description="Checks the scene display, view and working space match the workfile color management settings and that exposure and gamma are at their defaults.",
+        description="Checks the scene display, view, exposure, gamma and working space match the workfile color management settings.",
     )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,

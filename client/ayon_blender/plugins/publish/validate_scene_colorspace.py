@@ -1,4 +1,5 @@
 import inspect
+import math
 
 import bpy
 import pyblish.api
@@ -18,9 +19,9 @@ class ValidateSceneColorspace(plugin.BlenderContextPlugin,
                               OptionalPyblishPluginMixin):
     """Validate the scene color management matches the workfile settings.
 
-    Checks the display, view and working space (Blender 5.0+) against the
-    workfile color management settings, skipping empty values, and that
-    exposure and gamma are at their defaults.
+    Checks the display, view, exposure, gamma and working space (Blender
+    5.0+) against the workfile color management settings, skipping empty
+    values.
 
     Does nothing when the workfile color management settings are disabled.
     """
@@ -60,8 +61,10 @@ class ValidateSceneColorspace(plugin.BlenderContextPlugin,
              workfile_settings["display"]),
             ("View", scene.view_settings.view_transform,
              workfile_settings["view"]),
-            ("Exposure", scene.view_settings.exposure, 0.0),
-            ("Gamma", scene.view_settings.gamma, 1.0),
+            ("Exposure", scene.view_settings.exposure,
+             workfile_settings["exposure"]),
+            ("Gamma", scene.view_settings.gamma,
+             workfile_settings["gamma"]),
         ]
         # Blender 4.x has no per blend file working space, it was added in
         # Blender 5.0. Remove this check once Blender 4 is no longer supported.
@@ -73,10 +76,14 @@ class ValidateSceneColorspace(plugin.BlenderContextPlugin,
 
         invalid = []
         for label, current, expected in checks:
-            if expected == "" or current == expected:
-                continue
-            if isinstance(expected, float):
+            if isinstance(current, float):
+                # Blender stores these as 32-bit floats, e.g. 0.8 reads back
+                # as 0.800000011920929.
+                if math.isclose(current, expected, rel_tol=1e-6, abs_tol=1e-6):
+                    continue
                 error = f"{label} is {current:g} but should be {expected:g}."
+            elif expected == "" or current == expected:
+                continue
             else:
                 error = f"{label} is '{current}' but should be '{expected}'."
             cls.log.error(error)
@@ -86,9 +93,6 @@ class ValidateSceneColorspace(plugin.BlenderContextPlugin,
     @classmethod
     def repair(cls, context: pyblish.api.Context):
         set_colorspace_from_settings(context.data["project_settings"]["blender"])
-        view_settings = bpy.context.scene.view_settings
-        view_settings.exposure = 0.0
-        view_settings.gamma = 1.0
 
     @staticmethod
     def get_description(bullet_points: str) -> str:
@@ -101,6 +105,6 @@ class ValidateSceneColorspace(plugin.BlenderContextPlugin,
             {bullet_points}
 
             Use the Repair action to apply the workfile color management
-            settings and reset exposure and gamma to their defaults.
+            settings.
             """
         ).format(bullet_points=bullet_points)
