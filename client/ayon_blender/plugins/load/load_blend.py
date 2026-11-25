@@ -15,8 +15,82 @@ from ayon_blender.api.pipeline import (
     add_to_ayon_container,
     get_ayon_property
 )
-from ayon_blender.api.constants import AYON_PROPERTY
+from ayon_blender.api.constants import AYON_PROPERTY, AYON_INSTANCES
 
+
+# Creator identifiers of the Animation creator. Scenes created before the
+# OpenPype to AYON rename can still store the legacy identifier.
+ANIMATION_CREATOR_IDENTIFIERS = {
+    "io.ayon.creators.blender.animation",
+    "io.openpype.creators.blender.animation",
+}
+
+
+def _is_animation_instance(collection) -> bool:
+    """Return whether a collection is an Animation creator instance."""
+    instance_data = get_ayon_property(collection)
+    if not instance_data:
+        return False
+
+    creator_identifier = instance_data.get("creator_identifier") or ""
+    if creator_identifier in ANIMATION_CREATOR_IDENTIFIERS:
+        return True
+
+    # Legacy instances do not define a creator identifier and only store
+    # their family.
+    return instance_data.get("family") == "animation"
+
+
+def _get_animation_instances(datablocks) -> set:
+    """Return animation instances that reference any of `datablocks`.
+
+    Both objects and (nested) child collections are taken into account, so
+    instances that were created for (part of) a container are found even when
+    the referenced data is not a direct child of the container object.
+    """
+    instances = bpy.data.collections.get(AYON_INSTANCES)
+    if not instances:
+        return set()
+
+    matching = set()
+    for collection in instances.children_recursive:
+        if not _is_animation_instance(collection):
+            continue
+
+        referenced = set(collection.all_objects)
+        referenced.update(collection.children_recursive)
+        if datablocks.intersection(referenced):
+            matching.add(collection)
+
+    return matching
+
+
+def _get_container_datablocks(asset_group, members) -> set:
+    """Return all datablocks that belong to the loaded container.
+
+    The container members contain all datablocks that were appended from the
+    loaded file. Note that these are not necessarily children of the container
+    object (e.g. the rigs of a layout are separate top-level objects), so the
+    members are the authoritative source. The object hierarchy is added as
+    well for containers that were loaded without members.
+    """
+    datablocks = set(members)
+    datablocks.add(asset_group)
+    datablocks.update(asset_group.children_recursive)
+
+    collections = [
+        datablock for datablock in datablocks
+        if isinstance(datablock, bpy.types.Collection)
+    ]
+    while collections:
+        collection = collections.pop()
+        datablocks.update(collection.objects)
+        for child in collection.children:
+            if child not in datablocks:
+                datablocks.add(child)
+                collections.append(child)
+
+    return datablocks
 
 
 class BlendLoader(plugin.BlenderLoader):
@@ -287,8 +361,20 @@ class BlendLoader(plugin.BlenderLoader):
         """
         group_name = container["objectName"]
         asset_group = bpy.data.objects.get(group_name)
+        if asset_group is None:
+            self.log.warning(
+                "Can't remove container '%s', it is not in the scene.",
+                group_name
+            )
+            return False
 
         members = set(asset_group.get(AYON_PROPERTY).get("members", []))
+
+        # Also remove the animation instances that were created for this
+        # container (e.g. when loading a rig or layout).
+        removed_animation_instances = self._remove_animation_instances(
+            _get_container_datablocks(asset_group, members)
+        )
 
         # We need to update all the parent container members
         parent_containers = self.get_all_container_parents(asset_group)
@@ -299,5 +385,24 @@ class BlendLoader(plugin.BlenderLoader):
                 parent.get(AYON_PROPERTY).get("members", [])))
 
         members.discard(None)
+        # Animation instances are not container members, but make sure they
+        # are not removed twice if they happen to be part of the members.
+        members.difference_update(removed_animation_instances)
         members.add(asset_group)
         bpy.data.batch_remove(members)
+        return True
+
+    def _remove_animation_instances(self, datablocks) -> set:
+        """Remove the animation instances that use the container's datablocks."""
+        animation_instances = _get_animation_instances(datablocks)
+        if not animation_instances:
+            return set()
+
+        self.log.debug(
+            "Removing animation instances: %s",
+            ", ".join(
+                sorted(collection.name for collection in animation_instances)
+            )
+        )
+        bpy.data.batch_remove(animation_instances)
+        return animation_instances
