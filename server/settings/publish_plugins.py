@@ -270,6 +270,11 @@ class PublishPluginsModel(BaseSettingsModel):
         title="Validate Resolution Setting",
         description="Checks if the resolution setting matches AYON project values for the context.",
     )
+    ValidateSceneColorspace: ValidatePluginModel = SettingsField(
+        default_factory=ValidatePluginModel,
+        title="Validate Scene Colorspace",
+        description="Checks the scene display, view, exposure, gamma and working space match the workfile color management settings.",
+    )
     ExtractBlend: ExtractBlendModel = SettingsField(
         default_factory=ExtractBlendModel,
         title="Extract Blend",
@@ -400,6 +405,11 @@ DEFAULT_BLENDER_PUBLISH_SETTINGS = {
         "active": True
     },
     "ValidateResolutionSetting": {
+        "enabled": True,
+        "optional": True,
+        "active": True
+    },
+    "ValidateSceneColorspace": {
         "enabled": True,
         "optional": True,
         "active": True
