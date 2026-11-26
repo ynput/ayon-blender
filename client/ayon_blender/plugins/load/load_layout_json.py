@@ -1,12 +1,14 @@
 """Load a layout in Blender."""
 
 import json
+import math
 from pathlib import Path
 from pprint import pformat
 from typing import Dict, Optional
 
 import bpy
 import ayon_api
+from mathutils import Euler, Matrix, Vector
 
 from ayon_core.pipeline import (
     discover_loader_plugins,
@@ -21,6 +23,8 @@ from ayon_blender.api.constants import (
     VALID_EXTENSIONS
 )
 from ayon_blender.api import plugin
+from ayon_blender.api.lib import assign_action
+from ayon_blender.api.ops import MainThreadItem, execute_in_main_thread
 from ayon_blender.api.pipeline import add_to_ayon_container
 
 
@@ -35,8 +39,6 @@ class JsonLayoutLoader(plugin.BlenderLoader):
     label = "Load Layout"
     icon = "code-fork"
     color = "orange"
-
-    animation_creator_name = "CreateAnimation"
 
     def _remove(self, asset_group):
         objects = list(asset_group.children)
@@ -56,20 +58,131 @@ class JsonLayoutLoader(plugin.BlenderLoader):
             bpy.data.batch_remove(anim_collections)
 
     def _get_loader(self, loaders, product_base_type):
-        name = ""
-        if product_base_type == 'rig':
-            name = "BlendRigLoader"
-        elif product_base_type == 'model':
-            name = "BlendModelLoader"
-
-        if name == "":
+        # The loaders are already filtered by the element's product base type
+        # and representation. Prefer the Append Blend loader: it handles every
+        # product base type that can be part of a layout (model, rig, camera,
+        # layout, animation) and loads each element as its own container.
+        if not loaders:
             return None
 
         for loader in loaders:
-            if loader.__name__ == name:
+            if loader.__name__ == "BlendLoader":
                 return loader
 
+        return loaders[0]
+
+    def _get_animation_file(self, libpath, element):
+        """Return the baked animation file of a layout element, if any.
+
+        Newer layouts publish the FBX next to the layout JSON as
+        ``<json stem>.fbx``. Layouts published before that stored the staging
+        file name (e.g. ``000.fbx``) and were published as
+        ``<json stem>.000.fbx``, so both are supported.
+        """
+        animation = element.get("animation")
+        if not animation:
+            return None
+
+        json_path = Path(libpath)
+        stem = json_path.with_suffix("")
+        for candidate in (Path(f"{stem}.fbx"), Path(f"{stem}.{animation}")):
+            if candidate.is_file():
+                return str(candidate)
+
+        # Fall back to a single FBX next to the layout JSON
+        fbx_files = list(json_path.parent.glob("*.fbx"))
+        if len(fbx_files) == 1:
+            return str(fbx_files[0])
+
+        self.log.warning(
+            "Layout element '%s' has animation '%s', but no animation file "
+            "was found next to '%s'.",
+            element.get("instance_name") or element.get("asset_name"),
+            animation, libpath
+        )
         return None
+
+    @staticmethod
+    def _get_reference(element):
+        """Return the representation id of the layout element.
+
+        Blender layouts store it as `reference` (the blend representation of
+        the element). Layouts published from other hosts (Maya, Houdini,
+        Unreal) store the representation that was loaded there in
+        `representation`.
+        """
+        return (
+            element.get("reference")
+            or element.get("representation")
+            or element.get("reference_fbx")
+            or element.get("reference_abc")
+        )
+
+    def _get_transform(self, element):
+        """Return the location, rotation and scale of a layout element.
+
+        Blender layouts store the transform as `translation`, `rotation` and
+        `scale`. Layouts from other hosts only store `transform_matrix` in
+        Unreal's convention, which is converted to Blender here.
+        """
+        transform = element.get("transform")
+        if transform:
+            return transform
+
+        matrix = element.get("transform_matrix")
+        if not matrix:
+            return None
+        try:
+            return self._transform_from_unreal_matrix(matrix)
+        except (TypeError, ValueError):
+            self.log.warning(
+                "Unable to convert the transform matrix of layout element "
+                "'%s': %r",
+                element.get("instance_name") or element.get("asset_name"),
+                matrix, exc_info=True
+            )
+            return None
+
+    @staticmethod
+    def _transform_from_unreal_matrix(matrix):
+        """Convert an Unreal convention layout matrix to Blender values.
+
+        Layout matrices of other hosts (e.g. Maya's Extract Layout) are
+        written in Unreal's coordinate system. Unreal maps to the Y-up hosts
+        (Maya, Houdini) by swapping the Y and Z components, so that swap is
+        undone first. The resulting Y-up values are then converted to
+        Blender's Z-up coordinate system.
+        """
+        # Layout matrices are stored for row vectors, while Blender uses
+        # column vectors, so transpose the matrix.
+        unreal = Matrix(matrix).transposed()
+
+        location, rotation, scale = unreal.decompose()
+        euler = rotation.to_euler("XYZ")
+
+        # Unreal -> Y-up (Maya/Houdini)
+        location = Vector((location.x, location.z, location.y))
+        scale = Vector((scale.x, scale.z, scale.y))
+        euler = Euler((euler.x, euler.z, euler.y), "XYZ")
+
+        # Y-up -> Blender's Z-up
+        convert = Matrix.Rotation(math.radians(90.0), 3, "X")
+        location = convert @ location
+        scale = Vector((scale.x, scale.z, scale.y))
+        rotation = convert @ euler.to_matrix() @ convert.transposed()
+        euler = rotation.to_euler("XYZ")
+
+        return {
+            "translation": {
+                "x": location.x, "y": location.y, "z": location.z
+            },
+            "rotation": {
+                "x": euler.x, "y": euler.y, "z": euler.z
+            },
+            "scale": {
+                "x": scale.x, "y": scale.y, "z": scale.z
+            },
+        }
 
     def _process(self, libpath, asset, asset_group, actions):
         plugin.deselect_all()
@@ -77,51 +190,91 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         with open(libpath, "r") as fp:
             data = json.load(fp)
 
+        if not isinstance(data, list):
+            self.log.warning(
+                "Layout '%s' does not contain a list of elements.", libpath
+            )
+            return
+
         all_loaders = discover_loader_plugins()
+        loaded_elements = 0
+        pending = []
 
         for element in data:
-            reference = element.get('reference')
+            if not isinstance(element, dict):
+                self.log.warning(
+                    "Skipping invalid layout element: %r", element
+                )
+                continue
+
+            reference = self._get_reference(element)
+            instance_name = element.get('instance_name')
             product_base_type = (
                 element.get("product_base_type")
                 or element.get("product_type")
                 or element.get("family")
             )
 
+            if not reference:
+                self.log.warning(
+                    "Layout element '%s' has no representation reference; "
+                    "skipping it.",
+                    instance_name or element.get("asset_name")
+                )
+                continue
+
             loaders = loaders_from_representation(all_loaders, reference)
             loader = self._get_loader(loaders, product_base_type)
 
             if not loader:
+                self.log.warning(
+                    "No loader found for layout element '%s' (product base "
+                    "type '%s'); skipping it.",
+                    instance_name or element.get("asset_name"),
+                    product_base_type
+                )
                 continue
-
-            instance_name = element.get('instance_name')
 
             action = None
 
             if actions:
                 action = actions.get(instance_name, None)
 
-            options = {
-                'parent': asset_group,
-                'transform': element.get('transform'),
-                'action': action,
-                'create_animation': product_base_type == "rig",
-                'animation_asset': asset
-            }
-
-            if element.get('animation'):
-                options['animation_file'] = str(Path(libpath).with_suffix(
-                    '')) + "." + element.get('animation')
+            pending.append({
+                "namespace": instance_name,
+                "transform": self._get_transform(element),
+                "action": action,
+                "animation_file": (
+                    None if action
+                    else self._get_animation_file(libpath, element)
+                ),
+            })
 
             # This should return the loaded asset, but the load call will be
             # added to the queue to run in the Blender main thread, so
-            # at this time it will not return anything. The assets will be
-            # loaded in the next Blender cycle, so we use the options to
-            # set the transform, parent and assign the action, if there is one.
+            # at this time it will not return anything. The assets are loaded
+            # in the next Blender cycle, so the parent, transform, action and
+            # baked animation are applied by the follow-up item queued below.
             load_container(
                 loader,
                 reference,
-                namespace=instance_name,
-                options=options
+                namespace=instance_name
+            )
+            loaded_elements += 1
+
+        if pending:
+            # The element loads are queued on the Blender main thread, so the
+            # layout data is applied as a follow-up item, after they are done.
+            execute_in_main_thread(MainThreadItem(
+                self._apply_elements, asset_group, pending
+            ))
+
+        if not data:
+            self.log.warning("Layout '%s' contains no elements.", libpath)
+        elif not loaded_elements:
+            self.log.warning(
+                "None of the %d elements of layout '%s' could be loaded.",
+                len(data), libpath
             )
 
         # Camera creation when loading a layout is not necessary for now,
@@ -141,6 +294,136 @@ class JsonLayoutLoader(plugin.BlenderLoader):
         #     options={"useSelection": False}
         #     # data={"dependencies": context["representation"]["id"]}
         # )
+
+    def _apply_elements(self, asset_group, elements):
+        """Apply the layout data to the loaded element containers.
+
+        This runs on the Blender main thread after the element loads were
+        queued, so the loaded element containers exist by then. It applies
+        the parent, transform, action and baked animation of every element,
+        independent of the loader that loaded the element.
+        """
+        containers_by_namespace = {}
+        for obj in bpy.data.objects:
+            metadata = obj.get(AYON_PROPERTY)
+            if not metadata:
+                continue
+            namespace = metadata.get("namespace")
+            if namespace:
+                containers_by_namespace.setdefault(namespace, obj)
+
+        for element in elements:
+            namespace = element["namespace"]
+            container = containers_by_namespace.get(namespace)
+            if container is None:
+                self.log.warning(
+                    "Unable to apply layout element '%s': it was not loaded.",
+                    namespace
+                )
+                continue
+
+            container.parent = asset_group
+
+            transform = element.get("transform")
+            if transform:
+                for attr, key in (
+                    ("location", "translation"),
+                    ("rotation_euler", "rotation"),
+                    ("scale", "scale"),
+                ):
+                    values = transform.get(key)
+                    if values:
+                        setattr(
+                            container, attr,
+                            (values["x"], values["y"], values["z"])
+                        )
+
+            action = element.get("action")
+            if action:
+                for obj in container.children_recursive:
+                    if obj.type != "ARMATURE":
+                        continue
+                    assign_action(obj, action)
+                continue
+
+            animation_file = element.get("animation_file")
+            if animation_file:
+                self._apply_animation_file(container, animation_file)
+
+    def _apply_animation_file(self, container, filepath):
+        """Apply the animation baked into a layout element's FBX file.
+
+        Layout publishes bake the rig animation into an FBX next to the
+        layout JSON. The action is moved onto the armature of the loaded rig,
+        after which the objects imported from the FBX are removed again.
+        """
+        filepath = Path(filepath)
+        if not filepath.is_file():
+            self.log.warning(
+                "Unable to apply animation: '%s' does not exist.", filepath
+            )
+            return
+
+        armatures = [
+            obj for obj in container.children_recursive
+            if obj.type == 'ARMATURE'
+        ]
+        if not armatures:
+            self.log.warning(
+                "Unable to apply animation '%s': no armature found in '%s'.",
+                filepath, container.name
+            )
+            return
+
+        objects_before = set(bpy.data.objects)
+        actions_before = set(bpy.data.actions)
+        try:
+            bpy.ops.import_scene.fbx(
+                filepath=str(filepath), use_anim=True
+            )
+        except (RuntimeError, AttributeError):
+            self.log.warning(
+                "Unable to import animation file '%s'.",
+                filepath, exc_info=True
+            )
+            return
+
+        imported_objects = set(bpy.data.objects) - objects_before
+        imported_actions = set(bpy.data.actions) - actions_before
+
+        armatures_by_name = {
+            armature.name.rsplit(":", 1)[-1]: armature
+            for armature in armatures
+        }
+
+        applied_actions = set()
+        for imported in imported_objects:
+            if imported.type != 'ARMATURE':
+                continue
+            imported_animation = imported.animation_data
+            if not imported_animation or not imported_animation.action:
+                continue
+            action = imported_animation.action
+            target = armatures_by_name.get(imported.name)
+            if target is None and len(armatures) == 1:
+                target = armatures[0]
+            if target is None:
+                continue
+            assign_action(target, action)
+            applied_actions.add(action)
+
+        # Remove the objects imported from the FBX, but keep the actions that
+        # were applied to the loaded rig.
+        to_remove = set(imported_objects)
+        for imported in imported_objects:
+            data = imported.data
+            if data is not None and data.users <= 1:
+                to_remove.add(data)
+        bpy.data.batch_remove(to_remove)
+
+        for action in imported_actions - applied_actions:
+            if action.users == 0:
+                bpy.data.actions.remove(action)
 
     def process_asset(self,
                       context: dict,
@@ -287,7 +570,9 @@ class JsonLayoutLoader(plugin.BlenderLoader):
 
         self._remove(asset_group)
 
-        self._process(str(libpath), asset_group, actions)
+        self._process(
+            str(libpath), metadata["asset_name"], asset_group, actions
+        )
 
         asset_group.matrix_basis = mat
 

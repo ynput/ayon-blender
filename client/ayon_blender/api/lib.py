@@ -986,6 +986,40 @@ def has_users(cache: bpy.types.CacheFile) -> bool:  # noqa: F811
     return bool(bpy.data.user_map(subset={cache})[cache])
 
 
+def assign_action(obj, action):
+    """Assign an action to an object, binding a slot when needed.
+
+    Blender 4.4+ uses slotted actions: assigning the action alone is not
+    enough there, a matching slot must be selected too, otherwise the action
+    is not evaluated.
+
+    Arguments:
+        obj (bpy.types.Object): Object to assign the action to.
+        action (bpy.types.Action): Action to assign.
+    """
+    if not obj.animation_data:
+        obj.animation_data_create()
+
+    animation_data = obj.animation_data
+    animation_data.action = action
+
+    if not hasattr(action, "slots"):
+        # Blender without slotted actions (before 4.4)
+        return
+    if getattr(animation_data, "action_slot", None) is not None:
+        return
+
+    slots = list(action.slots)
+    if not slots:
+        return
+
+    for slot in slots:
+        if getattr(slot, "target_id_type", "OBJECT") == "OBJECT":
+            animation_data.action_slot = slot
+            return
+    animation_data.action_slot = slots[0]
+
+
 def create_animation_instance(rig: Union[bpy.types.Collection, bpy.types.Object]):
     """Create animation instances for the given rigs.
 
