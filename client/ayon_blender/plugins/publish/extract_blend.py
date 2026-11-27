@@ -13,6 +13,7 @@ from ayon_blender.api.lib import (
     strip_instance_data,
     strip_namespace,
     packed_images,
+    unpacked_images,
     make_material_image_paths_absolute,
 )
 
@@ -95,6 +96,10 @@ class ExtractBlend(
             if self.pack_textures:
                 stack.enter_context(
                     packed_images(data_blocks, logger=self.log)
+                )
+            else:
+                stack.enter_context(
+                    unpacked_images(data_blocks, logger=self.log)
                 )
             # make sure all texture files are absolute paths
             if instance.data["productBaseType"] == "look":
