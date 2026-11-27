@@ -291,35 +291,59 @@ def get_selected_collections():
     Returns a list of the currently selected collections in the outliner.
 
     Raises:
-        RuntimeError: If the outliner cannot be found in the main Blender
+        RuntimeError: If no outliner selection can be read from any Blender
         window.
 
     Returns:
         list: A list of `bpy.types.Collection` objects that are currently
         selected in the outliner.
     """
-    window = bpy.context.window or bpy.context.window_manager.windows[0]
+    windows = []
+    if bpy.context.window is not None:
+        windows.append(bpy.context.window)
+    for window in bpy.context.window_manager.windows:
+        if window not in windows:
+            windows.append(window)
 
-    try:
-        area = next(
-            area for area in window.screen.areas
-            if area.type == 'OUTLINER')
-        region = next(
-            region for region in area.regions
-            if region.type == 'WINDOW')
-    except StopIteration as e:
-        raise RuntimeError("Could not find outliner. An outliner space "
-                           "must be in the main Blender window.") from e
+    for window in windows:
+        for area in window.screen.areas:
+            if area.type != "OUTLINER":
+                continue
+            region = next(
+                (
+                    region
+                    for region in area.regions
+                    if region.type == "WINDOW"
+                ),
+                None,
+            )
+            if region is None:
+                continue
+            try:
+                with bpy.context.temp_override(
+                    window=window,
+                    screen=window.screen,
+                    area=area,
+                    region=region,
+                    space_data=area.spaces.active,
+                ):
+                    ids = getattr(
+                        bpy.context, "selected_ids", None
+                    )
+            except (AttributeError, TypeError):
+                continue
+            if ids is None:
+                continue
+            return [
+                id_
+                for id_ in ids
+                if isinstance(id_, bpy.types.Collection)
+            ]
 
-    with bpy.context.temp_override(
-        window=window,
-        area=area,
-        region=region,
-        screen=window.screen
-    ):
-        ids = bpy.context.selected_ids
-
-    return [id for id in ids if isinstance(id, bpy.types.Collection)]
+    raise RuntimeError(
+        "Could not read selected collections from an outliner. An"
+        " outliner with a window region must be available."
+    )
 
 
 def get_selection(include_collections: bool = False) -> List[bpy.types.Object]:
